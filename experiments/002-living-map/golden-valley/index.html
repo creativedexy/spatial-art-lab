@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golden Valley vertical slice — living map Sprint 1</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #dfe9ec; }
+  #app { position: fixed; inset: 0; }
+  .label {
+    position: absolute; transform: translate(-50%, -100%);
+    font: 12px/1.3 system-ui, sans-serif; color: #2c3a33;
+    background: rgba(255, 255, 255, 0.85); border-radius: 4px;
+    padding: 2px 7px; pointer-events: none; white-space: nowrap;
+  }
+  #credit {
+    position: fixed; left: 10px; bottom: 8px; max-width: 60vw;
+    font: 11px system-ui, sans-serif; color: #47554e;
+  }
+  #hint {
+    position: fixed; right: 10px; bottom: 8px;
+    font: 11px system-ui, sans-serif; color: #47554e;
+  }
+</style>
+<script type="importmap">{ "imports": { "three": "../terrain/vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="credit">Terrain and building heights: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</div>
+<div id="hint">drag: pan &middot; right-drag: orbit &middot; scroll: zoom</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

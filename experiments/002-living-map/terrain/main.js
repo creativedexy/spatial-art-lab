@@ -109,7 +109,7 @@ function toLocal(e, n) {
   return [e - (meta.easting[0] + sizeX / 2), (meta.northing[0] + sizeZ / 2) - n];
 }
 const places = [
-  { name: 'GCHQ / Golden Valley', e: 391755, n: 221389 },
+  { name: 'GCHQ / Golden Valley', e: 391523, n: 222336 },
   { name: 'Town centre', e: 394950, n: 222200 },
   { name: 'Cleeve Hill 330 m', e: 398470, n: 226070 },
 ];

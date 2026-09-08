@@ -26,9 +26,36 @@ Source file: `experiments/002-living-map/terrain/` (page + data + vendored three
 Preview: `exports/002-living-map-terrain-v001.png`
 Selected variant: south-west opening camera, town centred, escarpment behind.
 
-### Review
+### Review (Session A)
 
 What works: the terrain is unmistakably Cheltenham; markers for GCHQ/Golden Valley, town centre and Cleeve Hill confirm georeferencing (EPSG:27700 → local XZ) is correct.
 What I can now change without AI: palette ramp stops, vertical exaggeration, camera limits, marker set, box extent.
 One failure worth keeping: first WCS guess used a wrong service path (`environment.data.gov.uk/image/...` — doesn't exist); the real pattern is `environment.data.gov.uk/spatialdata/<dataset-slug>/wcs`, discovered by scraping the dataset page for service links.
 Next 20-minute experiment: Session B — generate the first descent clip candidates between an aerial-style frame and a ground-level photo (needs a Gemini or fal.ai key, and owned imagery of a Cheltenham spot).
+
+## Session A+ — Golden Valley vertical slice
+
+Date: 8 Sep 2026
+Intent in one sentence: Prove the map ties to the real place — full 1 m resolution, real buildings at measured heights, true scale.
+Tool/build/model: EA WCS (DTM + last-return DSM at native 1 m), OSM map API for footprints, pyproj for EPSG:27700↔WGS84, Three.js ExtrudeGeometry + merged buffers.
+Input files / source rights: EA LiDAR composites (OGL v3); building footprints © OpenStreetMap contributors (ODbL). Both attributed on the page.
+
+### What happened
+
+`scripts/golden_valley_slice.py` builds the whole dataset: 2×2 km box (E 390400–392400, N 221400–223400) fetched at native 1 m from both the DTM and the last-return DSM; **DSM − DTM = measured height of everything standing on the ground**. 4,042 OSM footprints rasterised against that difference grid give 4,033 buildings, each extruded to its median measured height (median 5.7 m — two-storey Benhall, correct; the page renders them as an archviz white model over the terrain, no vertical exaggeration).
+
+Three catches worth recording: (1) Overpass API is unreachable through this environment's proxy — the plain OSM `map` endpoint works for small boxes and returns everything; (2) my remembered GCHQ coordinate was ~1 km off and the first box clipped the doughnut — always convert a checked lat/lon through pyproj rather than trusting recall; (3) the doughnut is an OSM *relation* (outer ring + courtyard hole), so way-only parsing missed the single most recognisable building — the parser now handles building relations with holes, and the courtyard renders.
+
+Validation: LiDAR-measured doughnut height 14.8 m over a 52.7 m base; the surrounding crescents match the real street pattern; B&Q, the BMW dealer and Nuffield Hospital all appear where they are in life.
+
+### Saved outputs
+
+Source: `experiments/002-living-map/golden-valley/` (page + data), `scripts/golden_valley_slice.py` (rerun to rebuild).
+Preview: `exports/002-living-map-goldenvalley-v001.png`
+Camera/capture support: `?cam=x,y,z&look=x,z&clean=1` URL parameters frame clean stills — this is how descent frame A endpoints are rendered.
+
+## Session B — descent pipeline (prepared, awaiting key)
+
+`scripts/generate_descent.py` is the one-command pipeline: frame A + frame B → N candidate clips via Veo 3.1 frames-to-video (Gemini API), with a JSON run log for prompt/timing/cost discipline. Frame A for the first descent is rendered and saved (`descent/frames/gv-doughnut-aerial-frameA.png`, clean capture over the doughnut).
+
+Blocked on two inputs: a `GEMINI_API_KEY` in the environment, and a frame B (ground-level photo or render of the destination). Next 20-minute experiment once the key lands: three candidates between the saved frame A and a frame B, then the Session C seam test.

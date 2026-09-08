@@ -1,0 +1,25 @@
+{
+  "crs": "EPSG:27700",
+  "easting": [
+    390400,
+    392400
+  ],
+  "northing": [
+    221400,
+    223400
+  ],
+  "widthMetres": 2000,
+  "heightMetres": 2000,
+  "elevationMinMetres": 24.3,
+  "elevationMaxMetres": 59.26,
+  "binFile": "gv-height-2000.bin",
+  "binPixels": [
+    2000,
+    2000
+  ],
+  "buildings": 4033,
+  "sources": [
+    "EA LIDAR Composite DTM/DSM 1m (OGL v3)",
+    "OpenStreetMap contributors (ODbL)"
+  ]
+}
