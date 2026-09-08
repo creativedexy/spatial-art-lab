@@ -15,6 +15,10 @@ Start with [the visual moodboard](inspiration/index.html), then [the learning pl
 
 The plan assumes three 60–90 minute sessions per week and can stretch or compress. Start with the [first experiment brief](experiments/001-cosmic-breath/brief.md).
 
+## Projects
+
+- **The living map** — maps × generative video: an explorable stylised world of Cheltenham with generated zoom-in transitions and a season wave, targeting the Golden Valley development as exemplar. See [the plan](plans/living-map-plan.md) and [Sprint 1 brief](experiments/002-living-map/brief.md).
+
 ## Where things live
 
 - `inspiration/`: the visual board, source records and credited study captures.
