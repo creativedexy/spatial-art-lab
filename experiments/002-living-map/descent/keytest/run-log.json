@@ -1,0 +1,28 @@
+{
+  "startedUtc": "2026-09-08T13:20:00+00:00",
+  "purpose": "Session B key test: verify GEMINI_API_KEY works for Veo video generation",
+  "model": "veo-3.1-fast-generate-preview (attempted)",
+  "frameA": "experiments/002-living-map/descent/frames/gv-doughnut-aerial-frameA.png",
+  "frameB": null,
+  "candidatesRequested": 1,
+  "result": "FAILED - no usable API key reached the container",
+  "evidence": {
+    "envVarPresent": false,
+    "envVarCheck": "GEMINI_API_KEY is not set in the session environment (checked before any paid call)",
+    "freeModelsListValidation": {
+      "endpoint": "GET https://generativelanguage.googleapis.com/v1beta/models",
+      "withoutKeyHeader": "HTTP 403 PERMISSION_DENIED - 'Method doesn't allow unregistered callers' (request reached Google with no credential attached; the environment's egress proxy did not inject a Gemini key)",
+      "withPlaceholderKeyHeader": "HTTP 400 INVALID_ARGUMENT / API_KEY_INVALID (placeholder forwarded verbatim, confirming no proxy-side substitution)",
+      "veoModelsListed": "unknown - listing never succeeded"
+    },
+    "generationScript": {
+      "command": "python3 scripts/generate_descent.py .../gv-doughnut-aerial-frameA.png .../keytest --candidates 1 --model veo-3.1-fast-generate-preview",
+      "exitCode": 1,
+      "stderr": "GEMINI_API_KEY is not set. Add it to the environment (claude.ai code environment settings, or your shell) and re-run.",
+      "paidCallsMade": 0
+    }
+  },
+  "wallTimeSeconds": 0,
+  "costIncurred": "none - failed before any billable request",
+  "nextStep": "Re-check the claude.ai code environment settings: the GEMINI_API_KEY variable did not propagate into this freshly provisioned container. After saving the variable, start a new session (env vars are read at container start) and re-run this test."
+}

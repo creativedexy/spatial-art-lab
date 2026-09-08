@@ -59,3 +59,13 @@ Camera/capture support: `?cam=x,y,z&look=x,z&clean=1` URL parameters frame clean
 `scripts/generate_descent.py` is the one-command pipeline: frame A + frame B → N candidate clips via Veo 3.1 frames-to-video (Gemini API), with a JSON run log for prompt/timing/cost discipline. Frame A for the first descent is rendered and saved (`descent/frames/gv-doughnut-aerial-frameA.png`, clean capture over the doughnut).
 
 Blocked on two inputs: a `GEMINI_API_KEY` in the environment, and a frame B (ground-level photo or render of the destination). Next 20-minute experiment once the key lands: three candidates between the saved frame A and a frame B, then the Session C seam test.
+
+## Session B key test — key did not reach the container
+
+Date: 8 Sep 2026
+Intent in one sentence: Verify the newly added GEMINI_API_KEY works for Veo generation with one cheap candidate.
+Tool/build/model: attempted `veo-3.1-fast-generate-preview` via `scripts/generate_descent.py` (image-to-video from frame A alone).
+
+**Key worked: no.** `GEMINI_API_KEY` was not present in the freshly provisioned container's environment, so the variable set in the claude.ai environment settings did not propagate. The free validation (`GET /v1beta/models`) confirmed it independently: with no key header Google returned 403 "unregistered caller" (the proxy injected nothing), and a placeholder header was forwarded verbatim and rejected with 400 API_KEY_INVALID. The generation script exited before any billable call ("GEMINI_API_KEY is not set"), so generation wall time was 0 s and cost was zero. Evidence in `descent/keytest/run-log.json`.
+
+Fix to try: re-save the key in the environment settings and start a fresh session — env vars are read at container start, and this container (provisioned 8 Sep 13:14 UTC) never received it.
