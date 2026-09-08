@@ -8,7 +8,7 @@ Status: Session A done (terrain), Session A+ done (Golden Valley slice at true s
 
 **Session A — terrain:** Download the EA National LiDAR Programme DTM tile covering Cheltenham (Open Government Licence; note the tile reference). Convert to a heightmap with GDAL. Displace a plane in Three.js, add orbit-style pan/zoom limits and a simple gradient material. Success is recognising the Cotswold escarpment.
 
-**Session B — one descent:** Pick two owned images — an aerial-style frame and a ground-level photograph of the same Cheltenham spot. Generate 3–5 first/last-frame candidates (Veo 3.1 via Gemini API, or Kling/Luma via fal.ai). Log prompt, model, cost and duration per candidate. Keep the best and the worst; the worst teaches more.
+**Session B — one descent** (run it locally where the keys live: [LOCAL-SESSION.md](descent/LOCAL-SESSION.md))**:** Pick two owned images — an aerial-style frame and a ground-level photograph of the same Cheltenham spot. Generate 3–5 first/last-frame candidates (Veo 3.1 via Gemini API, or Kling/Luma via fal.ai). Log prompt, model, cost and duration per candidate. Keep the best and the worst; the worst teaches more.
 
 **Session C — the seam:** Build the swap: canvas renders frame A's camera pose, video element fades in on the matching first frame, plays, holds on the last frame. Measure where the eye catches the join (colour grade? resolution? motion stop?). Record findings in three sentences.
 
