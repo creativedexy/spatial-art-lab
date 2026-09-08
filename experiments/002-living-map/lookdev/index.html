@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Look development — living map</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #d9dfe0; }
+  #app { position: fixed; inset: 0; }
+  #credit { position: fixed; left: 10px; bottom: 8px; max-width: 60vw;
+    font: 11px system-ui, sans-serif; color: #47554e; }
+  #hint { position: fixed; right: 10px; bottom: 8px;
+    font: 11px system-ui, sans-serif; color: #47554e; }
+</style>
+<script type="importmap">{ "imports": { "three": "../terrain/vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="credit">Terrain and building heights: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</div>
+<div id="hint">look development &middot; drag: pan &middot; right-drag: orbit &middot; scroll: zoom</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
