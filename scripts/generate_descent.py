@@ -34,7 +34,9 @@ DEFAULT_PROMPT = (
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("frame_a")
-    ap.add_argument("frame_b")
+    ap.add_argument("frame_b", nargs="?", default=None,
+                    help="optional: omit to generate from frame A alone "
+                         "(image-to-video, no last-frame anchor)")
     ap.add_argument("out_dir")
     ap.add_argument("--prompt", default=DEFAULT_PROMPT)
     ap.add_argument("--candidates", type=int, default=3)
@@ -63,14 +65,14 @@ def main() -> None:
 
     for i in range(args.candidates):
         t0 = time.time()
+        cfg = {"aspect_ratio": "16:9"}
+        if args.frame_b:
+            cfg["last_frame"] = types.Image.from_file(location=args.frame_b)
         op = client.models.generate_videos(
             model=args.model,
             prompt=args.prompt,
             image=types.Image.from_file(location=args.frame_a),
-            config=types.GenerateVideosConfig(
-                last_frame=types.Image.from_file(location=args.frame_b),
-                aspect_ratio="16:9",
-            ),
+            config=types.GenerateVideosConfig(**cfg),
         )
         while not op.done:
             time.sleep(10)
