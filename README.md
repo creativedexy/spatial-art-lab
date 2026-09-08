@@ -34,4 +34,5 @@ All seven supplied references were identified and captured.
 
 ## Progress
 
+- **Living map, Sprint 1 Session A (8 Sep 2026):** real Cheltenham terrain in the browser from EA LiDAR (WCS, one request), recognisable escarpment and Cleeve Hill, georeferenced markers. See [the terrain page](experiments/002-living-map/terrain/index.html) (serve the folder over HTTP), [the session log](experiments/002-living-map/session-log.md) and [the still](exports/002-living-map-terrain-v001.png).
 - **Sprint 0 (8 Sep 2026):** environment logged (M5 Pro, 20-core GPU, 48 GB; Blender 5.2.1 LTS; TouchDesigner 2025.33230). Blender half complete — a scripted light study with three saved stills and a reopenable source file. See [the session log](experiments/000-sprint-zero/session-log.md) and [the light study](experiments/000-sprint-zero/light-study.html). TouchDesigner half is pending and specified in [the build sheet](experiments/000-sprint-zero/touchdesigner-build-sheet.md). No paid AI generation has been run yet.

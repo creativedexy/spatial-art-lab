@@ -1,0 +1,34 @@
+# 002 — Living map, session log
+
+## Session A — LiDAR terrain in the browser
+
+Date: 8 Sep 2026
+Intent in one sentence: Prove real Cheltenham terrain can live in the browser and be recognised.
+Tool/build/model: EA WCS 2.0.1 service, Python 3.11 (numpy/tifffile/Pillow), Three.js 0.169.0 (vendored), headless Chromium for capture.
+Input files / source rights: EA LIDAR Composite DTM 1m via WCS (`spatialdata/lidar-composite-digital-terrain-model-dtm-1m/wcs`, coverage `..._Lidar_Composite_Elevation_DTM_1m`), Open Government Licence v3, attributed on the page.
+Time / credits used: one cloud session; no paid generation.
+
+### One variable to explore
+
+Whether a single WCS `GetCoverage` request (12×12 km box, E 388000–400000 / N 216000–228000, `scaleFactor≈0.17` → 2048², ~16 MB GeoTIFF) beats the interactive tile portal for a repeatable pipeline.
+
+### What I predicted
+
+Tile downloads and GDAL wrangling; possibly no programmatic route at all.
+
+### What happened
+
+The dataset exposes a proper WCS with GeoTIFF output and server-side scaling — one URL replaces the whole portal flow. Elevation range came back 8.25–330.04 m; 330 m is Cleeve Hill's actual summit, which validated the data before a single pixel rendered. Converted to a 16-bit PNG (archival, 2048²) plus a uint16 binary (1024², 2 MB) the page reads directly, dodging the browser's 8-bit PNG decode. CPU vertex displacement (513² grid) with height+slope vertex colours rendered at full speed; ×1.8 vertical exaggeration keeps the scarp legible from map altitude. Drainage lines and field boundaries are visible in the vale — 1 m LiDAR carries texture even downsampled to ~12 m.
+
+### Saved outputs
+
+Source file: `experiments/002-living-map/terrain/` (page + data + vendored three.js). Rerun the fetch with `scripts/lidar_to_heightmap.py` and the WCS URL in this log.
+Preview: `exports/002-living-map-terrain-v001.png`
+Selected variant: south-west opening camera, town centred, escarpment behind.
+
+### Review
+
+What works: the terrain is unmistakably Cheltenham; markers for GCHQ/Golden Valley, town centre and Cleeve Hill confirm georeferencing (EPSG:27700 → local XZ) is correct.
+What I can now change without AI: palette ramp stops, vertical exaggeration, camera limits, marker set, box extent.
+One failure worth keeping: first WCS guess used a wrong service path (`environment.data.gov.uk/image/...` — doesn't exist); the real pattern is `environment.data.gov.uk/spatialdata/<dataset-slug>/wcs`, discovered by scraping the dataset page for service links.
+Next 20-minute experiment: Session B — generate the first descent clip candidates between an aerial-style frame and a ground-level photo (needs a Gemini or fal.ai key, and owned imagery of a Cheltenham spot).
