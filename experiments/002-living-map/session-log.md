@@ -273,3 +273,76 @@ out-seam's 1.4 %. If it does, the rule is "hand over below the detail
 threshold" and the whole descent path gets re-cut around it. Then the same
 two frames through Veo, once a key is available, as the provider comparison
 this session could not run.
+## Session D — the hotspot descent player
+
+Date: 8 Sep 2026
+Intent in one sentence: Turn Session C's proven hand-off into the thing it exists for — click a place, descend into it, come back.
+Tool/build/model: Three.js scene shared with the seam test, Playwright for an end-to-end interaction test, no paid generation.
+
+### One variable to explore
+
+Whether the descent can be made a property of a *place* rather than a
+hard-coded path — and specifically whether the map can be complete before any
+generated clip exists.
+
+### What happened
+
+`descent/hotspots.json` now holds three places, each with a descent path in
+the shape `descent-path.json` already used, and an optional `clip`. The
+doughnut carries the Session C control clip; the other two carry `null` and
+**descend live along the identical path**. That fallback is the design, not a
+stopgap: the path is the source of truth and the clip is an enhancement, so a
+clip can be generated, swapped, regenerated or dropped without touching the
+experience around it — and the map is finished today.
+
+`descent/player.js` is the mechanism, reusable and place-agnostic: fly from
+wherever the viewer is to the top of the path, hand over to the clip (or fly
+it), hand back, and offer the way home.
+
+Three things that only showed up by testing the real thing:
+
+1. **`maxPolarAngle` quietly stole the landing.** The map stops you tipping
+   below the horizon; an arrival is a low, near-level shot by design. The
+   path put the camera exactly on the clip's last frame, then OrbitControls'
+   first `update()` enforced its limit and lifted it 26 m — off the frame the
+   clip had just handed over. The player now opens the pitch limit to
+   whatever the arrival needs and restores it on the way out.
+2. **`[hidden]` does nothing against an author `display` rule.** `.descent-clip`
+   sets `display: block` and `.hotspot` sets `display: flex`, both of which
+   outrank the user agent's `[hidden] { display: none }`. So the clip stayed
+   on screen after handing back — showing its own first frame, which is
+   camera A, over a live canvas that had correctly moved to camera B. It read
+   exactly like a broken descent while the code was doing its job perfectly.
+3. **The test agreed with the bug.** It asserted `!button.hidden`, which was
+   true, while the screenshot showed all three pills still drawn. Assertions
+   now read `getComputedStyle(...).display`, because what matters is what is
+   on the screen, not what a property says.
+
+There is also a geometry detail worth keeping: a clip has one aspect ratio
+for ever and a window has whatever the viewer gives it. The overlay uses
+`object-fit: cover`, so `matchFovToClip()` narrows the live camera's vertical
+field of view by exactly the amount `cover` crops. Without it the two images
+are at different scales and the seam shows however perfectly the clip lands.
+
+### Saved outputs
+
+Source: `experiments/002-living-map/descent/{hotspots.json,player.js,path.js}`,
+`experiments/002-living-map/golden-valley/`. Test: `python3 scripts/test_hotspot_flow.py --shots DIR`
+(8 checks, including that the clip's `currentTime` actually advanced — headless
+virtual time fast-forwards timers but not media, so only a real-time run can
+tell the clip route from its fallback).
+Preview: `exports/002-living-map-hotspots-v001.png`
+
+### Review (Session D)
+
+What works: the whole loop — click, descend, arrive, read, return — with the
+control clip on one place and live flight on the other two, and no visible
+difference in how they behave.
+What I can now change without AI: places, blurbs, paths, fade length, and
+which places have clips, all from one JSON file.
+One failure worth keeping: I diagnosed the stuck-at-camera-A symptom as the
+`[hidden]` bug, fixed that, and the symptom stayed — because there were two
+independent causes and I had stopped at the first. The pitch clamp was the
+other. Fixing what you find is not the same as fixing what you are looking at.
+Next 20-minute experiment: drop a generated clip in for a second place and
+re-run `measure_clip_seam.py` against the control's floor.

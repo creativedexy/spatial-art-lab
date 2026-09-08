@@ -1,0 +1,43 @@
+{
+  "note": "Places you can descend into. Each path is written in local metres (x east, z south, origin at the Golden Valley box centre) and shares the shape of descent-path.json. `clip` is optional: a hotspot with no clip descends live along the same path, so the map works before a single frame is generated and improves the moment one lands.",
+  "defaults": { "fov": 48, "near": 2, "far": 20000, "size": [1280, 720], "fps": 24, "durationSeconds": 4 },
+  "hotspots": [
+    {
+      "id": "doughnut",
+      "name": "GCHQ — the Doughnut",
+      "blurb": "Measured here at 14.8 m tall on a 52.7 m base, courtyard and all, straight from the LiDAR difference between ground and surface. The reason the cyber campus is next door.",
+      "e": 391523,
+      "n": 222336,
+      "clip": "clips/descent-control.webm",
+      "clipNote": "The Session C control clip, rendered from this scene. Swap in a generated descent and the seam numbers stay comparable — this path is the one seam-report.json measures.",
+      "path": {
+        "a": { "pos": [-420, 300, 650], "look": [123, 64], "lift": 0 },
+        "b": { "pos": [-60, 92, 300], "look": [123, 64], "lift": 8 }
+      }
+    },
+    {
+      "id": "gv-site",
+      "name": "Golden Valley — phase 1",
+      "blurb": "The land the masterplan lands on: HBD with Cheltenham Borough Council, an innovation campus set against the fields west of Benhall.",
+      "e": 390808,
+      "n": 222615,
+      "clip": null,
+      "path": {
+        "a": { "pos": [-49, 300, 371], "look": [-592, -215], "lift": 0 },
+        "b": { "pos": [-482, 133, -75], "look": [-592, -215], "lift": 5 }
+      }
+    },
+    {
+      "id": "princess-elizabeth-way",
+      "name": "Princess Elizabeth Way",
+      "blurb": "The spine of post-war Benhall and Hesters Way — the residential grain any new campus has to knit itself into.",
+      "e": 392130,
+      "n": 222220,
+      "clip": null,
+      "path": {
+        "a": { "pos": [187, 300, 766], "look": [730, 180], "lift": 0 },
+        "b": { "pos": [620, 146, 320], "look": [730, 180], "lift": 5 }
+      }
+    }
+  ]
+}
