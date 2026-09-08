@@ -344,5 +344,16 @@ One failure worth keeping: I diagnosed the stuck-at-camera-A symptom as the
 `[hidden]` bug, fixed that, and the symptom stayed — because there were two
 independent causes and I had stopped at the first. The pitch clamp was the
 other. Fixing what you find is not the same as fixing what you are looking at.
-Next 20-minute experiment: drop a generated clip in for a second place and
-re-run `measure_clip_seam.py` against the control's floor.
+Amended the same day, once Session B's numbers landed: the player's fades are
+now asymmetric — 320 ms into the clip, 80 ms out of it. Session C's control
+said both seams were equal, so a symmetric fade looked right; Session B's
+generated clip put the departure at twice the landing, so the fade is spent
+where the error actually is. Both live in `hotspots.json` as data, per path.
+This is the point of keeping the path and the clip separate: a measurement
+changed the experience without anything being rebuilt.
+
+Next 20-minute experiment: Session B's proposal — re-cut the path so the
+hand-over happens *below* the detail threshold (frame A around 150 m rather
+than 300 m, where the building field is sparser) and see whether the in-seam
+falls towards the out-seam's 1.4 %. The anchors for it are a capture run
+away.

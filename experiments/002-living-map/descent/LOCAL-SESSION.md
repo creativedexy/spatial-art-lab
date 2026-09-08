@@ -6,8 +6,16 @@ here needs a photograph: both anchor frames already exist in the repo.
 
 ## Why it has to be anchored at both ends
 
-Session C measured the hand-off and found the counter-intuitive thing: video
-quality barely matters, landing accuracy is everything.
+Session C measured the hand-off with a control clip and found that video
+quality barely matters — landing accuracy does. Session B then generated a
+real clip and found the seam falls the *other* way round: the departure was
+twice as bad as the landing (2.79 % against 1.43 %), because the wide aerial
+holds thousands of tiny buildings a model cannot redraw exactly while the
+landing holds a few large masses it can.
+
+Both still hold, and together they say: anchor both ends, and expect the
+error at the top. The map's player now fades the departure over 320 ms and
+cuts the landing in 80 ms because of it.
 
 ```
  live map            generated clip              live map
@@ -21,7 +29,8 @@ At the destination one pixel is 0.21 m of ground, so five metres of drift is
 a 24 px jump. The generator therefore does not get to choose where the clip
 ends — we hand it the last frame.
 
-Control-clip floor to beat: **in-seam 0.478 %, out-seam 0.464 %**.
+Floors to beat: control clip **0.478 % / 0.464 %**; first generated clip
+(Kling 1.6 Pro) **2.793 % / 1.427 %**.
 
 ## Start the session
 
@@ -81,11 +90,18 @@ itself the finding, and the answer is the *departure* descent below.
 Drop the winning candidate in as the clip the seam test plays:
 
 ```bash
-cp $D/veo/candidate-0.mp4 $D/clips/descent-generated.mp4
-# in descent/seam-test/index.html, point the <source> at descent-generated.mp4
+# .gitignore excludes *.mp4, so the winning clip has to be encoded to WebM to
+# travel with the repo — which is also what the map plays.
+ffmpeg -i $D/fal/candidate-0.mp4 -c:v libvpx-vp9 -crf 24 -b:v 0 -row-mt 1 \
+  $D/clips/descent-doughnut-kling.webm
+# then point the doughnut's "clip" at it in descent/hotspots.json
 cd experiments/002-living-map && python3 -m http.server 8000
-# open http://localhost:8000/descent/seam-test/index.html
+# open http://localhost:8000/golden-valley/index.html  (click the doughnut)
+# or http://localhost:8000/descent/seam-test/index.html  (measure and flip)
 ```
+
+Commit that WebM: without it nobody else can see the descent, and the cloud
+session cannot wire it into the map.
 
 Press **Run descent**, then **Flip** to hold the clip's last frame against the
 live map and judge the join by eye. The measured number tells you whether it

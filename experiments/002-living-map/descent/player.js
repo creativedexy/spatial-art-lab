@@ -29,7 +29,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {(state: string, hotspot?: object) => void} [o.onState]
  */
 export function createDescentPlayer({
-  camera, controls, container, groundAt, clipBase, onState = () => {}, fadeMs = 220,
+  camera, controls, container, groundAt, clipBase, onState = () => {},
+  // Asymmetric on purpose, and on evidence. Session B measured a generated
+  // clip against our anchors and found the departure seam twice as bad as the
+  // landing (2.79% against 1.43%): the wide aerial holds thousands of tiny
+  // buildings the model cannot redraw exactly, while the landing holds a few
+  // large masses it can. So spend the fade where the error is — and the
+  // departure is also where the camera moves fastest, which is where a fade
+  // is cheapest to hide. A path may override either.
+  fadeInMs = 320, fadeOutMs = 80,
 }) {
   const video = document.createElement('video');
   video.className = 'descent-clip';
@@ -89,6 +97,8 @@ export function createDescentPlayer({
 
   /** Hand the view to the clip and take it back, per Session C's sequence. */
   async function playClip(path, src) {
+    const fadeIn = path.fadeInMs ?? fadeInMs;
+    const fadeOut = path.fadeOutMs ?? fadeOutMs;
     video.src = src;
     video.hidden = false;
     video.style.transition = 'none';
@@ -102,16 +112,16 @@ export function createDescentPlayer({
     // Fade up over an identical image: the live canvas is already sitting on
     // the clip's first frame, so this cross-fade has nothing to reveal.
     await new Promise(requestAnimationFrame);
-    video.style.transition = `opacity ${fadeMs}ms linear`;
+    video.style.transition = `opacity ${fadeIn}ms linear`;
     video.style.opacity = '1';
-    await wait(fadeMs + 20);
+    await wait(fadeIn + 20);
 
     await video.play();
     // While the clip is opaque, move the live camera to the destination and
     // leave it there. The hand-back must never wait on a first frame.
     frame(path, 1);
 
-    const endsAt = video.duration - fadeMs / 1000;
+    const endsAt = video.duration - fadeOut / 1000;
     await new Promise((resolve) => {
       const check = () => {
         if (video.currentTime >= endsAt || video.ended) resolve();
@@ -119,8 +129,9 @@ export function createDescentPlayer({
       };
       check();
     });
+    video.style.transition = `opacity ${fadeOut}ms linear`;
     video.style.opacity = '0';
-    await wait(fadeMs + 20);
+    await wait(fadeOut + 20);
     video.pause();
     video.hidden = true;
   }

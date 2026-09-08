@@ -40,6 +40,9 @@ import json
 import os
 import sys
 import time
+import re
+import shutil
+import subprocess
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -84,6 +87,20 @@ DEFAULT_MODEL = {
     "gemini": "veo-3.1-generate-preview",
     "fal": "fal-ai/kling-video/v1.6/pro/image-to-video",
 }
+
+
+def clip_seconds(path):
+    """How long the delivered clip actually is — models round durations up."""
+    try:
+        exe = shutil.which("ffmpeg")
+        if not exe:
+            import imageio_ffmpeg
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+        out = subprocess.run([exe, "-i", str(path)], capture_output=True, text=True).stderr
+        h, m, sec = re.search(r"Duration: (\d+):(\d+):([\d.]+)", out).groups()
+        return round(int(h) * 3600 + int(m) * 60 + float(sec), 2)
+    except Exception:
+        return None
 
 
 def find_video_url(payload):
@@ -177,6 +194,13 @@ def main() -> None:
     ap.add_argument("--prompt", default=None, help="overrides --style")
     ap.add_argument("--seconds", type=float, default=4.0)
     ap.add_argument("--candidates", type=int, default=3)
+    ap.add_argument("--rate-usd-per-second", type=float, default=None,
+                    help="the model's price per second of video, from the "
+                         "provider's pricing page. Recorded with the clip's "
+                         "real duration so the run log answers 'what did that "
+                         "cost?'. Providers do not return a charge, and this "
+                         "script will not invent a rate — the dashboard is "
+                         "always the authority.")
     ap.add_argument("--dry-run", action="store_true",
                     help="print the request that would be sent, spend nothing")
     args = ap.parse_args()
@@ -215,6 +239,7 @@ def main() -> None:
         "prompt": prompt,
         "frameA": args.frame_a,
         "frameB": args.frame_b,
+        "rateUsdPerSecond": args.rate_usd_per_second,
         "candidates": [],
     }
 
@@ -230,11 +255,19 @@ def main() -> None:
         if dest.exists():
             entry["file"] = dest.name
             entry["bytes"] = dest.stat().st_size
+            entry["clipSeconds"] = clip_seconds(dest)
+            if args.rate_usd_per_second and entry["clipSeconds"]:
+                entry["estimatedCostUsd"] = round(
+                    entry["clipSeconds"] * args.rate_usd_per_second, 4)
         log["candidates"].append(entry)
         print(json.dumps(entry))
 
     with open(out / "run-log.json", "w") as f:
         json.dump(log, f, indent=2)
+    total = sum(c.get("estimatedCostUsd", 0) for c in log["candidates"])
+    if total:
+        print(f"estimated spend: ${total:.2f} — check the provider dashboard "
+              f"for the actual charge")
     print(f"wrote {out}/run-log.json")
 
 

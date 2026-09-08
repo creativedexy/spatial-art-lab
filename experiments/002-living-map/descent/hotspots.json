@@ -1,6 +1,6 @@
 {
-  "note": "Places you can descend into. Each path is written in local metres (x east, z south, origin at the Golden Valley box centre) and shares the shape of descent-path.json. `clip` is optional: a hotspot with no clip descends live along the same path, so the map works before a single frame is generated and improves the moment one lands.",
-  "defaults": { "fov": 48, "near": 2, "far": 20000, "size": [1280, 720], "fps": 24, "durationSeconds": 4 },
+  "note": "Places you can descend into. Each path is written in local metres (x east, z south, origin at the Golden Valley box centre) and shares the shape of descent-path.json. `fadeInMs`/`fadeOutMs` are deliberately asymmetric: Session B measured the departure seam of a generated clip at twice the landing seam, so the fade is spent on the departure and the landing is close to a straight cut. `clip` is optional: a hotspot with no clip descends live along the same path, so the map works before a single frame is generated and improves the moment one lands.",
+  "defaults": { "fov": 48, "near": 2, "far": 20000, "size": [1280, 720], "fps": 24, "durationSeconds": 4, "fadeInMs": 320, "fadeOutMs": 80 },
   "hotspots": [
     {
       "id": "doughnut",
