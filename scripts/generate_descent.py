@@ -1,8 +1,15 @@
 """Generate a first/last-frame descent clip for the living map.
 
-Bridges two owned images — frame A rendered from our map scene, frame B a
-ground-level render or photograph — into a continuous video descent using
-Veo 3.1's frames-to-video mode via the Gemini API.
+Bridges two owned images into a continuous video descent using Veo 3.1's
+frames-to-video mode via the Gemini API.
+
+Give it BOTH frames. Session C measured what happens otherwise: the seam
+where the clip hands back to the live map is insensitive to video quality and
+very sensitive to where the clip lands — five metres of drift is a five-fold
+jump in error. So frame B should be rendered from our own scene at the
+destination camera (`scripts/capture_descent_path.py` writes exactly that as
+`descent/frames/*-landing-frameB.png`), not chosen by the generator and not a
+loose photograph. See experiments/002-living-map/descent/seam-report.json.
 
 Usage:
   export GEMINI_API_KEY=...   (never commit the key)

@@ -78,3 +78,107 @@ Intent in one sentence: Re-verify Veo access now that the Gemini credential is i
 **Key worked: no.** The free validation call (`GET /v1beta/models`, no key header or query param added by this test, letting the proxy attach the credential) returned HTTP 401 UNAUTHENTICATED / `ACCESS_TOKEN_TYPE_UNSUPPORTED` — not the 403 "unregistered caller" seen last time, but still not a successful auth. Per the test instructions, generation was not attempted since the free step failed; wall time was 0 s and no billable call was made. Evidence in `descent/keytest/run-log.json`.
 
 One-line note: the credential header mechanism was reconfigured between attempts, from `Authorization: Bearer <key>` to `x-goog-api-key` with no prefix (the format the Generative Language API expects) — this retest confirms the header format change alone hasn't yet produced a working call.
+## Session C — the descent seam, measured
+
+Date: 8 Sep 2026
+Intent in one sentence: Find out whether a viewer can see the cut between the live map and a pre-rendered descent — and if so, what actually causes it.
+Tool/build/model: Three.js scene shared with the map page, headless Chromium for rendering, ffmpeg (VP9 + H.264) for encoding and decoding. No paid generation.
+Input files / source rights: as Session A+ (EA LiDAR OGL v3, OSM footprints ODbL).
+Time / credits used: one cloud session; £0.
+
+### The thing being tested
+
+A descent is two cuts, not one:
+
+```mermaid
+flowchart LR
+  A["live WebGL<br/>camera A"] -->|in-seam| C["pre-rendered clip<br/>4 s"]
+  C -->|out-seam| B["live WebGL<br/>camera B"]
+  style C fill:#4a6f8a,color:#fff
+```
+
+Either cut can betray the trick. So rather than argue about it, I rendered a
+**control clip** — the descent path drawn from the very same scene the map
+runs — and measured both seams. A control has perfect seams by construction,
+so every percentage point that shows up is the *pipeline's* error, not the
+world's, and a generated clip inherits all of it as a floor.
+
+### One variable to explore
+
+How far can the clip's last frame drift from where the live map resumes
+before the hand-back is visible? `?errors=` renders the destination as the
+map would draw it at 0, 5, 10, 20, 40 and 60 m of landing error, and each is
+compared against the clip's decoded final frame.
+
+### What I predicted
+
+That codec quality would be the problem, and we would need an expensive encode.
+
+### What happened
+
+The opposite, decisively. Mean absolute pixel difference, delivery encode
+(VP9, 1.84 MB for 4 s at 1280x720):
+
+| seam | mean | pixels a viewer could see differ |
+|---|---|---|
+| in-seam (clip frame 0 vs live A) | 0.48 % | 0.95 % |
+| out-seam, 0 m landing error | 0.46 % | 1.8 % |
+| out-seam, 5 m | 2.50 % | 12.0 % |
+| out-seam, 10 m | 3.56 % | 17.6 % |
+| out-seam, 60 m | 7.05 % | 31.1 % |
+
+Re-encoding all but losslessly (18.8 MB, ten times the size) moves the 0 m
+case from 0.46 % to 0.38 %. **Codec is not the limiting factor — landing
+accuracy is.** Five metres of drift is a five-fold jump in error and a
+twelve-fold jump in visibly different pixels.
+
+The geometry says why. At the landing the camera sits 300 m from the
+doughnut with a 48° field of view across 1280 px, so one pixel is 0.21 m:
+
+```
+metres per pixel = 2 x 300 m x tan(24°) / 1280 px = 0.209
+5 m of drift  ->  24 px of jump   (obvious)
+0.5 m         ->  2.4 px          (a cross-fade will bury it)
+```
+
+### The consequence for the project
+
+The last frame of a generated descent cannot be left to the generator's
+judgement — it has to be *given* to it. Veo's frames-to-video mode takes a
+last-frame anchor, and that anchor must be rendered from our own scene at
+exactly camera B, which `scripts/capture_descent_path.py` now does as a
+by-product. Landing on a photograph of the real place is still possible, but
+it is a separate, deliberate cut, not this hand-back — or the photograph has
+to be registered into the scene first.
+
+### Saved outputs
+
+Source: `experiments/002-living-map/descent/` — `descent-path.json` (the path,
+shared by every renderer of it), `path.js`, `seam-test/` (the page),
+`clips/descent-control.webm`, `seam-report.json` (the numbers above).
+Rebuild everything with `python3 scripts/capture_descent_path.py`.
+Also saved: `descent/frames/gv-doughnut-landing-frameB.png` — the destination
+rendered from the live scene at camera B. That is the last-frame anchor
+Session B needs, so the descent no longer waits on a photograph of the place.
+Preview: `exports/002-living-map-descent-sheet-v001.png`
+
+### Review (Session C)
+
+What works: the hand-off itself. Serve the folder, open
+`descent/seam-test/index.html`, press **Run descent**, and the map descends
+and hands back with nothing to see — then drag *landing error* to 5 m and
+press **Flip** to watch it fall apart.
+What I can now change without AI: path endpoints, easing, clip length, fade
+duration, encode settings — all in one JSON file and one script.
+One failure worth keeping: the first version of this test measured the seams
+inside the browser and reported a 6.8 % out-seam. It was measuring nothing of
+the kind — `seeked` fires when the decoder has moved, not when a frame has
+been *painted*, so headless Chromium kept handing `drawImage` the previous
+frame and the test compared the clip's opening frame against the destination.
+Two lessons: a measurement that surprises you deserves a second, independent
+route before it becomes a finding; and the render is bit-for-bit reproducible
+(the refactor onto a shared `scene.js` changed exactly zero pixels), which is
+what makes offline comparison trustworthy in the first place.
+Next 20-minute experiment: Session B proper — same path, but the middle four
+seconds generated by Veo from our own frame A and frame B, then re-run this
+measurement and compare against the control's floor.

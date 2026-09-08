@@ -33,3 +33,10 @@ venv/
 *.mp4
 *.exr
 *.ply
+
+# Descent capture intermediates — all reproducible with
+# scripts/capture_descent_path.py. The delivery WebM the seam test plays IS
+# tracked (it is the artefact under test); the 96 source PNGs, the near-
+# lossless reference encode and the MP4 viewing copy are not.
+experiments/002-living-map/descent/path-frames/
+experiments/002-living-map/descent/clips/*-hq.webm

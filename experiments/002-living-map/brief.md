@@ -1,6 +1,6 @@
 # 002 — Living map, Sprint 1
 
-Status: ready to start. Source plan: [the living map plan](../../plans/living-map-plan.md). Inspiration: [Explore Primland](https://explore.ownprimland.com/) — study the feeling of the map and the hotspot transitions, not their assets.
+Status: Session A done (terrain), Session A+ done (Golden Valley slice at true scale), Session C done (the seam holds — see the [session log](session-log.md)). Session B is the only one outstanding and is blocked on a `GEMINI_API_KEY` reaching the container. Verdict on the next decision below: **the seam convinces**, on one condition — the clip's last frame must be rendered from our own scene at the destination camera and handed to the generator as its last-frame anchor, because landing accuracy, not video quality, is what makes the join visible. Source plan: [the living map plan](../../plans/living-map-plan.md). Inspiration: [Explore Primland](https://explore.ownprimland.com/) — study the feeling of the map and the hotspot transitions, not their assets.
 
 **Question:** Can real Cheltenham terrain live in the browser, and can a generated video descent play so seamlessly over it that the seam disappears?
 
