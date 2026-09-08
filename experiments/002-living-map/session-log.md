@@ -78,6 +78,18 @@ Intent in one sentence: Re-verify Veo access now that the Gemini credential is i
 **Key worked: no.** The free validation call (`GET /v1beta/models`, no key header or query param added by this test, letting the proxy attach the credential) returned HTTP 401 UNAUTHENTICATED / `ACCESS_TOKEN_TYPE_UNSUPPORTED` — not the 403 "unregistered caller" seen last time, but still not a successful auth. Per the test instructions, generation was not attempted since the free step failed; wall time was 0 s and no billable call was made. Evidence in `descent/keytest/run-log.json`.
 
 One-line note: the credential header mechanism was reconfigured between attempts, from `Authorization: Bearer <key>` to `x-goog-api-key` with no prefix (the format the Generative Language API expects) — this retest confirms the header format change alone hasn't yet produced a working call.
+
+Correction (checked directly, 8 Sep ~15:05 UTC): there is no credential
+injection to reconfigure. The agent proxy documents CA trust and egress
+policy only — it attaches no Gemini credential, and `/__agentproxy/status`
+lists no such accommodation. `GEMINI_API_KEY`, `GOOGLE_API_KEY`,
+`GOOGLE_GENAI_API_KEY` and `FAL_KEY` are all unset in this container too, and
+an uncredentialled `GET /v1beta/models` returns Google's ordinary 401
+`ACCESS_TOKEN_TYPE_UNSUPPORTED` — the 403-then-401 change between attempts is
+Google's own response to no credentials, not evidence of a header being
+attached. Both key tests are therefore the same result: **no key has reached
+any container**, and the only fix is a `GEMINI_API_KEY` saved in the "Play
+area" environment settings, picked up by a session started afterwards.
 ## Session C — the descent seam, measured
 
 Date: 8 Sep 2026
