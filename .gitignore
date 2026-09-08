@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Blender — source .blend files ARE tracked; these are auto-backups
+*.blend1
+*.blend2
+*.blend[0-9]
+/blender_autosave/
+
+# TouchDesigner — source .toe files ARE tracked; these are auto-backups
+Backup/
+*.toe.[0-9]*
+*.tox.[0-9]*
+
+# Renders in progress / scratch
+/tmp/
+*.tmp
+/experiments/**/scratch/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Heavy media — revisit if these start appearing.
+# Finished, selected exports in /exports are tracked deliberately.
+# Raw video captures and large scans are not:
+*.mov
+*.mp4
+*.exr
+*.ply
