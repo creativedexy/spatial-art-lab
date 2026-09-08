@@ -1,0 +1,13 @@
+{
+  "clip": "experiments/002-living-map/descent/fal/candidate-0.mp4",
+  "inSeam": {
+    "meanPercent": 2.793,
+    "peakPercent": 54.1,
+    "visiblePixelsPercent": 17.25
+  },
+  "outSeam": {
+    "meanPercent": 1.427,
+    "peakPercent": 72.5,
+    "visiblePixelsPercent": 6.02
+  }
+}

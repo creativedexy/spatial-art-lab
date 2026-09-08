@@ -26,6 +26,7 @@ Control-clip floor to beat: **in-seam 0.478 %, out-seam 0.464 %**.
 ## Start the session
 
 ```bash
+# on Windows the interpreter is `python`, not `python3`
 git clone https://github.com/creativedexy/spatial-art-lab.git   # or pull
 cd spatial-art-lab
 git checkout claude/maps-generative-video-ia8733

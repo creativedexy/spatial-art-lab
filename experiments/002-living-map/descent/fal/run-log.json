@@ -1,0 +1,17 @@
+{
+  "startedUtc": "2026-09-08T15:24:54.040030+00:00",
+  "provider": "fal",
+  "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
+  "style": "clay",
+  "prompt": "Smooth continuous aerial descent. The camera flies forward and down from the high aerial view in the first frame, easing into the exact position and framing of the last frame. Terrain and buildings stay rigid and consistent; no new structures appear; correct parallax; one unbroken shot, no cuts. No people, no vehicles, no text. Architectural white model: matte off-white buildings with no windows or textures, soft pale green terrain, clean studio lighting, flat even shadows. Not photorealistic, no photographic detail, no foliage, no signage.",
+  "frameA": "experiments/002-living-map/descent/frames/gv-doughnut-aerial-frameA.png",
+  "frameB": "experiments/002-living-map/descent/frames/gv-doughnut-landing-frameB.png",
+  "candidates": [
+    {
+      "index": 0,
+      "seconds": 239.5,
+      "file": "candidate-0.mp4",
+      "bytes": 6209897
+    }
+  ]
+}
