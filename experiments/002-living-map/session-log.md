@@ -69,3 +69,12 @@ Tool/build/model: attempted `veo-3.1-fast-generate-preview` via `scripts/generat
 **Key worked: no.** `GEMINI_API_KEY` was not present in the freshly provisioned container's environment, so the variable set in the claude.ai environment settings did not propagate. The free validation (`GET /v1beta/models`) confirmed it independently: with no key header Google returned 403 "unregistered caller" (the proxy injected nothing), and a placeholder header was forwarded verbatim and rejected with 400 API_KEY_INVALID. The generation script exited before any billable call ("GEMINI_API_KEY is not set"), so generation wall time was 0 s and cost was zero. Evidence in `descent/keytest/run-log.json`.
 
 Fix to try: re-save the key in the environment settings and start a fresh session — env vars are read at container start, and this container (provisioned 8 Sep 13:14 UTC) never received it.
+
+## Session B key test — retry after credential fix
+
+Date: 8 Sep 2026
+Intent in one sentence: Re-verify Veo access now that the Gemini credential is injected by the network proxy as an `x-goog-api-key` header rather than exposed as an env var.
+
+**Key worked: no.** The free validation call (`GET /v1beta/models`, no key header or query param added by this test, letting the proxy attach the credential) returned HTTP 401 UNAUTHENTICATED / `ACCESS_TOKEN_TYPE_UNSUPPORTED` — not the 403 "unregistered caller" seen last time, but still not a successful auth. Per the test instructions, generation was not attempted since the free step failed; wall time was 0 s and no billable call was made. Evidence in `descent/keytest/run-log.json`.
+
+One-line note: the credential header mechanism was reconfigured between attempts, from `Authorization: Bearer <key>` to `x-goog-api-key` with no prefix (the format the Generative Language API expects) — this retest confirms the header format change alone hasn't yet produced a working call.
