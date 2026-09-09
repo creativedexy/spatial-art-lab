@@ -551,3 +551,132 @@ re-run `scripts/capture_descent_path.py`. The seam has been measured against
 a white model; measuring it again against a world with foliage and roof
 detail tests Session B's finding — that the seam is driven by detail density
 — on our own control clip, for free.
+
+## Session G — adoption, and re-measuring the seam against a real place
+
+Date: 9 Sep 2026
+Intent in one sentence: Move Phases 1–3 into the map page itself, re-render the descent anchors, and find out what a detailed world does to a seam that was measured on a white model.
+Tool/build/model: Three.js, headless Chromium capture, ffmpeg, Playwright, no paid generation.
+
+### One variable to explore
+
+Session C measured the hand-off on a clay model and concluded that codec
+quality barely matters while landing accuracy is everything. Session B, on a
+generated clip, found the seam is driven by **detail density**. Adopting three
+phases of surface detail into the world is the experiment that tests both at
+once, for free, on a control clip that is perfect by construction.
+
+### What happened
+
+`golden-valley/scene.js` now exports `buildWorld({ renderer })` and the map
+page, the seam test and the lookdev harness all call it. `look.js` moved out
+of `lookdev/` and into the world; `lookdev/` is now purely the comparison
+harness that makes the before-and-after sheets, and it builds its earlier
+states from the same parts with one pass left out rather than from a
+differently-built world.
+
+Then `scripts/capture_descent_path.py` re-rendered all 96 frames and the six
+landing errors, and the numbers moved a long way:
+
+| | white model | land cover, trees, roofs |
+|---|---|---|
+| in-seam, perfect landing | 0.478 % | 0.704 % |
+| out-seam, perfect landing | 0.464 % | 0.940 % |
+| out-seam, 5 m of drift | 2.496 % | 7.736 % |
+| out-seam, 10 m of drift | 3.559 % | 8.997 % |
+| delivery clip, crf 24 | 1.84 MB | 5.09 MB |
+
+**Session B's detail-density finding is confirmed on our own control clip.**
+Five metres of drift used to cost 2.5 % and now costs 7.7 % — landing accuracy
+matters about three times as much as it did, because there is three times as
+much detail to be wrong about.
+
+**Codec quality changed less than it looks.** The delivery encode now sits
+0.37 points above the near-lossless one where it used to sit 0.08 above, so
+absolute codec error more than quadrupled. But it quadrupled against a
+landing penalty that tripled, so the ratio survives — and measuring the whole
+curve settled it:
+
+```
+  crf 24   5.09 MB   in 0.644 %   out 0.781 %
+  crf 28   3.84 MB   in 0.670 %   out 0.865 %
+  crf 32   2.87 MB   in 0.704 %   out 0.940 %
+  crf 36   2.05 MB   in 0.756 %   out 1.028 %
+```
+
+Halving the download costs 0.16 of a percentage point where five metres of
+drift costs seven. **Bitrate is still not what breaks a hand-off.** The
+delivery encode moved to crf 32.
+
+### The bug the adoption exposed, which was there all along
+
+The clip stopped playing. `test_hotspot_flow.py` had been failing two of its
+eight checks for two days and I had been writing it off as "a container
+flake". It was two real bugs, and the heavier world only made them visible.
+
+1. **The clip was never preloaded.** `video.preload = 'auto'` was set at
+   construction, but `video.src` was only assigned when a descent started, so
+   there was nothing to preload. At 1.8 MB nobody noticed; at 5 MB the clip
+   took seven seconds to become playable, the player's twelve-second stall
+   guard fired, and the map quietly fell back to flying the path live — doing
+   exactly what it was designed to do, which is why it never looked broken.
+   The player now warms the HTTP cache for every hotspot's clip at
+   `rel="prefetch"` priority as soon as the map loads, and loading has its own
+   budget separate from playing, because "the network is slow" and "the file
+   is corrupt" are different failures that were sharing one number.
+2. **The test was waiting on the clock, not on the world.** It slept 2,600 ms
+   and assumed the clip would be up. The descent is driven by
+   `requestAnimationFrame`, and this container renders through software WebGL
+   at *seconds per frame* — a 900 ms fly-in can take half a minute of wall
+   time. Every fixed `wait_for_timeout` was really measuring the renderer.
+   Waits are on state now, with long timeouts, so a slow renderer costs
+   patience rather than a false failure.
+
+All eight checks pass, for the first time in this container.
+
+### The measurement I nearly reported and should not have
+
+Load time looked like it had doubled: 6.6 s to first frame before adoption,
+12.8 s after. It had not. Both numbers were the page's own render loop —
+3.9 seconds per frame under software WebGL — being counted inside the
+measurement. Timing the build with no renderer in the loop:
+
+```
+   805 ms   buildScene, flat buildings (the old world)
+   764 ms   buildScene, terrain only
+   216 ms   buildBuildings — 4,033 roofs and five material families
+     2 ms   applyLook
+    69 ms   applyLandCover
+    34 ms   loadTrees — 9,181 instances
+```
+
+The whole world builds in 1.08 s against the old 0.81 s. Three phases of
+detail cost 280 ms, not six seconds. A benchmark that shares a thread with a
+renderer measures the renderer.
+
+### Saved outputs
+
+Source: `experiments/002-living-map/golden-valley/scene.js` (`buildWorld`),
+`descent/player.js`, `scripts/capture_descent_path.py`.
+Numbers: `experiments/002-living-map/descent/seam-report.json`.
+Anchors: `descent/frames/*.png` re-rendered from the current world — a
+generated descent bought against the old ones would be a descent of a place
+that no longer exists.
+Preview: `exports/002-living-map-adopted-v001.png`.
+
+### Review (Session G)
+
+What works: one `buildWorld` call, three pages, no way for the live canvas
+and a pre-rendered clip to disagree about the world — which was always the
+reason the scene lived in one module.
+What I can now change without AI: the delivery encode's quality, the stall
+and load budgets, and which phases the lookdev harness leaves out.
+One failure worth keeping: I called a failing test a flake for two days
+because it failed identically on a clean checkout. That was good evidence it
+was not *my* regression and no evidence at all that it was not a bug. "Not
+caused by this change" and "not real" are different findings, and I reported
+the first as though it settled the second.
+
+Next 20-minute experiment: Phase 4's free half — cloud shadows across the
+vale, driven by a scrolling noise texture on the sun's shadow, which costs
+one shader and turns a static render into weather.

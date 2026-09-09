@@ -18,7 +18,9 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
-import { heightAtLocal, sizeX } from './scene.js';
+// Deliberately no import of ./scene.js: scene.js imports this module, and two
+// modules that both await at the top level cannot also import each other.
+// The ground height arrives as a function argument instead.
 
 const url = (f) => new URL(f, import.meta.url).href;
 export const coverMeta = await (await fetch(url('gv-landcover.json'))).json();
@@ -110,7 +112,7 @@ function unitTree(kind) {
   return mergeGeometries(parts);
 }
 
-export async function loadTrees(groundAt = heightAtLocal) {
+export async function loadTrees(groundAt) {
   const buf = await (await fetch(url(coverMeta.treeFile))).arrayBuffer();
   const view = new DataView(buf);
   const stride = 8;
@@ -160,16 +162,17 @@ export async function loadTrees(groundAt = heightAtLocal) {
     // The whole box is in view from altitude and instances share one bounding
     // sphere, so let the shadow pass and the camera see all of it.
     mesh.frustumCulled = false;
-    mesh.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), sizeX);
+    mesh.geometry.boundingSphere = new THREE.Sphere(
+      new THREE.Vector3(), coverMeta.pixels[0]);
     group.add(mesh);
   });
   return group;
 }
 
 /** Everything Phase 2 and the tree half of Phase 3 add, in one call. */
-export async function addLandCover(scene, renderer) {
+export async function addLandCover(scene, renderer, groundAt) {
   const texture = applyLandCover(scene, renderer);
-  const trees = await loadTrees();
+  const trees = await loadTrees(groundAt);
   scene.add(trees);
   return { texture, trees };
 }

@@ -29,8 +29,22 @@ At the destination one pixel is 0.21 m of ground, so five metres of drift is
 a 24 px jump. The generator therefore does not get to choose where the clip
 ends — we hand it the last frame.
 
-Floors to beat: control clip **0.478 % / 0.464 %**; first generated clip
+Floors to beat: control clip **0.704 % / 0.940 %**; first generated clip
 (Kling 1.6 Pro) **2.793 % / 1.427 %**.
+
+⚠️ **Both anchor frames were re-rendered on 9 Sep** and no longer show a white
+model — the map now has surveyed land cover, 9,181 trees, and roofs measured
+from the DSM. Two consequences: pull before you generate, or you will buy an
+expensive descent of a world that no longer exists; and the Kling numbers
+above were measured against the old world, so they are a record rather than a
+comparison. The control clip's own floor moved with the world — the seam is
+worse in absolute terms because there is far more detail to get wrong, and
+**five metres of landing drift now costs 7.7 % where it used to cost 2.5 %**.
+Landing accuracy matters about three times as much as it did.
+
+`--style clay` is therefore probably the wrong default now. The map is no
+longer a clay model, and a clip that arrives matte-white would break the
+hand-back on style. Worth generating one of each and measuring.
 
 ## Start the session
 

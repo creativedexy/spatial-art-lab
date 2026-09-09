@@ -47,6 +47,14 @@ export function createDescentPlayer({
   video.hidden = true;
   container.appendChild(video);
 
+  // How long the clip is allowed to take to become playable, separately from
+  // how long it is then allowed to take to play. They are different failures:
+  // the first is the network, the second is a broken file, and rolling them
+  // into one budget meant a slow download looked like a corrupt clip — which
+  // is exactly what happened the day the world stopped being a white model
+  // and the clip grew with it.
+  const LOAD_BUDGET_MS = 25000;
+
   const mapFov = camera.fov;
   const mapMaxPolar = controls.maxPolarAngle;
   let busy = false;
@@ -103,9 +111,13 @@ export function createDescentPlayer({
     video.hidden = false;
     video.style.transition = 'none';
     video.style.opacity = '0';
-    await new Promise((resolve) => {
-      if (video.readyState >= 2) resolve();
-      else video.addEventListener('loadeddata', resolve, { once: true });
+    await new Promise((resolve, reject) => {
+      if (video.readyState >= 2) return resolve();
+      const timer = setTimeout(
+        () => reject(new Error(`clip did not load in ${LOAD_BUDGET_MS} ms`)),
+        LOAD_BUDGET_MS);
+      video.addEventListener('loadeddata', () => { clearTimeout(timer); resolve(); },
+                             { once: true });
     });
     video.currentTime = 0;
 
@@ -154,7 +166,10 @@ export function createDescentPlayer({
         // Guard the wall clock as well as the exceptions: a clip that stalls
         // rather than fails would otherwise leave the viewer hanging in the
         // sky for ever.
-        const budget = (path.durationSeconds + 8) * 1000;
+        // Loading is the slow half now: a descent of a world with foliage
+        // and roofs costs 2.9 MB where the white model cost 1.8 MB, so the
+        // budget has to cover arriving as well as playing.
+        const budget = LOAD_BUDGET_MS + (path.durationSeconds + 6) * 1000;
         await Promise.race([
           playClip(path, new URL(hotspot.clip, clipBase).href),
           wait(budget).then(() => { throw new Error(`clip stalled after ${budget} ms`); }),
@@ -219,6 +234,22 @@ export function createDescentPlayer({
   return {
     descend,
     returnToMap,
+    /**
+     * Warm the HTTP cache for every clip, at idle priority, so that clicking
+     * a place does not then mean waiting for five megabytes. `prefetch` and
+     * not `preload`: the world's own data has to arrive first, and a descent
+     * nobody clicks should cost them nothing but spare bandwidth.
+     */
+    prefetchClips(hotspots) {
+      for (const h of hotspots) {
+        if (!h.clip) continue;
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.as = 'video';
+        link.href = new URL(h.clip, clipBase).href;
+        document.head.appendChild(link);
+      }
+    },
     get busy() { return busy; },
     get inside() { return here; },
     /** Keep the descent framing correct when the window changes shape. */

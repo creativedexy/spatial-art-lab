@@ -10,9 +10,11 @@
 //   a blue clear colour ->  a graded sky the fog agrees with
 //   one green blanket   ->  slope and height shading with warmth in it
 //
-// Kept separate from the map page on purpose: adopting it means re-rendering
-// the descent anchors and the control clip, because the seam measurements
-// compare pixels and every one of these changes them.
+// Proved in lookdev/ first and adopted here once the roofs landed, because
+// adopting it means re-rendering the descent anchors and the control clip —
+// the seam measurements compare pixels and every one of these changes them.
+// Doing that once for three phases rather than three times is the whole
+// reason this lived apart for two days.
 
 import * as THREE from 'three';
 
@@ -96,7 +98,7 @@ function regradeTerrain(mesh) {
 }
 
 /**
- * Re-light and re-grade a scene built by ../golden-valley/scene.js.
+ * Re-light and re-grade a scene built by ./scene.js.
  * `extent` is the half-width in metres the shadow camera must cover.
  * `grade` colours the terrain by height and slope; turn it off when a land
  * cover image is supplying the ground colour instead, or the two multiply.

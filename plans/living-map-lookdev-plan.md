@@ -181,7 +181,7 @@ If a pitch date lands, Phase 5 jumps the queue: a client will forgive a
 plain-looking map that shows *their scheme*, and will not forgive a beautiful
 map that does not.
 
-## The adoption debt — now due
+## The adoption debt — paid
 
 Phases 1–3 all live in `experiments/002-living-map/lookdev/`, and the map page
 still runs the old flat look. That was deliberate, not neglect: the descent
@@ -196,13 +196,43 @@ and `height` are recomputed and asserted identical, and the script refuses to
 write if any of the 4,033 disagree. So the map page renders exactly what it
 rendered yesterday, and the seam numbers still stand.
 
-Adoption is now one job: move the `applyLook` / `addLandCover` /
-`buildBuildings` calls into `golden-valley/scene.js`, re-run
-`scripts/capture_descent_path.py`, and re-measure the seam. About five
-minutes of compute, free.
+Done. `golden-valley/scene.js` now exports `buildWorld({ renderer })`, and the
+map page, the seam test and the lookdev harness all call it — one world, so
+the live canvas and a pre-rendered descent can never disagree about what the
+place looks like. `look.js` moved into `golden-valley/` with it; lookdev/ is
+now purely the comparison harness that makes the before-and-after sheets.
+
+Re-measuring the seam was the interesting part:
+
+| | white model | with land cover, trees and roofs |
+|---|---|---|
+| perfect landing | 0.464 % | 0.940 % |
+| 5 m of drift | 2.496 % | 7.736 % |
+| 10 m of drift | 3.559 % | 8.997 % |
+| delivery clip at crf 24 | 1.84 MB | 5.09 MB |
+
+Session B's finding — that the seam is driven by **detail density** — was
+made on a generated clip and is now confirmed on our own control clip, which
+is perfect by construction. Landing accuracy matters about three times as
+much as it did.
+
+Codec quality was the other thing that changed, and it changed less than it
+looks. The delivery encode now sits 0.37 points above the near-lossless one
+where it used to sit 0.08 above, so codec error more than quadrupled — but
+against a landing penalty that tripled, so the ratio holds. Measuring the
+whole curve settled it: crf 32 halves the download to 2.87 MB for 0.16 of a
+point at the seam, where five metres of drift costs seven. **Bitrate is still
+not what breaks a hand-off**, and the delivery encode moved to crf 32.
 
 ## Immediate next step
 
-Adopt Phases 1–3 into the map page and re-render the descent anchors in one
-pass. Then Phase 4 — the living half — which is the first phase that needs a
-decision from you rather than a dataset.
+Phase 4 — the living half — which is the first phase that needs a decision
+from you rather than a dataset: birds, cloud shadows, wind and water are free
+and mechanical, but typography, palette, the opening move and sound are brand
+direction, and that is yours.
+
+Phase 6's generated descents also became newly worth doing, and newly urgent
+to re-run: both anchor frames were re-rendered on 9 Sep, so the descent a
+generator would now produce is a descent of a real-looking place rather than
+of a clay model. The Kling clip in `descent/fal/` is a record of the old
+world, not a comparison against this one.

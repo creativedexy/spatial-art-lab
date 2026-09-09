@@ -107,8 +107,16 @@ def encode(spec):
     CLIPS.mkdir(parents=True, exist_ok=True)
     out = {}
     jobs = [
-        # delivery: what a viewer would actually stream
-        ("descent-control.webm", ["-c:v", "libvpx-vp9", "-crf", "24", "-b:v", "0",
+        # Delivery: what a viewer would actually stream. crf 32 rather than
+        # 24, measured rather than assumed — once the world had foliage and
+        # roofs, crf 24 cost 5.09 MB for four seconds, and the whole curve is
+        # this flat:
+        #     crf 24  5.09 MB   in 0.644%  out 0.781%
+        #     crf 32  2.87 MB   in 0.704%  out 0.940%
+        # Halving the download costs 0.16 of a percentage point at the seam,
+        # where five metres of landing drift costs seven. Bitrate is still not
+        # what breaks a hand-off.
+        ("descent-control.webm", ["-c:v", "libvpx-vp9", "-crf", "32", "-b:v", "0",
                                   "-row-mt", "1", "-pix_fmt", "yuv420p"]),
         # reference: codec error pushed as close to zero as VP9 goes
         ("descent-control-hq.webm", ["-c:v", "libvpx-vp9", "-lossless", "1",

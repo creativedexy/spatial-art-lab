@@ -1,20 +1,20 @@
-// Living map, Sprint 1 vertical slice: Golden Valley / west Cheltenham at
-// full 1 m LiDAR resolution, true scale, with every OSM building footprint
-// extruded to its DSM-minus-DTM measured height. White-model archviz look;
-// GCHQ's doughnut picked out in slate. The world itself is built by
-// ./scene.js, which the descent seam test shares.
+// Living map, Golden Valley / west Cheltenham at full 1 m LiDAR resolution,
+// true scale: every OSM building footprint extruded to its DSM-minus-DTM
+// measured height, roofed from the same survey, standing on surveyed land
+// cover under a low afternoon sun. The world itself is built by ./scene.js,
+// which the descent seam test shares — one module, so the live canvas and a
+// pre-rendered descent can never disagree about what the place looks like.
 //
 // Clicking a place descends into it — the mechanism Session C measured,
 // driven by ../descent/hotspots.json.
 
 import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
-import { buildScene, heightAtLocal, toLocal, sizeX, sizeZ } from './scene.js';
+import { buildWorld, heightAtLocal, toLocal, sizeX, sizeZ } from './scene.js';
 import { loadHotspots } from '../descent/path.js';
 import { createDescentPlayer } from '../descent/player.js';
 
 const app = document.getElementById('app');
-const scene = buildScene();
 
 // ?cam=x,y,z&look=x,z frames a specific shot (used to render descent
 // endpoints); ?clean=1 hides every overlay for capture.
@@ -32,6 +32,9 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 app.appendChild(renderer.domElement);
+
+// After the renderer, because tone mapping and the shadow map live on it.
+const scene = await buildWorld({ renderer });
 
 // --- controls ---------------------------------------------------------------
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -62,6 +65,8 @@ const player = createDescentPlayer({
   clipBase: new URL('../descent/', import.meta.url),
   onState: (state, hotspot) => render(state, hotspot),
 });
+// Start the clips arriving now, quietly, rather than when someone clicks.
+player.prefetchClips(hotspots);
 
 for (const h of hotspots) {
   const [x, z] = toLocal(h.e, h.n);

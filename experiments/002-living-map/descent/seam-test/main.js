@@ -15,7 +15,7 @@
 //   (none)      interactive: run it, flip between clip and live, judge by eye
 
 import * as THREE from 'three';
-import { buildScene, heightAtLocal } from '../../golden-valley/scene.js';
+import { buildWorld, heightAtLocal } from '../../golden-valley/scene.js';
 import { PATH, frameCount, cameraAt, makeCamera } from '../path.js';
 
 const params = new URLSearchParams(location.search);
@@ -23,7 +23,6 @@ const capturing = params.has('capture');
 
 const frameEl = document.getElementById('frame');
 const video = document.getElementById('clip');
-const scene = buildScene();
 const camera = makeCamera();
 
 // ?clip=name.webm swaps which encode is under test, so codec error can be
@@ -32,6 +31,10 @@ if (params.has('clip')) video.src = `../clips/${params.get('clip')}`;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 frameEl.appendChild(renderer.domElement);
+// The world is built from the renderer, so it cannot be constructed until
+// the renderer exists — and everything below renders, so it must be awaited
+// here rather than anywhere later.
+const scene = await buildWorld({ renderer });
 const render = () => renderer.render(scene, camera);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 

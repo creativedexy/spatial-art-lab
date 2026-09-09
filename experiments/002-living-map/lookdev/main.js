@@ -1,15 +1,26 @@
-// The same world as the map page, lit and graded. Takes the same ?cam / ?look
-// / ?clean parameters so any shot can be rendered both ways and compared.
+// The comparison harness.
+//
+// Phases 1–3 now live in ../golden-valley/scene.js and the map page renders
+// them, so this page's job has changed: it is no longer where the look is
+// developed, it is where any two states of it can be photographed from one
+// identical camera. Every before-and-after sheet in exports/ was made here.
+//
+//   (nothing)    the world as the map renders it
+//   ?flatroofs   land cover and trees, buildings back to flat extrusions
+//   ?bare        Phase 1 only — the same light on a blank green ground
+//
+// Takes the same ?cam / ?look / ?clean parameters as the map page, so a shot
+// can be rendered in any of the three states and diffed.
 
 import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
-import { buildScene, heightAtLocal, toLocal, sizeX, sizeZ } from '../golden-valley/scene.js';
-import { applyLook } from './look.js';
+import {
+  buildScene, buildWorld, heightAtLocal, toLocal, sizeX, sizeZ,
+} from '../golden-valley/scene.js';
+import { applyLook } from '../golden-valley/look.js';
 import { addLandCover } from '../golden-valley/landcover.js';
-import { buildBuildings } from '../golden-valley/buildings.js';
 
 const app = document.getElementById('app');
-const scene = buildScene();
 
 const params = new URLSearchParams(location.search);
 const camPos = (params.get('cam') ?? '-750,520,1050').split(',').map(Number);
@@ -25,23 +36,19 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 app.appendChild(renderer.domElement);
 
-// ?bare is the state before Phase 2 — the same light on a blank green ground.
-// ?flatroofs keeps the land cover but leaves the buildings as extrusions, so
-// the roof pass can be judged on its own from an identical camera.
 const bare = params.has('bare');
-if (!bare && !params.has('flatroofs')) {
-  // Swap the flat-topped extrusions for measured roofs and material
-  // families. Done before applyLook, which walks scene.children and would
-  // otherwise be re-lighting meshes that are about to be thrown away.
-  for (const child of [...scene.children]) {
-    if (child.isMesh && child.material && !child.material.vertexColors) {
-      scene.remove(child);
-    }
-  }
-  scene.add(buildBuildings());
+const flatRoofs = params.has('flatroofs');
+let scene;
+if (bare || flatRoofs) {
+  // The earlier states are assembled by hand from the same parts, so a
+  // comparison is never against a differently-built world — only against the
+  // same world with one pass left out.
+  scene = buildScene();
+  applyLook(scene, renderer, { grade: bare });
+  if (flatRoofs) await addLandCover(scene, renderer, heightAtLocal);
+} else {
+  scene = await buildWorld({ renderer });
 }
-applyLook(scene, renderer, { grade: bare });
-if (!bare) await addLandCover(scene, renderer);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };

@@ -8,6 +8,9 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
+import { applyLook } from './look.js';
+import { addLandCover } from './landcover.js';
+import { buildBuildings } from './buildings.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 
@@ -58,8 +61,12 @@ function footprintGeometry(b) {
 }
 
 // `segments` trades terrain fidelity for build time: 1000 is ~2 m per vertex
-// over the 2 km box, which is what the map page uses.
-export function buildScene({ segments = 1000 } = {}) {
+// over the 2 km box, which is what the map page uses. `flatBuildings` draws
+// every footprint as one white extrusion at its median height, which is what
+// the world looked like before roofs were measured — kept so the lookdev page
+// can render the before of a before-and-after, and skipped by buildWorld so
+// 4,033 buildings are not built twice.
+export function buildScene({ segments = 1000, flatBuildings = true } = {}) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xdfe9ec);
   scene.fog = new THREE.Fog(0xdfe9ec, 2500, 7000);
@@ -90,23 +97,46 @@ export function buildScene({ segments = 1000 } = {}) {
     vertexColors: true, roughness: 1, metalness: 0,
   })));
 
-  const gchq = [];
-  const rest = [];
-  for (const b of buildings) {
-    (b.name === 'Government Communications Headquarters' ? gchq : rest)
-      .push(footprintGeometry(b));
+  if (flatBuildings) {
+    const gchq = [];
+    const rest = [];
+    for (const b of buildings) {
+      (b.name === 'Government Communications Headquarters' ? gchq : rest)
+        .push(footprintGeometry(b));
+    }
+    scene.add(new THREE.Mesh(mergeGeometries(rest), new THREE.MeshStandardMaterial({
+      color: 0xf3efe4, roughness: 0.95, // masterplan white model
+    })));
+    scene.add(new THREE.Mesh(mergeGeometries(gchq), new THREE.MeshStandardMaterial({
+      color: 0x4a6f8a, roughness: 0.8,
+    })));
   }
-  scene.add(new THREE.Mesh(mergeGeometries(rest), new THREE.MeshStandardMaterial({
-    color: 0xf3efe4, roughness: 0.95, // masterplan white model
-  })));
-  scene.add(new THREE.Mesh(mergeGeometries(gchq), new THREE.MeshStandardMaterial({
-    color: 0x4a6f8a, roughness: 0.8,
-  })));
 
   const sun = new THREE.DirectionalLight(0xfff2dd, 2.4);
   sun.position.set(-1500, 1800, -700);
   scene.add(sun);
   scene.add(new THREE.HemisphereLight(0xd3e4ee, 0x93a183, 1.15));
 
+  return scene;
+}
+
+/**
+ * The world as it is meant to be seen: Phase 1's light, Phase 2's land cover
+ * and trees, Phase 3's roofs and materials.
+ *
+ * Every page that shows the map must call this and nothing else. The descent
+ * hands a pre-rendered clip to a live canvas and the join is measured in
+ * pixels, so a page that built the world even slightly differently would open
+ * a seam that no amount of fading could close — which is exactly why the
+ * world has lived in one module since the beginning.
+ *
+ * Needs the renderer, because tone mapping and the shadow map are properties
+ * of the renderer rather than of the scene, so it must be constructed first.
+ */
+export async function buildWorld({ renderer, segments = 1000 } = {}) {
+  const scene = buildScene({ segments, flatBuildings: false });
+  scene.add(buildBuildings());
+  applyLook(scene, renderer, { grade: false });
+  await addLandCover(scene, renderer, heightAtLocal);
   return scene;
 }
