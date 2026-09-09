@@ -63,7 +63,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # and garden however hard it is filtered. The 20th percentile puts them at
 # 4.9 m, which is right.
 EAVES_PCT, RIDGE_PCT = 20, 97
-MIN_PITCH = 1.4          # metres of ridge above eaves before we call it pitched
+MIN_PITCH = 1.2          # metres of ridge above eaves before we call it pitched
 MAX_SPAN = 22.0          # metres; a wider span than this is a shed, not a roof
 # Anything this low inside a footprint is the ground leaking in at the wall
 # line, where a diagonal footprint rasterised on a 1 m grid always mixes roof
@@ -72,7 +72,40 @@ MAX_SPAN = 22.0          # metres; a wider span than this is a shed, not a roof
 # building is longest — which is how a measurement of roofs becomes a
 # measurement of footprint shape.
 GROUND_LEAK = 1.5
-GABLE_RATIO = 1.6        # one direction this much steeper than the other
+GABLE_RATIO = 1.4        # one direction this much steeper than the other
+# Both fitted against OSM's 832 surveyed roof:shape labels — see --calibrate,
+# which is how they stopped being guesses. Two things had to be got right
+# about *how* to fit them.
+#
+# Plain accuracy is a trap: 84 % of labelled pitched roofs are gabled, so a
+# rule that always says "gable" scores 84 % and builds a town without a
+# single hipped roof. Balanced accuracy — the mean of the per-class recalls —
+# is the honest score, and on it the tent test peaks at only 65 %. A 1 m
+# raster can tell pitched from flat and can find the ridge direction; telling
+# a gable from a hip means reading the last two or three metres at each end
+# of the roof, which is two or three pixels.
+#
+# So the ratio is not set to the balanced-accuracy peak. At 3.4 the call is
+# 65 % right per building but puts 48 % hipped roofs in a town that is 16 %
+# hipped — every terrace in Hesters Way wrongly hipped, which is what you
+# would actually see. At 1.4 the call is 59 % right and the *share* comes out
+# at 16 %, matching the survey. When the per-item call is barely better than
+# a coin toss, get the population right. And on the 874 footprints where OSM
+# states the shape, none of this applies: the survey wins.
+#
+# MIN_PITCH sits on a plateau between 0.8 and 1.2 that the labels cannot
+# resolve, because people tag the roofs of houses and not of garages — so the
+# labelled set cannot see the flat sheds a lower threshold would wrongly
+# pitch. On a plateau, take the conservative end.
+
+# OSM's own word for the roof, where a human has put one there. 874 of the
+# 4,033 footprints in this box carry roof:shape, and a survey beats an
+# inference: these are used directly and the DSM only fills the gaps.
+OSM_SHAPE = {
+    "gabled": "gable", "hipped": "hip", "half-hipped": "hip",
+    "pyramidal": "hip", "round": "hip", "dome": "hip", "onion": "hip",
+    "flat": "flat", "skillion": "flat", "sawtooth": "flat",
+}
 
 # The material families. Walls stay in a restrained off-white range on
 # purpose — the map's whole proposition is a measured architectural model,
@@ -186,10 +219,83 @@ def erode(mask):
     return m
 
 
+def score(ev, min_pitch, gable_ratio):
+    """Agreement with OSM's labels for one pair of thresholds.
+
+    Returns plain accuracy *and* balanced accuracy — the mean of the three
+    per-class recalls — because plain accuracy is a trap here. Four in five
+    labelled roofs are gabled, so a rule that simply always says "gable"
+    scores 79 % and builds a town with no hipped roofs in it.
+    """
+    labels = ("gable", "hip", "flat")
+    hit = {l: 0 for l in labels}
+    seen = {l: 0 for l in labels}
+    for e in ev:
+        if not e["osm"]:
+            continue
+        seen[e["osm"]] += 1
+        if e["rise"] < min_pitch or e["span"] > MAX_SPAN:
+            ours = "flat"
+        else:
+            ours = "gable" if e["hi"] > gable_ratio * max(e["lo"], 1e-6) else "hip"
+        if ours == e["osm"]:
+            hit[e["osm"]] += 1
+    n = sum(seen.values())
+    plain = sum(hit.values()) / n if n else 0
+    recalls = [hit[l] / seen[l] for l in labels if seen[l]]
+    return plain, sum(recalls) / len(recalls), n
+
+
+def agree(ev):
+    """What the shipped thresholds score, and where they go wrong."""
+    labels = ["gable", "hip", "flat"]
+    conf = {(a, b): 0 for a in labels for b in labels}
+    for e in ev:
+        if e["osm"]:
+            conf[(e["osm"], e["guessed"])] += 1
+    n = sum(conf.values())
+    if not n:
+        return
+    hit = sum(conf[(x, x)] for x in labels)
+    print(f"\nchecked against {n} surveyed roof:shape labels: "
+          f"{hit / n:.0%} agreement before OSM is allowed to overrule")
+    print("%12s" % "OSM v ours" + "".join("%8s" % l for l in labels))
+    for a in labels:
+        print("%12s" % a + "".join("%8d" % conf[(a, p)] for p in labels))
+
+
+def calibrate(ev):
+    ratios = (1.2, 1.6, 2.0, 2.6, 3.4, 4.5, 6.0)
+    pitches = (0.8, 1.0, 1.2, 1.4, 1.6)
+    labelled = sum(1 for e in ev if e["osm"])
+    print(f"sweeping against {labelled} surveyed labels")
+    print("balanced accuracy — the mean of the three per-class recalls. Plain "
+          "accuracy is\nuseless here: 79 % of labelled roofs are gabled, so "
+          "'always gable' scores 79 %\nand builds a town without a single "
+          "hipped roof in it.\n")
+    print("%10s" % "MIN_PITCH" + "".join("%9.1f" % g for g in ratios))
+    best = None
+    for mp in pitches:
+        row = []
+        for gr in ratios:
+            plain, balanced, _ = score(ev, mp, gr)
+            row.append(balanced)
+            if best is None or balanced > best[0]:
+                best = (balanced, mp, gr, plain)
+        print("%10.1f" % mp + "".join("%8.0f%%" % (v * 100) for v in row))
+    print(f"\nbest balanced: MIN_PITCH {best[1]}, GABLE_RATIO {best[2]} — "
+          f"{best[0]:.0%} balanced, {best[3]:.0%} plain")
+    print("Shipped values are in the constants at the top of this file.")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true",
                     help="measure and report, write nothing")
+    ap.add_argument("--calibrate", action="store_true",
+                    help="sweep the two thresholds against OSM's surveyed "
+                         "roof:shape labels and report the agreement, which "
+                         "is how they stopped being guesses")
     args = ap.parse_args()
 
     out = ROOT / OUT
@@ -206,7 +312,9 @@ def main():
     def px(e, n):
         return (e - E0) * sx, (N1 - n) * sy
 
-    stats = {"gable": 0, "hip": 0, "flat": 0, "ridge_across_long_axis": 0}
+    stats = {"gable": 0, "hip": 0, "flat": 0, "ridge_across_long_axis": 0,
+             "osm_stated": 0, "osm_overruled": 0, "osm_recovered": 0}
+    evidence = []
     families = {}
     rows, index = [], 0
     for b in fetch_footprints():
@@ -285,6 +393,35 @@ def main():
             shape = "gable" if hi > GABLE_RATIO * max(lo, 1e-6) else "hip"
             if span > MAX_SPAN:
                 pitched = False           # too wide to be a roof of this kind
+            evidence.append({"osm": OSM_SHAPE.get(b["tags"].get("roof:shape")),
+                             "rise": ridge - eaves, "lo": lo, "hi": hi,
+                             "span": span, "tag": b["tags"].get("building", "yes"),
+                             "elong": long_side / max(span, 1e-6),
+                             "guessed": shape if pitched else "flat"})
+
+
+        # Where OSM states the shape, take it. The DSM still supplies the
+        # eaves, the ridge and the direction — it is only the gable-or-hip
+        # call that a human standing in the street has already made better
+        # than a 1 m raster can.
+        stated = OSM_SHAPE.get(b["tags"].get("roof:shape"))
+        if stated:
+            stats["osm_stated"] += 1
+            if stated == "flat" and pitched:
+                stats["osm_overruled"] += 1
+                pitched = False
+            elif stated != "flat":
+                if not pitched:
+                    stats["osm_recovered"] += 1
+                    # OSM says pitched and the DSM could not see it — a small
+                    # or shadowed footprint. Take the survey's word and give
+                    # it the median rise for its span rather than nothing.
+                    eaves = max(1.5, h - span * 0.22)
+                    ridge = h + span * 0.11
+                    pitched = True
+                elif stated != shape:
+                    stats["osm_overruled"] += 1
+                shape = stated
 
         if pitched:
             stats[shape] += 1
@@ -323,8 +460,15 @@ def main():
 
     assert index == len(existing), f"{index} rebuilt, {len(existing)} on file"
     pitched = stats["gable"] + stats["hip"]
+    if args.calibrate:
+        calibrate(evidence)
+        return
     print(f"buildings {len(rows)}  gable {stats['gable']}  hip {stats['hip']}"
           f"  flat {stats['flat']}")
+    print(f"roof:shape stated by OSM on {stats['osm_stated']} of them; it "
+          f"overruled our call {stats['osm_overruled']} times and rescued "
+          f"{stats['osm_recovered']} the DSM read as flat")
+    agree(evidence)
     print("ridge runs across the footprint's long axis:",
           stats["ridge_across_long_axis"],
           f"({stats['ridge_across_long_axis'] / max(1, pitched):.1%}) — "

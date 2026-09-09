@@ -32,12 +32,18 @@
   },
   "maskColours": {
     "sky": "#000000",
-    "building": "#d94f3d",
+    "wall": "#d94f3d",
     "tree": "#7ad14f",
     "field": "#3f8f3a",
     "wood": "#1f5f2a",
     "hard": "#9a9a9a",
     "road": "#4a4a4a",
-    "water": "#2d6fb5"
+    "water": "#2d6fb5",
+    "roof:house": "#e8a33d",
+    "roof:terrace": "#b46bd1",
+    "roof:retail": "#7fc4ff",
+    "roof:shed": "#ffe066",
+    "roof:civic": "#ff7bb0",
+    "roof:gchq": "#6d5bd0"
   }
 }

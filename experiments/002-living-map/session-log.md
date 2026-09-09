@@ -1190,3 +1190,109 @@ for twice, looked at once, on every image rung.
 
 Next 20-minute experiment: hand the `building` class from the mask to rung 6
 as a second condition, and see whether the doughnut stops being an earthwork.
+## Session L — material hints, and OSM as a test rather than a hint
+
+Ran in parallel with Session K on a different machine, which is why the
+numbering doubles back. Session K was climbing the ladder while this was
+reading the tags, and the two met at the same place: K's residual failure is
+that the doughnut renders as an earthwork "because we already write a
+`building` class per square metre and did not hand it over", and the mask
+built here now splits roofs by material family ready to be handed over.
+
+Date: 9 Sep 2026
+Intent in one sentence: Take material hints from the OSM tags — the cheap half of "less Blender" — and find out what the tags actually carry.
+Tool/build/model: Python raster work, a threshold sweep against surveyed labels, no paid generation.
+
+### One variable to explore
+
+Whether OSM in this box says enough about materials to be worth reading.
+
+### What happened
+
+It says almost nothing about materials and a great deal that implies them,
+and one of the tags turned out to be a **test** rather than a hint.
+
+```
+  building:material     0     nothing at all
+  roof:material        41     all "roof_tiles"
+  roof:shape          874     ← the gable-or-hip call, surveyed by a human
+  building:levels     687     ← an independent check on the measured eaves
+  surface             577     asphalt, concrete, paving, gravel, unpaved, grass
+  lanes               134     a real carriageway width, and where to paint a line
+```
+
+**`roof:shape` scored Phase 3.** Against those 874 labels the DSM inference
+agreed 70 %, and the shape of the disagreement mattered more than the number.
+Plain accuracy is a trap when 84 % of labelled pitched roofs are gabled: a
+rule that always says "gable" scores 84 % and builds a town without a single
+hipped roof in it. On balanced accuracy — the mean of the per-class recalls —
+the tent test peaks at 65 %, because telling a gable from a hip means reading
+the last two or three metres at each end of a roof, and on a 1 m raster that
+is two or three pixels.
+
+So the threshold is not set to the accuracy peak:
+
+```
+  ratio 3.4   65 % right per building   →  48 % of the town hipped
+  ratio 1.4   59 % right per building   →  16 % of the town hipped
+  surveyed                                 16 %
+```
+
+At the peak, every terrace in Hesters Way comes out hipped, which is what you
+would actually see. **When the per-item call is barely better than a coin
+toss, get the population right.** And on the 874 where OSM states the shape
+none of this applies — the survey wins, overruling us 179 times and rescuing
+34 roofs the DSM had read as flat.
+
+`building:levels` was the happier check, and it needed no threshold at all:
+
+```
+  1 storey    n= 88   median measured eaves  3.1 m
+  2 storeys   n=401                          4.8 m   (2.40 m a storey)
+  3 storeys   n= 94                          7.8 m   (2.60 m a storey)
+  4 storeys   n= 11                         10.4 m   (2.60 m a storey)
+```
+
+About 2.5 m a storey, which is what a British house is — on 594 buildings
+nobody told us about. Session F's choice of the 20th percentile for the eaves
+was a judgement at the time; it is a validated one now.
+
+The rest went into the ground raster. Roads take their width from `lanes`
+where it is tagged and their colour from `surface` — two new classes,
+appended rather than inserted, because the index is written into
+`gv-landclass.png` and a new class in the middle would silently renumber
+every texel already shipped. Carriageways with lanes get a centre line, drawn
+at 2× and left to the downsample to make it as faint as it looks from three
+hundred metres up. And the mask now splits roofs by material family, so a
+segmentation-conditioned model can be told which roof is domestic slate and
+which is profiled metal over a shed.
+
+One thing is not from a tag and says so: **every field is worked in lines**,
+because that is most of what a field looks like from the air. The direction
+is nowhere in OSM, so it comes from the field's own long axis, on the grounds
+that a farmer drives the long way.
+
+### Saved outputs
+
+Source: `scripts/golden_valley_roofs.py` (now with `--calibrate`),
+`scripts/golden_valley_landcover.py`, `experiments/002-living-map/passes/main.js`.
+Preview: `exports/002-living-map-materials-v001.png`.
+Seam re-measured on the changed world: 0.828 % / 0.945 %, unmoved. Both test
+suites pass.
+
+### Review (Session K)
+
+What works: two of the four things I set out to read turned out to grade our
+own work rather than decorate it, and both grades were useful — one bad, one
+good.
+What I can now change without AI: the surface palette, the lane width, the
+marking colour, the field line spacing per class, and the two roof thresholds
+with a sweep to justify them.
+One failure worth keeping: I fitted the roof threshold to plain accuracy
+first, got 80 %, and was pleased — a number that was better precisely because
+the classifier had stopped predicting the minority class at all. It took
+printing the confusion matrix to see that the "improvement" had cut hipped
+roofs from 658 to 392 in a town that has more than that. An accuracy that
+goes up while the output gets worse is the most flattering kind of wrong.
+
+Next 20-minute experiment: whichever way the ladder falls.

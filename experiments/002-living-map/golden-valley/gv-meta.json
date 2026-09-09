@@ -24,14 +24,14 @@
   ],
   "roofs": {
     "note": "eaves and ridge are heights above `base`, in the same units as `height`; `axis` is the ridge bearing in degrees within the local frame (x east, z south), or null for a flat roof. `height` is unchanged and is still what the map page renders. `roof` is \"gable\", \"hip\" or null.",
-    "gable": 2658,
-    "hip": 735,
-    "flat": 640,
+    "gable": 2977,
+    "hip": 571,
+    "flat": 485,
     "families": {
       "house": {
         "wall": "#efe8dc",
         "roof": "#646a72",
-        "count": 2532
+        "count": 2534
       },
       "terrace": {
         "wall": "#e9e1d3",
@@ -41,7 +41,7 @@
       "retail": {
         "wall": "#e6e6e2",
         "roof": "#8f9398",
-        "count": 72
+        "count": 70
       },
       "shed": {
         "wall": "#dedcd5",

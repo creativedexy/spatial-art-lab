@@ -12,7 +12,7 @@
     "farmland": {
       "index": 0,
       "colour": "#7d9460",
-      "coverPercent": 22.92
+      "coverPercent": 22.87
     },
     "meadow": {
       "index": 1,
@@ -22,7 +22,7 @@
     "grass": {
       "index": 2,
       "colour": "#8ca767",
-      "coverPercent": 10.53
+      "coverPercent": 10.55
     },
     "pitch": {
       "index": 3,
@@ -47,7 +47,7 @@
     "residential": {
       "index": 7,
       "colour": "#8d947a",
-      "coverPercent": 31.67
+      "coverPercent": 31.66
     },
     "hardstanding": {
       "index": 8,
@@ -67,12 +67,12 @@
     "path": {
       "index": 11,
       "colour": "#9a9083",
-      "coverPercent": 1.14
+      "coverPercent": 0.88
     },
     "road_minor": {
       "index": 12,
       "colour": "#6f6f6a",
-      "coverPercent": 6.11
+      "coverPercent": 6.1
     },
     "road": {
       "index": 13,
@@ -83,6 +83,16 @@
       "index": 14,
       "colour": "#5f5b54",
       "coverPercent": 0.03
+    },
+    "concrete": {
+      "index": 15,
+      "colour": "#a9a59b",
+      "coverPercent": 0.18
+    },
+    "unpaved": {
+      "index": 16,
+      "colour": "#8d8676",
+      "coverPercent": 0.14
     }
   },
   "treeKinds": {
@@ -90,11 +100,11 @@
     "1": "scrub",
     "2": "hedge"
   },
-  "trees": 9181,
+  "trees": 9216,
   "treesByKind": {
     "0": 6211,
     "1": 352,
-    "2": 2618
+    "2": 2653
   },
   "sources": [
     "OpenStreetMap contributors (ODbL)"

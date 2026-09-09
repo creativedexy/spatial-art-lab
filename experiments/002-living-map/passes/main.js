@@ -154,10 +154,16 @@ const normalMaterial = new THREE.ShaderMaterial({
 // this is the second thing to read it: the mask separates carriageway from
 // pasture from water without a single extra mesh, which is the difference
 // between a mask that says "ground" and one a model can actually condition on.
+// Roofs are split by material family, not lumped as "building": a generator
+// that is told which roof is domestic slate, which is profiled metal over a
+// shed and which is membrane over a retail park can put the right thing on
+// each. That split is the OSM `building` tag, via Phase 3's families.
 const MASK = {
-  sky: 0x000000, building: 0xd94f3d, tree: 0x7ad14f,
+  sky: 0x000000, wall: 0xd94f3d, tree: 0x7ad14f,
   field: 0x3f8f3a, wood: 0x1f5f2a, hard: 0x9a9a9a,
   road: 0x4a4a4a, water: 0x2d6fb5,
+  'roof:house': 0xe8a33d, 'roof:terrace': 0xb46bd1, 'roof:retail': 0x7fc4ff,
+  'roof:shed': 0xffe066, 'roof:civic': 0xff7bb0, 'roof:gchq': 0x6d5bd0,
 };
 const GROUND_CLASS = {
   farmland: 'field', meadow: 'field', grass: 'field', pitch: 'field',
@@ -202,7 +208,12 @@ const maskMaterials = Object.fromEntries(Object.entries(MASK).map(
 function maskMaterialFor(obj) {
   if (obj.parent && obj.parent.name === 'trees') return maskMaterials.tree;
   if (obj.material && obj.material.vertexColors) return groundMaskMaterial;
-  return maskMaterials.building;
+  // buildings.js names its meshes "<family>:wall" and "<family>:roof", which
+  // is the whole reason they are separate meshes rather than one merge.
+  const [family, part] = (obj.name || '').split(':');
+  if (part === 'roof') return maskMaterials[`roof:${family}`] ?? maskMaterials.wall;
+  if (obj.name === 'gchq') return maskMaterials['roof:gchq'];
+  return maskMaterials.wall;
 }
 
 function render() {

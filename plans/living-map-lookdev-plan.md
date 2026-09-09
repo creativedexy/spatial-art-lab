@@ -303,6 +303,50 @@ whole curve settled it: crf 32 halves the download to 2.87 MB for 0.16 of a
 point at the seam, where five metres of drift costs seven. **Bitrate is still
 not what breaks a hand-off**, and the delivery encode moved to crf 32.
 
+## Material hints, and what OSM actually carries
+
+The nearest thing to "less Blender" that is free, and it starts with a
+disappointment: **`building:material` appears zero times in this box** and
+`roof:material` only 41 times. OSM here does not say what anything is made
+of. What it does carry is a great deal that *implies* material, and one thing
+that is better than an implication:
+
+| tag | count | what it buys |
+|---|---|---|
+| `roof:shape` | 874 | the gable-or-hip call, surveyed by a human |
+| `building:levels` | 687 | an independent check on the measured eaves |
+| `surface` | 577 | asphalt, concrete, paving, gravel, unpaved, grass |
+| `lanes` | 134 | a real carriageway width, and where to paint a line |
+
+**`roof:shape` turned out to be a test as much as a hint.** Scored against
+those 874 labels, the Phase 3 DSM inference agreed 70 % of the time — and the
+way it was wrong mattered more than the number. Plain accuracy is a trap when
+84 % of labelled pitched roofs are gabled: a rule that always says "gable"
+scores 84 % and builds a town without a single hipped roof. On balanced
+accuracy the tent test peaks at 65 %, because telling a gable from a hip
+means reading the last two or three metres at each end of a roof, which on a
+1 m raster is two or three pixels.
+
+So the threshold is not set to the accuracy peak. At the peak the call is
+65 % right per building but puts 48 % hipped roofs in a town that is 16 %
+hipped. At the shipped value the call is 59 % right and the *share* comes out
+at 16 %, matching the survey. **When the per-item call is barely better than
+a coin toss, get the population right.** And on the 874 where OSM states the
+shape, none of it applies — the survey wins, overruling us 179 times and
+rescuing 34 roofs the DSM had read as flat.
+
+`building:levels` was the happier check: 2 storeys → 4.8 m of measured eaves,
+3 → 7.8 m, 4 → 10.4 m. About 2.5 m a storey, which is what a British house
+is, on 594 buildings nobody told us about.
+
+The rest went into the ground raster. Roads get their width from `lanes`
+where it is tagged and their colour from `surface`; carriageways with lanes
+get a centre line, drawn at 2× and left to the downsample to make it as faint
+as it actually looks from three hundred metres up. And every field is worked
+in lines, because that is most of what a field looks like from the air — the
+*direction* is not in OSM, so it comes from the field's own shape, on the
+grounds that a farmer drives the long way.
+
 ## The Blender question
 
 > "My idea is that we feed this 3D structure into image and video generators

@@ -32,7 +32,7 @@ all from one camera at one instant, wind off and birds hidden:
 | `<view>-beauty.png` | the map as it renders |
 | `<view>-depth.png` | linear view depth, near white, far black, range fitted to the frame |
 | `<view>-normal.png` | world-space normals |
-| `<view>-mask.png` | flat colour by class — building, road, water, field, wood, tree |
+| `<view>-mask.png` | flat colour by class **and by material family** — walls, domestic slate roofs, terrace roofs, shed roofs, civic roofs, road, hardstanding, water, field, wood, tree |
 | `<view>.json` | camera, field of view, the fitted depth planes **in metres**, the mask palette |
 
 Views: `aerial` (camera A of the doughnut descent — wide and dense),
@@ -42,7 +42,19 @@ site itself). Re-render any of them with
 
 The mask is worth a look before you start. It separates carriageway from
 pasture from water from roof without a single extra mesh, because Phase 2
-wrote a class per square metre and this reads it back.
+wrote a class per square metre and this reads it back — and the roofs are
+split by material family from the OSM `building` tag, so a
+segmentation-conditioned model can be told which roof is domestic slate,
+which is profiled metal over a shed and which is membrane over a retail park.
+
+Worth knowing what OSM does and does not carry here, because it shapes what
+the mask can promise. `building:material` appears **zero** times in this box
+and `roof:material` only 41 times. What it does carry is
+`roof:shape` on 874 buildings, `building:levels` on 687, `surface` on 577
+ways and `lanes` on 134 — none of which is a material, all of which implies
+one. The families in the mask are therefore *inferred* from the building tag,
+the storey count and the measured roof, and the `-mask.png` palette in the
+sidecar says exactly which colour is which.
 
 ## The run, cheapest first
 

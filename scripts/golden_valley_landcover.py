@@ -74,10 +74,19 @@ CLASSES = {
     "road_minor":  0x6f6f6a,
     "road":        0x64645f,
     "rail":        0x5f5b54,
+    # Appended rather than inserted, because the class index is written into
+    # gv-landclass.png and read by name elsewhere — a new class in the middle
+    # would silently renumber every texel already shipped.
+    "concrete":    0xa9a59b,
+    # Desaturated hard. A farm track is a pale grey-brown, and under a low
+    # warm sun anything with real ochre in it comes out as a red scratch
+    # drawn across a green field.
+    "unpaved":     0x8d8676,
 }
 INDEX = {name: i for i, name in enumerate(CLASSES)}
 # PIL reads an integer fill lowest-byte-first, so 0x7d9460 paints as BGR.
-RGB = {name: ((v >> 16) & 255, (v >> 8) & 255, v & 255) for name, v in CLASSES.items()}
+RGB_OF = lambda v: ((v >> 16) & 255, (v >> 8) & 255, v & 255)
+RGB = {name: RGB_OF(v) for name, v in CLASSES.items()}
 
 # tag -> class, tried in this order. First match wins, so put the specific
 # tags above the general ones.
@@ -130,7 +139,27 @@ WAY_WIDTHS = {
     "bridleway": ("path", 1.8), "track": ("path", 3.0), "steps": ("path", 1.6),
 }
 # Minor first so a trunk road is never cut by the service road joining it.
-ROAD_ORDER = ["path", "road_minor", "rail", "road"]
+ROAD_ORDER = ["path", "road_minor", "rail", "road", "concrete", "unpaved"]
+
+# OSM's `surface` tag, on 577 ways in this box. It is the closest thing to a
+# material the data actually carries — building:material appears zero times —
+# and it is worth having, because a gravel farm track and a resurfaced trunk
+# road are the same width and nothing like the same colour from the air.
+SURFACE = {
+    "asphalt": None, "paved": None, "chipseal": None, "tarmac": None,
+    "concrete": "concrete", "concrete:plates": "concrete",
+    "paving_stones": "concrete", "sett": "concrete", "cobblestone": "concrete",
+    "unpaved": "unpaved", "gravel": "unpaved", "fine_gravel": "unpaved",
+    "compacted": "unpaved", "ground": "unpaved", "dirt": "unpaved",
+    "earth": "unpaved", "sand": "unpaved",
+    "grass": "grass",
+}
+# A lane is about 3.1 m of running surface, plus a shoulder either side. Used
+# only where OSM says how many there are — 134 ways here — because a guessed
+# lane count is just the default width wearing a hat.
+LANE_METRES = 3.1
+LANE_MARKED = {"trunk", "primary", "secondary", "tertiary"}
+MARKING = 0xbdb9ae
 
 # Where trees come from, and how thick. `spacing` is metres between trunks on
 # a jittered grid, so a wood at 6.5 m is roughly 24 stems per 1000 m2 — thick
@@ -246,7 +275,21 @@ def read_world():
             cls, width = WAY_WIDTHS[highway]
             if tags.get("tunnel") in ("yes", "building_passage"):
                 continue
-            lines.append({"cls": cls, "pts": pts, "width": width})
+            lanes = tags.get("lanes", "")
+            if lanes.isdigit() and 0 < int(lanes) <= 8:
+                width = max(width, int(lanes) * LANE_METRES + 1.4)
+            if tags.get("width", "").replace(".", "", 1).isdigit():
+                width = max(width, float(tags["width"]) + 1.0)
+            surface = SURFACE.get(tags.get("surface", ""), "keep")
+            if surface != "keep" and surface is not None:
+                cls = surface
+            lines.append({"cls": cls, "pts": pts, "width": width,
+                          # Painted lines are a tenth of a metre wide on a
+                          # one-metre grid, so they are drawn at 2x and left
+                          # to the downsample to make them as faint as they
+                          # actually look from three hundred metres up.
+                          "marked": highway.split("_")[0] in LANE_MARKED
+                                    or (lanes.isdigit() and int(lanes) >= 2)})
             continue
         if tags.get("railway") in ("rail", "light_rail", "disused"):
             lines.append({"cls": "rail", "pts": pts, "width": 4.0})
@@ -271,6 +314,53 @@ def read_world():
     return areas, lines, tree_points
 
 
+# Every field in England is worked in lines, and from the air that is most of
+# what a field looks like: tramlines in the arable, mower stripes on the
+# pitches. The *direction* is not in OSM — nothing is tagged for it — so it
+# comes from the field's own shape, because a farmer drives the long way.
+STRIPED = {"farmland": (11.0, 0.055), "meadow": (11.0, 0.045),
+           "grass": (7.0, 0.035), "pitch": (6.0, 0.05), "park": (9.0, 0.03)}
+
+
+def principal_angle(ring):
+    """The long axis of a polygon, by the covariance of its vertices."""
+    xs = np.array([p[0] for p in ring], dtype=float)
+    ys = np.array([p[1] for p in ring], dtype=float)
+    xs -= xs.mean()
+    ys -= ys.mean()
+    cxx, cyy, cxy = (xs * xs).mean(), (ys * ys).mean(), (xs * ys).mean()
+    return 0.5 * math.atan2(2 * cxy, cxx - cyy)
+
+
+def stripe(img, ring, cls):
+    """Rule working lines across one field, clipped to it."""
+    spacing, contrast = STRIPED[cls]
+    xs = [p[0] * SS for p in ring]
+    ys = [p[1] * SS for p in ring]
+    x0, y0 = int(min(xs)) - 1, int(min(ys)) - 1
+    x1, y1 = int(max(xs)) + 2, int(max(ys)) + 2
+    if x1 - x0 < 8 or y1 - y0 < 8:
+        return
+    mask = Image.new("1", (x1 - x0, y1 - y0), 0)
+    ImageDraw.Draw(mask).polygon([(x - x0, y - y0) for x, y in zip(xs, ys)], fill=1)
+    tile = img.crop((x0, y0, x1, y1))
+    draw = ImageDraw.Draw(tile)
+    base = RGB[cls]
+    dark = tuple(max(0, min(255, int(c * (1 - contrast)))) for c in base)
+    ang = principal_angle(ring)
+    ux, uy = math.cos(ang), math.sin(ang)
+    px, py = -uy, ux
+    cx, cy = (x1 - x0) / 2, (y1 - y0) / 2
+    reach = math.hypot(x1 - x0, y1 - y0)
+    step = spacing * SS
+    for k in range(-int(reach / step) - 1, int(reach / step) + 2):
+        mx, my = cx + px * k * step, cy + py * k * step
+        draw.line([(mx - ux * reach, my - uy * reach),
+                   (mx + ux * reach, my + uy * reach)],
+                  fill=dark, width=max(1, int(SS * 1.4)))
+    img.paste(tile, (x0, y0), mask)
+
+
 def paint(areas, lines):
     """Rasterise to a colour image (supersampled) and a 1 m class map."""
     W = E1 - E0
@@ -287,9 +377,13 @@ def paint(areas, lines):
 
     for a in areas:
         poly(a["ring"], a["holes"], a["cls"])
+        # Only worth it on a field you could see the lines in; below about a
+        # third of a hectare they are one texel apart and read as noise.
+        if a["cls"] in STRIPED and ring_area(a["ring"]) > 3000:
+            stripe(rgb, a["ring"], a["cls"])
 
     hedges = [l for l in lines if l["cls"] == "hedge"]
-    for cls in ROAD_ORDER + ["water"]:
+    for cls in ROAD_ORDER + ["grass", "water"]:
         for l in lines:
             if l["cls"] != cls or len(l["pts"]) < 2:
                 continue
@@ -298,6 +392,16 @@ def paint(areas, lines):
                       fill=RGB[cls], width=max(1, round(w * SS)), joint="curve")
             dlab.line(l["pts"], fill=INDEX[cls], width=max(1, round(w)),
                       joint="curve")
+    # Markings last, over every carriageway, and only in the colour image:
+    # a painted line is a material, not a land class, and putting it in the
+    # class raster would tell the segmentation that the middle of the A40 is
+    # a different kind of ground from its edges.
+    for l in lines:
+        if not l.get("marked") or len(l["pts"]) < 2:
+            continue
+        drgb.line([(x * SS, y * SS) for x, y in l["pts"]],
+                  fill=RGB_OF(MARKING), width=1, joint="curve")
+
     # Downsampling is what gives the roads clean edges: at 1x, PIL's line
     # drawing is hard-aliased and a diagonal service road reads as a staircase.
     return rgb.resize((W, W), Image.BOX), lab, hedges
@@ -318,7 +422,8 @@ def blocked_mask(lab, lines):
         d.polygon([(x + W / 2, z + W / 2) for x, z in b["ring"]], fill=1)
     blocked = np.array(img, dtype=bool)
     arr = np.array(lab)
-    for cls in ("water", "road", "road_minor", "parking", "rail", "path"):
+    for cls in ("water", "road", "road_minor", "parking", "rail", "path",
+                "concrete", "unpaved"):
         blocked |= arr == INDEX[cls]
     return blocked
 

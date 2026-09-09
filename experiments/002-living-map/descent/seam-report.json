@@ -1,5 +1,5 @@
 {
-  "utc": "2026-09-09T14:10:53.928116+00:00",
+  "utc": "2026-09-09T15:34:51.162446+00:00",
   "path": {
     "id": "gv-doughnut-descent",
     "note": "Aerial over west Cheltenham down to a low approach on GCHQ. Camera A is the frame already saved as frames/gv-doughnut-aerial-frameA.png. Positions are local metres (x east, z south, origin at the box centre); look targets take their height from the terrain plus lift.",
@@ -41,128 +41,128 @@
     "frames": 102
   },
   "clipBytes": {
-    "descent-control.webm": 2761053,
-    "descent-control-hq.webm": 38725623,
-    "descent-control.mp4": 4216412
+    "descent-control.webm": 2774574,
+    "descent-control-hq.webm": 39162208,
+    "descent-control.mp4": 4258143
   },
   "seams": [
     {
       "clip": "descent-control.webm",
       "inSeam": {
-        "meanPercent": 0.823,
-        "peakPercent": 16.9,
+        "meanPercent": 0.828,
+        "peakPercent": 18.8,
         "visiblePixelsPercent": 8.64
       },
       "outSeam": {
         "0": {
-          "meanPercent": 0.935,
-          "peakPercent": 31.8,
-          "visiblePixelsPercent": 10.01
+          "meanPercent": 0.945,
+          "peakPercent": 23.5,
+          "visiblePixelsPercent": 10.05
         },
         "5": {
-          "meanPercent": 7.73,
-          "peakPercent": 88.2,
+          "meanPercent": 7.697,
+          "peakPercent": 89.0,
           "visiblePixelsPercent": 46.62
         },
         "10": {
-          "meanPercent": 8.972,
-          "peakPercent": 89.8,
-          "visiblePixelsPercent": 51.49
+          "meanPercent": 8.94,
+          "peakPercent": 90.2,
+          "visiblePixelsPercent": 51.66
         },
         "20": {
-          "meanPercent": 10.06,
-          "peakPercent": 94.1,
-          "visiblePixelsPercent": 54.11
+          "meanPercent": 10.215,
+          "peakPercent": 89.4,
+          "visiblePixelsPercent": 54.3
         },
         "40": {
-          "meanPercent": 10.939,
-          "peakPercent": 88.6,
-          "visiblePixelsPercent": 55.81
+          "meanPercent": 10.956,
+          "peakPercent": 89.0,
+          "visiblePixelsPercent": 55.65
         },
         "60": {
-          "meanPercent": 11.322,
+          "meanPercent": 11.305,
           "peakPercent": 89.0,
-          "visiblePixelsPercent": 56.74
+          "visiblePixelsPercent": 56.68
         }
       }
     },
     {
       "clip": "descent-control-hq.webm",
       "inSeam": {
-        "meanPercent": 0.665,
+        "meanPercent": 0.664,
         "peakPercent": 16.5,
-        "visiblePixelsPercent": 6.3
+        "visiblePixelsPercent": 6.26
       },
       "outSeam": {
         "0": {
           "meanPercent": 0.572,
           "peakPercent": 17.3,
-          "visiblePixelsPercent": 2.89
+          "visiblePixelsPercent": 2.93
         },
         "5": {
-          "meanPercent": 7.736,
-          "peakPercent": 88.2,
-          "visiblePixelsPercent": 46.21
+          "meanPercent": 7.692,
+          "peakPercent": 88.6,
+          "visiblePixelsPercent": 46.19
         },
         "10": {
-          "meanPercent": 8.986,
-          "peakPercent": 88.6,
-          "visiblePixelsPercent": 51.21
+          "meanPercent": 8.945,
+          "peakPercent": 89.8,
+          "visiblePixelsPercent": 51.4
         },
         "20": {
-          "meanPercent": 10.076,
-          "peakPercent": 88.6,
-          "visiblePixelsPercent": 53.95
+          "meanPercent": 10.225,
+          "peakPercent": 88.2,
+          "visiblePixelsPercent": 54.12
         },
         "40": {
-          "meanPercent": 10.962,
+          "meanPercent": 10.973,
           "peakPercent": 88.6,
-          "visiblePixelsPercent": 55.62
+          "visiblePixelsPercent": 55.5
         },
         "60": {
-          "meanPercent": 11.34,
+          "meanPercent": 11.32,
           "peakPercent": 89.0,
-          "visiblePixelsPercent": 56.62
+          "visiblePixelsPercent": 56.53
         }
       }
     },
     {
       "clip": "descent-control.mp4",
       "inSeam": {
-        "meanPercent": 0.826,
-        "peakPercent": 19.2,
-        "visiblePixelsPercent": 8.8
+        "meanPercent": 0.83,
+        "peakPercent": 18.8,
+        "visiblePixelsPercent": 8.78
       },
       "outSeam": {
         "0": {
-          "meanPercent": 0.833,
-          "peakPercent": 22.4,
-          "visiblePixelsPercent": 7.94
+          "meanPercent": 0.834,
+          "peakPercent": 23.5,
+          "visiblePixelsPercent": 7.97
         },
         "5": {
-          "meanPercent": 7.743,
+          "meanPercent": 7.699,
           "peakPercent": 88.2,
-          "visiblePixelsPercent": 46.48
+          "visiblePixelsPercent": 46.49
         },
         "10": {
-          "meanPercent": 8.983,
-          "peakPercent": 88.6,
-          "visiblePixelsPercent": 51.39
+          "meanPercent": 8.942,
+          "peakPercent": 90.2,
+          "visiblePixelsPercent": 51.6
         },
         "20": {
-          "meanPercent": 10.069,
-          "peakPercent": 88.6,
-          "visiblePixelsPercent": 54.07
+          "meanPercent": 10.216,
+          "peakPercent": 90.2,
+          "visiblePixelsPercent": 54.26
         },
         "40": {
-          "meanPercent": 10.943,
+          "meanPercent": 10.954,
           "peakPercent": 89.0,
-          "visiblePixelsPercent": 55.75
+          "visiblePixelsPercent": 55.59
         },
         "60": {
-          "meanPercent": 11.318,
+          "meanPercent": 11.298,
           "peakPercent": 89.0,
-          "visiblePixelsPercent": 56.73
+          "visiblePixelsPercent": 56.66
         }
       }
     }
