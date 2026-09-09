@@ -1,0 +1,43 @@
+{
+  "view": "aerial",
+  "note": "Camera A of the doughnut descent \u2014 the wide, dense one.",
+  "camera": {
+    "positionLocalMetres": [
+      -420.0,
+      300.0,
+      650.0
+    ],
+    "lookAtLocalMetres": [
+      123.0,
+      64.0
+    ],
+    "lookLiftMetres": 0.0,
+    "fovDegrees": 48
+  },
+  "sizePixels": [
+    1280,
+    720
+  ],
+  "frame": "local metres from the box centre, x east, z south (the same frame as gv-buildings.json)",
+  "files": {
+    "beauty": "aerial-beauty.png",
+    "depth": "aerial-depth.png",
+    "normal": "aerial-normal.png",
+    "mask": "aerial-mask.png"
+  },
+  "depth": {
+    "nearMetres": 357.1,
+    "farMetres": 1579.7,
+    "encoding": "near=white, far=black, linear in view space, range fitted to the frame"
+  },
+  "maskColours": {
+    "sky": "#000000",
+    "building": "#d94f3d",
+    "tree": "#7ad14f",
+    "field": "#3f8f3a",
+    "wood": "#1f5f2a",
+    "hard": "#9a9a9a",
+    "road": "#4a4a4a",
+    "water": "#2d6fb5"
+  }
+}

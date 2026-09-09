@@ -148,7 +148,7 @@ export async function buildWorld({ renderer, segments = 1000 } = {}) {
   // both of which need everything else to already be in the scene.
   bringToLife(scene, {
     groundAt: heightAtLocal,
-    classMap: loadClassTexture(),
+    classMap: await loadClassTexture(),
     waterIndex: classIndex('water'),
   });
   return scene;

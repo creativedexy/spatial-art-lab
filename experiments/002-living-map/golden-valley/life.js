@@ -33,6 +33,12 @@ const MAX_CATCHUP = 4;            // seconds of simulation any one call may run
 
 const uniforms = {
   uTime: { value: 0 },
+  // Scales the wind to nothing for a structure pass. A depth or normal render
+  // uses an override material, which does not carry the tree material's sway,
+  // so a swaying beauty frame and a still depth frame would disagree about
+  // where the canopy is — and disagreeing by a metre is exactly the kind of
+  // thing a depth-conditioned generator turns into a smear.
+  uWindAmp: { value: 1 },
   // West-south-west, the same quarter the sun is in, because a sky where the
   // cloud and the light disagree reads as two separate effects.
   uWind: { value: new THREE.Vector2(0.86, 0.51).normalize() },
@@ -86,7 +92,8 @@ function patch(material, { water = false, wind = 0, flap = 0 } = {}) {
     Object.assign(shader.uniforms, uniforms);
 
     let v = shader.vertexShader;
-    v = inject(v, '#include <common>', `\n${WORLD_VARYING}\nuniform float uTime;\nuniform vec2 uWind;\n`);
+    v = inject(v, '#include <common>',
+      `\n${WORLD_VARYING}\nuniform float uTime;\nuniform vec2 uWind;\nuniform float uWindAmp;\n`);
     if (wind) {
       // The unit tree is one metre tall before its instance matrix scales it,
       // so `position.y` is already "fraction of the way up the tree" and the
@@ -103,7 +110,7 @@ function patch(material, { water = false, wind = 0, flap = 0 } = {}) {
         float lifeGust = 0.65 + 0.35 * sin(uTime * 0.31 + lifeBase.x * 0.004);
         float lifeSway = sin(uTime * 1.7 + lifePhase) * 0.6
                        + sin(uTime * 3.1 + lifePhase * 1.7) * 0.4;
-        transformed.xz += uWind * lifeSway * lifeGust
+        transformed.xz += uWind * lifeSway * lifeGust * uWindAmp
                         * position.y * position.y * ${wind.toFixed(3)};`);
     }
     if (flap) {
@@ -333,6 +340,17 @@ let pinned = null;
 
 export function worldSeconds() {
   return pinned !== null ? pinned : (performance.now() - originMs) / 1000;
+}
+
+/**
+ * Freeze the vegetation and hide the flock, for renders that are describing
+ * the world's *structure* rather than picturing it. Everything a generator is
+ * conditioned on has to agree with everything else, and a bird is a hole in a
+ * depth map.
+ */
+export function setStructureMode(on) {
+  uniforms.uWindAmp.value = on ? 0 : 1;
+  if (flock.mesh) flock.mesh.visible = !on;
 }
 
 /** Hold the world at one instant — used while a pre-rendered clip is on screen. */

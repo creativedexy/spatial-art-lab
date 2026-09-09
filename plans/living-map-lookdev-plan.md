@@ -303,6 +303,44 @@ whole curve settled it: crf 32 halves the download to 2.87 MB for 0.16 of a
 point at the seam, where five metres of drift costs seven. **Bitrate is still
 not what breaks a hand-off**, and the delivery encode moved to crf 32.
 
+## The Blender question
+
+> "My idea is that we feed this 3D structure into image and video generators
+> to make hyper realistic zoom sections — less time in Blender and more of a
+> fake-it-til-you-make-it approach. Do we need to spend a session in Blender
+> adding detail?"
+
+Probably not, and the answer is worth three pounds rather than an argument.
+
+The reasoning: a generator does not need our render to be *realistic*, it
+needs it to be *unambiguous*. It can invent brick, slate, tarmac wear and
+undergrowth. It cannot invent that GCHQ is 14.8 m on a 52.7 m base, that the
+ridge runs with the street, or the shape of the ground under all of it — and
+those we have, measured. Detail added in Blender lands in the column the
+model overwrites anyway, and it does not transfer to the next postcode, which
+is the whole proposition.
+
+There is also a measurement against it. Session B found the generator's error
+tracks **detail density** — 2.79 % at the wide departure against 1.43 % at
+the low landing — and Session G confirmed it on our own control clip, where
+5 m of drift went from costing 2.5 % to 7.7 % once the world had foliage and
+roofs. More detail in the input makes a *return* descent harder, not easier.
+Departures are the species where detail density stops mattering, and
+"hyper-realistic zoom sections" are departures.
+
+So: `scripts/capture_passes.py` renders what a generator should actually be
+conditioned on — beauty, depth, world normals, and a class mask that
+separates carriageway from pasture from roof, because Phase 2 wrote a class
+per square metre and this is the second thing to read it. Then
+`scripts/generation_ladder.py` climbs four rungs, cheapest first, and
+`descent/LADDER-SESSION.md` is the brief for running it somewhere with keys.
+
+**What to look at is the failure mode, not the score.** Wrong buildings is a
+conditioning problem; plastic is a prompt problem; brick-versus-render is a
+material-hint problem, and material hints are cheap raster work in the
+pipeline we own. Only a failure that *geometry* would fix earns a Blender
+session.
+
 ## Immediate next step
 
 **The season wave**, which the reference makes the case for better than this

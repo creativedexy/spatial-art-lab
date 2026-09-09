@@ -41,8 +41,12 @@ const KINDS = [
   ] },
 ];
 
-export function loadCoverTexture(renderer) {
-  const tex = new THREE.TextureLoader().load(url(coverMeta.colourFile));
+export async function loadCoverTexture(renderer) {
+  // Awaited, not fired and forgotten. A TextureLoader callback that lands one
+  // frame after the first render is invisible on a page you scroll — and on a
+  // page whose first frame is the anchor a descent is measured against, it is
+  // an untextured world in the one image everything else is compared to.
+  const tex = await new THREE.TextureLoader().loadAsync(url(coverMeta.colourFile));
   tex.colorSpace = THREE.SRGBColorSpace;
   // The map is 1 m/texel over 2 km, so at any oblique angle the far half of
   // the vale is deep in the mip chain — without anisotropy the roads dissolve
@@ -83,8 +87,8 @@ function neutralGrade(mesh) {
  * here — a bilinear tap between "water" (10) and "grass" (2) returns 6, which
  * is a class nothing is, so anything reading this must never interpolate.
  */
-export function loadClassTexture() {
-  const tex = new THREE.TextureLoader().load(url(coverMeta.classFile));
+export async function loadClassTexture() {
+  const tex = await new THREE.TextureLoader().loadAsync(url(coverMeta.classFile));
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
   tex.generateMipmaps = false;
@@ -96,8 +100,8 @@ export function loadClassTexture() {
 export const classIndex = (name) => coverMeta.classes[name].index;
 
 /** Paint the surveyed ground onto whichever mesh carries vertex colours. */
-export function applyLandCover(scene, renderer) {
-  const tex = loadCoverTexture(renderer);
+export async function applyLandCover(scene, renderer) {
+  const tex = await loadCoverTexture(renderer);
   for (const obj of scene.children) {
     const m = obj.isMesh && obj.material;
     if (!m || !m.vertexColors) continue;
@@ -189,7 +193,7 @@ export async function loadTrees(groundAt) {
 
 /** Everything Phase 2 and the tree half of Phase 3 add, in one call. */
 export async function addLandCover(scene, renderer, groundAt) {
-  const texture = applyLandCover(scene, renderer);
+  const texture = await applyLandCover(scene, renderer);
   const trees = await loadTrees(groundAt);
   scene.add(trees);
   return { texture, trees };

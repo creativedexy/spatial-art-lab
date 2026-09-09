@@ -749,6 +749,13 @@ pre-rendered clip exactly as well as a still one did. That is the whole
 result: the architecture is what made it free, and had the clock been an
 afterthought it would have cost a re-render to find out.
 
+> **Correction, added in Session J.** The in-seam figures in the table above
+> — 0.704 % before, 0.700 % after — were both measured on a frame 0 that had
+> no land cover texture on it, because `TextureLoader.load` was never awaited.
+> The *comparison* stands, since both runs carried the same bug, and the
+> out-seam numbers are unaffected. The absolute in-seam on a correct frame 0
+> is 0.823 %. See Session J.
+
 ### Saved outputs
 
 Source: `experiments/002-living-map/golden-valley/life.js`, wired in by
@@ -880,3 +887,159 @@ built the first while designing the second.
 
 Next 20-minute experiment: the season wave — one palette per land class per
 season, crossing the vale on the Phase 4a clock rather than cutting.
+
+## Session J — structure passes, and the ladder that decides the Blender question
+
+Date: 9 Sep 2026
+Intent in one sentence: Build what a generator should actually be conditioned on, and a cheapest-first ladder that answers "do we need a Blender session?" with evidence instead of opinion.
+Tool/build/model: Three.js override materials, Playwright capture, fal client, no paid generation yet.
+
+### One variable to explore
+
+Dex's proposal: feed the 3D structure into image and video generators for
+hyper-real zoom sections, and spend less time in Blender. The question under
+it is whether a generator needs our render to be **realistic** or merely
+**unambiguous** — and the answer decides where the next few sessions go.
+
+### What happened
+
+Four passes, from one camera at one instant, wind off and birds hidden:
+
+| pass | what it carries |
+|---|---|
+| beauty | composition, light, colour |
+| depth | linear view depth, near white, **range fitted to the frame** |
+| normal | world-space normals — what says a roof is a roof and not a paving slab |
+| mask | flat colour by class: building, road, water, field, wood, tree |
+
+The mask is the one worth pointing at. It separates carriageway from pasture
+from water from roof **without a single extra mesh**, because Phase 2 wrote a
+class per square metre and this is the second thing to read it. A
+segmentation-conditioned model can now be told which colour means roof.
+
+### Three things that had to be right, and one that was not
+
+1. **The depth range is fitted, not given.** A hand-picked 40 m near plane on
+   a view whose nearest ground is 90 m away turned the whole approach shot
+   white. The pass now renders once with distance packed across 24 bits, reads
+   it back, takes the 2nd and 98th percentiles of the non-sky pixels, and
+   re-renders with those — so one chimney at the horizon cannot flatten the
+   town. The approach view fits to 71–824 m and says so in the sidecar.
+2. **A structure pass is data, not a picture.** The first version inherited
+   the scene's ACES tone mapping and sRGB output, so every depth, normal and
+   class value was quietly gamma-warped on the way out. Tone mapping off,
+   linear output, and mask colours set with `setHex(v, LinearSRGBColorSpace)`
+   so the pixel equals the number in the sidecar. A filmic curve applied to a
+   measurement is just a corrupted measurement.
+3. **The wind had to stop.** Depth and normal render through an override
+   material, which does not carry the tree material's sway — so a swaying
+   beauty frame and a still depth frame would disagree about where the canopy
+   is by a metre, which is exactly what a depth-conditioned model turns into
+   a smear. `setStructureMode` zeroes the wind and hides the flock.
+
+And the one that was not right, found by accident:
+
+**The land cover textures were never awaited.** `TextureLoader.load` fires
+and forgets, so `buildWorld` could resolve — and `__terrainReady` could go
+true — before either the colour or the class image had arrived. Found because
+the class mask came back entirely `farmland`: the shader was sampling a blank
+texture, which decodes as class 0.
+
+Then it turned out to be much worse than a cosmetic race. Re-capturing the
+descent and diffing the new frame 0 against the anchor that had been
+committed that morning:
+
+```
+  frame A, old capture vs new:  mean 12.35 % of 255
+                                45.8 % of pixels differing by more than 8
+  frame 1 vs frame 0, new:      mean  0.26 %   (ordinary camera motion)
+```
+
+The old anchor had **no land cover on it at all** — two square kilometres of
+near-black ground with the buildings floating on it. That was the frame about
+to be handed to a paid generator, and the frame the control clip starts on.
+
+The part worth keeping is *why the seam measurement said nothing*. It
+compares the clip's first frame against the live render at the same instant,
+and both came from the same capture run, so both were equally black. The
+measurement reported 0.704 % and was telling the truth: the two images agreed
+beautifully about a world that did not exist. A measurement of *agreement*
+cannot see an error that both sides share, and this project has been leaning
+on exactly that measurement for four sessions.
+
+Both textures are awaited now, the descent is re-captured, and the seam is
+0.823 % / 0.935 % — the in-seam is *worse* than yesterday's 0.704 %, which is
+the correct direction: frame 0 now carries a fully textured world, and there
+is more in it for the codec to lose.
+
+### And a second one, from the same re-capture
+
+The interaction test started failing the clip check again, and this time it
+was not the container. The player had a wall-clock budget on the *whole*
+descent — load plus fade plus playback plus a margin — and the diagnostic
+showed the clip loading, playing, and reaching 4.00 s of 4.00 s before the
+budget fired anyway and threw the viewer into the live fallback. The descent
+had simply taken longer in wall time than the budget, because the 900 ms
+fly-in takes half a minute on a page rendering at four seconds a frame.
+
+That is a real bug for a real person: a viewer on a throttled phone is
+exactly who the fallback exists for, and a wall-clock budget takes the clip
+away from them for being slow rather than for being broken. The guard now
+watches *progress* — the clip must become playable within 25 s, and must not
+go 8 s without its clock advancing — and nothing is timed against the page.
+
+Worth noting how close it came to being written off: I had a ready-made
+explanation ("this container renders at a frame every four seconds") that
+was true, relevant, and not the cause.
+
+### The ladder
+
+`scripts/generation_ladder.py`, four rungs, each a gate on the next, about
+three pounds for the lot:
+
+```
+  0  dry-run        free      prints every request, spends nothing
+  1  still, beauty  pennies   our render → photoreal. Does it keep the town?
+  2  still, depth   pennies   the same view conditioned on structure instead
+  3  video, low     ~£0.40    a departure from the low approach — the easy case
+  4  video, aerial  ~£0.40    the same from the wide shot — Session B's hard case
+```
+
+Rung 2 beating rung 1 is the most interesting single result available: it
+would mean the geometry is doing the work, and that adding surface detail —
+in Blender or anywhere else — is beside the point.
+
+The brief tells whoever runs it to look at the **failure mode, not the
+score**. Wrong buildings is a conditioning problem; plastic is a prompt
+problem; brick-versus-render is a material-hint problem, and material hints
+are cheap raster work in the pipeline we own. Only a failure that *geometry*
+would fix earns a Blender session.
+
+### Saved outputs
+
+Source: `experiments/002-living-map/passes/`, `scripts/capture_passes.py`,
+`scripts/generation_ladder.py`.
+Images: `experiments/002-living-map/passes/out/` — three views, four passes
+each, committed so the paid session starts from identical inputs.
+Brief: `experiments/002-living-map/descent/LADDER-SESSION.md`.
+
+### Review (Session J)
+
+What works: the map can now hand a generator four different descriptions of
+the same instant, and every number in them means something because the
+sidecar says what.
+What I can now change without AI: the views, the depth fitting percentiles,
+the mask palette, and every prompt in the ladder.
+One failure worth keeping: I also managed to write a fix, run the test, watch
+it fail, and only then notice that my edit had never applied — a string
+replacement that matched nothing and said nothing. Two comment lines I had
+not accounted for. Check that the change is in the file before concluding
+anything about the change.
+Another: I built the mask, looked at it, saw green fields
+and red buildings and nearly called it done — the roads were missing and I
+almost read that as "roads are part of the ground texture, fair enough". They
+were missing because the texture had not loaded. Two of the three things I
+had to fix in this session were found by counting pixels rather than by
+looking at them.
+
+Next 20-minute experiment: the ladder itself, on a machine with keys.

@@ -1,0 +1,43 @@
+{
+  "view": "gv-site",
+  "note": "The Golden Valley site itself, which is the one a client cares about and currently an empty field.",
+  "camera": {
+    "positionLocalMetres": [
+      -482.0,
+      133.0,
+      -75.0
+    ],
+    "lookAtLocalMetres": [
+      -592.0,
+      -215.0
+    ],
+    "lookLiftMetres": 5.0,
+    "fovDegrees": 48
+  },
+  "sizePixels": [
+    1280,
+    720
+  ],
+  "frame": "local metres from the box centre, x east, z south (the same frame as gv-buildings.json)",
+  "files": {
+    "beauty": "gv-site-beauty.png",
+    "depth": "gv-site-depth.png",
+    "normal": "gv-site-normal.png",
+    "mask": "gv-site-mask.png"
+  },
+  "depth": {
+    "nearMetres": 111.1,
+    "farMetres": 685.1,
+    "encoding": "near=white, far=black, linear in view space, range fitted to the frame"
+  },
+  "maskColours": {
+    "sky": "#000000",
+    "building": "#d94f3d",
+    "tree": "#7ad14f",
+    "field": "#3f8f3a",
+    "wood": "#1f5f2a",
+    "hard": "#9a9a9a",
+    "road": "#4a4a4a",
+    "water": "#2d6fb5"
+  }
+}

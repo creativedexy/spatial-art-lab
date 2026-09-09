@@ -48,13 +48,19 @@ export function createDescentPlayer({
   video.hidden = true;
   container.appendChild(video);
 
-  // How long the clip is allowed to take to become playable, separately from
-  // how long it is then allowed to take to play. They are different failures:
-  // the first is the network, the second is a broken file, and rolling them
-  // into one budget meant a slow download looked like a corrupt clip — which
-  // is exactly what happened the day the world stopped being a white model
-  // and the clip grew with it.
+  // How long the clip is allowed to take to become playable, and how long it
+  // may then go without advancing. Two budgets, because they are two
+  // different failures — the first is the network, the second is a broken
+  // file — and rolling them into one meant a slow download looked like a
+  // corrupt clip.
+  //
+  // Neither is a budget on the *whole* descent, which was the third version
+  // of this and the worst: a clip that is playing perfectly well should never
+  // be killed because the page around it is rendering slowly. A phone
+  // throttled to a frame a second is exactly the case a fallback is supposed
+  // to be for, and exactly the case a wall-clock budget takes it away from.
   const LOAD_BUDGET_MS = 25000;
+  const STALL_MS = 8000;
 
   const mapFov = camera.fov;
   const mapMaxPolar = controls.maxPolarAngle;
@@ -135,7 +141,9 @@ export function createDescentPlayer({
     frame(path, 1);
 
     const endsAt = video.duration - fadeOut / 1000;
-    await new Promise((resolve) => {
+    await new Promise((resolve, reject) => {
+      let lastTime = -1;
+      let movedAt = performance.now();
       const check = () => {
         // Hold the live world at the clip's own frame while the clip is on
         // screen. Quantised to the clip's frame grid on purpose: the clip is
@@ -143,8 +151,18 @@ export function createDescentPlayer({
         // cloud shadow half a frame ahead is exactly the sort of thing the
         // seam measurement notices and the eye does not.
         pinWorld(Math.floor(video.currentTime * path.fps) / path.fps);
-        if (video.currentTime >= endsAt || video.ended) resolve();
-        else requestAnimationFrame(check);
+        if (video.currentTime >= endsAt || video.ended) return resolve();
+        if (video.currentTime !== lastTime) {
+          lastTime = video.currentTime;
+          movedAt = performance.now();
+        } else if (performance.now() - movedAt > STALL_MS) {
+          return reject(new Error(`clip stopped advancing for ${STALL_MS} ms`));
+        }
+        // setTimeout rather than requestAnimationFrame: this loop is watching
+        // the clip, not the renderer, and on a slow page a frame callback can
+        // be seconds apart — long enough to miss the end of a four second
+        // descent entirely.
+        setTimeout(check, 200);
       };
       check();
     });
@@ -179,17 +197,11 @@ export function createDescentPlayer({
     await flyToStart(path, 900);
     if (hotspot.clip) {
       try {
-        // Guard the wall clock as well as the exceptions: a clip that stalls
-        // rather than fails would otherwise leave the viewer hanging in the
-        // sky for ever.
-        // Loading is the slow half now: a descent of a world with foliage
-        // and roofs costs 2.9 MB where the white model cost 1.8 MB, so the
-        // budget has to cover arriving as well as playing.
-        const budget = LOAD_BUDGET_MS + (path.durationSeconds + 6) * 1000;
-        await Promise.race([
-          playClip(path, new URL(hotspot.clip, clipBase).href),
-          wait(budget).then(() => { throw new Error(`clip stalled after ${budget} ms`); }),
-        ]);
+        // No budget on the descent as a whole. playClip guards the two things
+        // that can actually go wrong — a clip that never arrives, and one that
+        // arrives and then stops advancing — and a clip playing perfectly well
+        // on a slow machine is neither.
+        await playClip(path, new URL(hotspot.clip, clipBase).href);
         // Time runs again, continuing from the clip's last frame rather than
         // snapping back to wall time and jumping every cloud in the vale.
         releaseWorld(clipSeconds(path));
