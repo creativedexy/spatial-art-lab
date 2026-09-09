@@ -16,7 +16,7 @@ Every session so far has gone into **structure**, and none into **surface**.
 | **Light, shadow, grade** | Phase 1 — proved |
 | **Land cover: woods, fields, water, roads** | **Phase 2 — done** |
 | **Trees: woods, hedges, street trees** | **done — 9,181 instances** |
-| **Buildings that read as buildings** | roof pitch and materials still to do |
+| **Buildings that read as buildings** | **Phase 3 — done** |
 | **Weather, birds, movement** | not started |
 | **Art direction, typography, sound** | not started |
 | **The Golden Valley proposal itself** | not started — the site is an empty field |
@@ -50,6 +50,7 @@ flowchart TD
   P5 --> P6["Phase 6 — Signature moves<br/>season wave, descents regenerated"]
   style P1 fill:#4a6f8a,color:#fff
   style P2 fill:#4a6f8a,color:#fff
+  style P3 fill:#4a6f8a,color:#fff
 ```
 
 ### Phase 1 — Light *(proved, needs adopting)*
@@ -97,7 +98,7 @@ art-directed.
 **Bought:** the vale stopped being a lawn. Second biggest jump, as predicted.
 **Cost:** one pass. Free — OSM data, ODbL, already attributed.
 
-### Phase 3 — Buildings that read as buildings *(trees done)*
+### Phase 3 — Buildings that read as buildings *(done)*
 
 **Trees are in.** 9,181 instances in three families — 6,211 broadleaf
 scattered on the woodland and park polygons and through residential gardens,
@@ -107,18 +108,32 @@ records carry no Y: the map reads each trunk's ground height from the same
 height field the terrain is built from, so a tree cannot float or sink if
 either ever changes. Three draw calls for the lot.
 
-The buildings themselves are still flat-topped extrusions. Two fixes remain,
-both from data we already hold:
+**And the buildings now have roofs.** We were keeping the *median* height
+inside each footprint and throwing the distribution away; the DSM held the
+eaves and the ridge all along. `scripts/golden_valley_roofs.py` recovers
+both — 2,658 gables, 735 hips, 640 flat — along with the ridge *direction*,
+which is measured rather than assumed, and that turned out to matter:
 
-- **Roof pitch from the DSM.** We take the *median* height inside each
-  footprint. The DSM also holds the ridge and the eaves, so the roof shape is
-  sitting in data we have already downloaded and thrown away.
-- **Material by type.** OSM tags every footprint — house, retail, industrial,
-  school. Four or five material families instead of one white, and the town
-  reads as a town.
+> The obvious prior is that a ridge runs along a building's long axis. In
+> this box it does not, 62 % of the time. A British semi or terraced house is
+> narrow-fronted and deep, and its ridge runs with the **street** — across
+> its own footprint's long axis. Assuming the long axis would have laid every
+> terrace in Hesters Way at right angles to the road it faces.
 
-**Buys:** the last of the "architectural competition entry" look.
-**Cost:** one session for the two building fixes. Free.
+The same two numbers tell a gable from a hip: if the surface falls away in
+one direction and stays level in the other, the ends are vertical and the
+ridge runs the full length; if it falls away in both, the ends are hipped.
+
+Materials come from the OSM `building` tag, with the 1,781 footprints tagged
+only `yes` inferred from the land cover Phase 2 put underneath them, the
+footprint area and whether the roof measured pitched. Walls stay in a narrow
+off-white range on purpose — the proposition is a measured architectural
+model, and 4,000 brick-red houses would trade that for a video game — so the
+five families carry their difference in the roofs, which is what you see from
+the air anyway.
+
+**Bought:** the last of the "architectural competition entry" look.
+**Cost:** one pass. Free.
 
 ### Phase 4 — Life, and art direction
 
@@ -166,20 +181,28 @@ If a pitch date lands, Phase 5 jumps the queue: a client will forgive a
 plain-looking map that shows *their scheme*, and will not forgive a beautiful
 map that does not.
 
-## The adoption debt
+## The adoption debt — now due
 
 Phases 1–3 all live in `experiments/002-living-map/lookdev/`, and the map page
-still runs the old flat look. That is deliberate, not neglect: the descent
+still runs the old flat look. That was deliberate, not neglect: the descent
 seam is measured *in pixels*, so the moment the world's appearance changes,
 `descent/frames/*.png`, the control clip and `seam-report.json` are all stale.
-Adoption is therefore one job, not three — move the calls into
-`golden-valley/scene.js`, re-run `scripts/capture_descent_path.py`, and
-re-measure. About five minutes of compute, free, and worth doing in one go
-once the building half of Phase 3 lands rather than three times.
+Holding the changes in one place meant paying that cost once instead of three
+times.
+
+`golden-valley/gv-buildings.json` is the one shared file the three phases
+touched, and the roof pass only *added* fields to it: `ring`, `holes`, `base`
+and `height` are recomputed and asserted identical, and the script refuses to
+write if any of the 4,033 disagree. So the map page renders exactly what it
+rendered yesterday, and the seam numbers still stand.
+
+Adoption is now one job: move the `applyLook` / `addLandCover` /
+`buildBuildings` calls into `golden-valley/scene.js`, re-run
+`scripts/capture_descent_path.py`, and re-measure the seam. About five
+minutes of compute, free.
 
 ## Immediate next step
 
-The building half of Phase 3: roof pitch from the DSM we already downloaded,
-and material families from the OSM tags already on every footprint. Then
-adopt Phases 1–3 into the map page and re-render the descent anchors in one
-pass.
+Adopt Phases 1–3 into the map page and re-render the descent anchors in one
+pass. Then Phase 4 — the living half — which is the first phase that needs a
+decision from you rather than a dataset.

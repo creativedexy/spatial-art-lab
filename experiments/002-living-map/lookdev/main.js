@@ -6,6 +6,7 @@ import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
 import { buildScene, heightAtLocal, toLocal, sizeX, sizeZ } from '../golden-valley/scene.js';
 import { applyLook } from './look.js';
 import { addLandCover } from '../golden-valley/landcover.js';
+import { buildBuildings } from '../golden-valley/buildings.js';
 
 const app = document.getElementById('app');
 const scene = buildScene();
@@ -24,9 +25,21 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 app.appendChild(renderer.domElement);
 
-// ?bare renders the state before Phase 2 — the same light on a blank green
-// ground — so before and after can be captured from one identical camera.
+// ?bare is the state before Phase 2 — the same light on a blank green ground.
+// ?flatroofs keeps the land cover but leaves the buildings as extrusions, so
+// the roof pass can be judged on its own from an identical camera.
 const bare = params.has('bare');
+if (!bare && !params.has('flatroofs')) {
+  // Swap the flat-topped extrusions for measured roofs and material
+  // families. Done before applyLook, which walks scene.children and would
+  // otherwise be re-lighting meshes that are about to be thrown away.
+  for (const child of [...scene.children]) {
+    if (child.isMesh && child.material && !child.material.vertexColors) {
+      scene.remove(child);
+    }
+  }
+  scene.add(buildBuildings());
+}
 applyLook(scene, renderer, { grade: bare });
 if (!bare) await addLandCover(scene, renderer);
 

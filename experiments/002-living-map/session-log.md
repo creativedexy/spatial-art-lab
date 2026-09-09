@@ -445,3 +445,109 @@ Next 20-minute experiment: roof pitch from the DSM. We take the median height
 inside each footprint and throw the rest away, but the ridge and the eaves
 are both sitting in a file already on disk — the difference between the
 footprint's median and its 90th percentile is a roof.
+
+## Session F — roofs, and what the ridge direction turned out to be
+
+Date: 9 Sep 2026
+Intent in one sentence: The building half of Phase 3 — recover roof shape from the DSM we already downloaded, and material families from the OSM tags already on every footprint.
+Tool/build/model: Python + numpy percentiles over the LiDAR difference, Three.js merged geometry, no paid generation.
+
+### One variable to explore
+
+We keep the **median** height inside each footprint and throw the
+distribution away. The DSM holds the eaves and the ridge of every house in
+west Cheltenham; the question was whether a 1 m composite can resolve them.
+
+### What happened
+
+It can, and it also answered a question I did not think was open.
+
+`scripts/golden_valley_roofs.py` measures four things per footprint: eaves
+(20th percentile of the roof pixels), ridge (97th), the direction the ridge
+runs, and whether it is a gable or a hip. 2,658 gables, 735 hips, 640 flat,
+median ridge 2.5 m above the eaves. Sheds come out 84 % flat and houses 79 %
+pitched without being told which is which, which is the check that the
+measurement is measuring roofs.
+
+**The finding.** The ridge direction is measured, not assumed — the
+minimum-area rectangle offers two axes and the DSM says which one the surface
+falls away from. I expected the measurement to agree with the obvious prior
+(a ridge runs along a building's long axis) nearly always, and treated
+disagreement as noise to be suppressed. It disagrees **62 % of the time**,
+and the prior is the thing that is wrong:
+
+```
+   OSM footprint of one semi          what I assumed         what the DSM says
+   ┌──────────┐                       ┌──────────┐           ┌──────────┐
+   │          │  9 m deep             │ ───────► │           │    ▲▲    │
+   │          │  6 m frontage         │  ridge   │           │    ││    │
+   └──────────┘                       └──────────┘           └──────────┘
+        street ────────────────           wrong               ridge runs
+                                                              with the street
+```
+
+A British semi or terraced house is narrow-fronted and deep. Its ridge runs
+parallel to the road, which is *across* its own footprint's long axis.
+Assuming the long axis would have laid every terrace in Hesters Way at right
+angles to the street it faces, and it would have looked wrong without anyone
+being able to say why.
+
+The same two numbers separate a gable from a hip. Fall-off in one direction
+and level in the other means vertical ends and a full-length ridge; fall-off
+in both means the ends are hipped and the ridge is short. In the browser that
+is one parameter — how far the ridge segment is inset from the footprint's
+extent — and every footprint edge is then joined to its own projection on
+that segment. It is the straight skeleton of a rectangle, it stays closed for
+any simple polygon, and it needs no offsetting library.
+
+Materials come from the `building` tag. Nearly half say only `building=yes`,
+so those are inferred from the land cover Phase 2 put underneath the
+centroid, the footprint area, and whether the roof measured pitched.
+
+### Three things worth keeping
+
+1. **The percentiles were checked, not chosen.** At the 97th percentile the
+   ridge lands within 0.11 m of the footprint's highest pixel, so it is the
+   ridge and not a chimney. The eaves are the fragile end: at the 12th
+   percentile they come out at 3.7 m, a metre and a half below where a
+   two-storey semi's eaves actually sit, because the wall line mixes roof and
+   garden however hard it is filtered. The 20th puts them at 4.9 m.
+2. **Ground leak was tilting the ridge direction, and it looked like signal.**
+   A footprint rasterised diagonally on a 1 m grid is fringed with pixels
+   that are half garden. Those sit at the greatest distance from every centre
+   line, so they bias the tent fit in whichever direction the building is
+   longest — turning a measurement of roofs into a measurement of footprint
+   shape. My first run reported the DSM overruling the long axis 55 % of the
+   time and I nearly shipped that number as a finding.
+3. **Under this sun, grey renders as tan.** The light is 0xffe0b5 at a low
+   angle, so a neutral roof arrives brown. Slate has to be specified cool —
+   these values read blue in the file and grey on the screen.
+
+### Saved outputs
+
+Source: `scripts/golden_valley_roofs.py`,
+`experiments/002-living-map/golden-valley/buildings.js`. Serve
+`experiments/002-living-map` and open `lookdev/index.html`; `?flatroofs`
+keeps the land cover and leaves the buildings as extrusions, which is how the
+comparison sheet was made, and `?bare` goes all the way back to Phase 1.
+Preview: `exports/002-living-map-roofs-v001.png` (before/after),
+`exports/002-living-map-roofs-aerial-v001.png`.
+
+### Review (Session F)
+
+What works: the roofscape reads as British suburbia from 300 m — ridges
+following streets, hipped semis among gabled terraces, flat sheds on the
+industrial estate — and none of it was drawn.
+What I can now change without AI: the five material families in one table,
+the two percentiles that define eaves and ridge, and the gable/hip threshold.
+One failure worth keeping: I built the ridge-direction test around a prior I
+never questioned, then read a 55 % disagreement as noise rather than as the
+prior being wrong. It was both — contaminated pixels *and* a wrong
+assumption — and the only reason I found either was printing the actual
+height grid of three houses instead of another summary statistic.
+
+Next 20-minute experiment: adopt Phases 1–3 into `golden-valley/scene.js` and
+re-run `scripts/capture_descent_path.py`. The seam has been measured against
+a white model; measuring it again against a world with foliage and roof
+detail tests Session B's finding — that the seam is driven by detail density
+— on our own control clip, for free.
