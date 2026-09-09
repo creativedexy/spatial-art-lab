@@ -98,8 +98,10 @@ function regradeTerrain(mesh) {
 /**
  * Re-light and re-grade a scene built by ../golden-valley/scene.js.
  * `extent` is the half-width in metres the shadow camera must cover.
+ * `grade` colours the terrain by height and slope; turn it off when a land
+ * cover image is supplying the ground colour instead, or the two multiply.
  */
-export function applyLook(scene, renderer, { extent = 1250 } = {}) {
+export function applyLook(scene, renderer, { extent = 1250, grade = true } = {}) {
   // Filmic tone mapping, so a white model stops clipping to flat paper and
   // keeps detail in the lit faces.
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -149,7 +151,7 @@ export function applyLook(scene, renderer, { extent = 1250 } = {}) {
     const m = obj.material;
     if (!m || !m.isMeshStandardMaterial) continue;
     if (m.vertexColors) {
-      regradeTerrain(obj);
+      if (grade) regradeTerrain(obj);
       m.roughness = 1;
     } else {
       m.roughness = 0.88;

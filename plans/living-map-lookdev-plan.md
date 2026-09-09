@@ -13,10 +13,11 @@ Every session so far has gone into **structure**, and none into **surface**.
 | Buildings at measured heights | done — 4,033 of them, DSM minus DTM |
 | Georeferencing you can trust | done — real businesses at real coordinates |
 | The descent mechanism | done and measured — seams, fades, fallbacks |
-| **Light, shadow, grade** | **Phase 1 — proved today** |
-| **Land cover: woods, fields, water, roads** | not started |
-| **Buildings that read as buildings** | not started |
-| **Vegetation, weather, birds** | not started |
+| **Light, shadow, grade** | Phase 1 — proved |
+| **Land cover: woods, fields, water, roads** | **Phase 2 — done** |
+| **Trees: woods, hedges, street trees** | **done — 9,181 instances** |
+| **Buildings that read as buildings** | roof pitch and materials still to do |
+| **Weather, birds, movement** | not started |
 | **Art direction, typography, sound** | not started |
 | **The Golden Valley proposal itself** | not started — the site is an empty field |
 
@@ -48,6 +49,7 @@ flowchart TD
   P4 --> P5["Phase 5 — The proposal<br/>Golden Valley in place, before/after"]
   P5 --> P6["Phase 6 — Signature moves<br/>season wave, descents regenerated"]
   style P1 fill:#4a6f8a,color:#fff
+  style P2 fill:#4a6f8a,color:#fff
 ```
 
 ### Phase 1 — Light *(proved, needs adopting)*
@@ -62,22 +64,51 @@ unit effort in the whole list.
 control clip, because the seam measurements compare pixels — one command,
 about five minutes, free.
 
-### Phase 2 — Land cover and roads
+### Phase 2 — Land cover and roads *(done)*
 
-The ground is still one green blanket. Real ground is woodland, playing
-fields, farmland with hedge boundaries, water, car parks, and a road network.
-OpenStreetMap has all of it as polygons and lines in the box we already
-fetch, and the same script that pulled 4,033 footprints can pull them.
+The ground was one green blanket. Real ground is woodland, playing fields,
+farmland with hedge boundaries, water, car parks, and a road network, and
+OpenStreetMap had all of it in the box we had already fetched — 327 polygons
+and 1,484 lines, no new download.
 
-**Buys:** the vale stops being a lawn and becomes west Cheltenham. This is
-the difference between "a hill with boxes on it" and "somewhere you
-recognise". Probably the second biggest jump.
-**Cost:** one session. Free — OSM data, ODbL, already attributed.
+`scripts/golden_valley_landcover.py` rasterises them into a 1 m/texel colour
+image of the ground with the roads drawn in at their real widths, which is
+the decision worth keeping: a 4 m service road is *narrower than the terrain
+mesh's own 2 m triangles*, so as geometry it would z-fight and crawl, while
+as texels it is exact, anti-aliased and free.
 
-### Phase 3 — Buildings that read as buildings
+```
+      OSM ways/relations            gv-landcover.png             the map
+ ┌──────────────────────────┐   ┌──────────────────────┐   ┌───────────────┐
+ │ 327 area polygons        │   │ 2000 x 2000, 1 m per │   │ terrain mesh  │
+ │ 1484 lines (roads,       ├──▶│ texel, drawn at 2x   ├──▶│ .map =        │
+ │ streams, hedges)         │   │ and box-downsampled  │   │  land cover   │
+ │ 540 surveyed trees       │   │ 605 KB PNG           │   │ vertex colour │
+ └──────────────────────────┘   └──────────────────────┘   │  = slope only │
+                                └── gv-trees.bin, 72 KB ──▶│ InstancedMesh │
+                                                           └───────────────┘
+```
 
-Every building is currently a flat-topped extrusion. Two fixes, both from
-data we already hold:
+The vale now covers 31.7 % residential, 22.9 % farmland, 10.5 % amenity
+grass, 7.1 % meadow, 9.4 % carriageway, 4.5 % woodland, 3.0 % park and
+0.66 % water — which is west Cheltenham, and it is measured rather than
+art-directed.
+
+**Bought:** the vale stopped being a lawn. Second biggest jump, as predicted.
+**Cost:** one pass. Free — OSM data, ODbL, already attributed.
+
+### Phase 3 — Buildings that read as buildings *(trees done)*
+
+**Trees are in.** 9,181 instances in three families — 6,211 broadleaf
+scattered on the woodland and park polygons and through residential gardens,
+2,618 hedge blobs along OSM's hedge lines, 352 scrub — plus OSM's 540
+individually surveyed trees, all in one 72 KB file of 8-byte records. The
+records carry no Y: the map reads each trunk's ground height from the same
+height field the terrain is built from, so a tree cannot float or sink if
+either ever changes. Three draw calls for the lot.
+
+The buildings themselves are still flat-topped extrusions. Two fixes remain,
+both from data we already hold:
 
 - **Roof pitch from the DSM.** We take the *median* height inside each
   footprint. The DSM also holds the ridge and the eaves, so the roof shape is
@@ -86,11 +117,8 @@ data we already hold:
   school. Four or five material families instead of one white, and the town
   reads as a town.
 
-Trees land here too: instanced geometry on Phase 2's woodland polygons and
-hedge lines, plus OSM's individual tree points.
-
 **Buys:** the last of the "architectural competition entry" look.
-**Cost:** one to two sessions. Free.
+**Cost:** one session for the two building fixes. Free.
 
 ### Phase 4 — Life, and art direction
 
@@ -138,8 +166,20 @@ If a pitch date lands, Phase 5 jumps the queue: a client will forgive a
 plain-looking map that shows *their scheme*, and will not forgive a beautiful
 map that does not.
 
+## The adoption debt
+
+Phases 1–3 all live in `experiments/002-living-map/lookdev/`, and the map page
+still runs the old flat look. That is deliberate, not neglect: the descent
+seam is measured *in pixels*, so the moment the world's appearance changes,
+`descent/frames/*.png`, the control clip and `seam-report.json` are all stale.
+Adoption is therefore one job, not three — move the calls into
+`golden-valley/scene.js`, re-run `scripts/capture_descent_path.py`, and
+re-measure. About five minutes of compute, free, and worth doing in one go
+once the building half of Phase 3 lands rather than three times.
+
 ## Immediate next step
 
-Phase 2 and the tree half of Phase 3, together, in one pass — land cover,
-roads and woodland are what stop the ground reading as a lawn, and they share
-one OSM fetch. Nothing to spend, and it is the largest remaining jump.
+The building half of Phase 3: roof pitch from the DSM we already downloaded,
+and material families from the OSM tags already on every footprint. Then
+adopt Phases 1–3 into the map page and re-render the descent anchors in one
+pass.

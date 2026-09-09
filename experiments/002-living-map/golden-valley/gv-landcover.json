@@ -1,0 +1,102 @@
+{
+  "note": "Land cover and trees for the Golden Valley box. Pixel (0,0) is the north-west corner, one pixel is one metre. Tree records are 8 bytes little-endian: int16 x, int16 z (local decimetres from the box centre, x east, z south), uint8 height (0.25 m steps), uint8 rotation (1/256 turn), uint8 kind, uint8 canopy spread (percent).",
+  "colourFile": "gv-landcover.png",
+  "classFile": "gv-landclass.png",
+  "treeFile": "gv-trees.bin",
+  "metresPerPixel": 1,
+  "pixels": [
+    2000,
+    2000
+  ],
+  "classes": {
+    "farmland": {
+      "index": 0,
+      "colour": "#7d9460",
+      "coverPercent": 22.92
+    },
+    "meadow": {
+      "index": 1,
+      "colour": "#93a566",
+      "coverPercent": 7.12
+    },
+    "grass": {
+      "index": 2,
+      "colour": "#8ca767",
+      "coverPercent": 10.53
+    },
+    "pitch": {
+      "index": 3,
+      "colour": "#7fa457",
+      "coverPercent": 0.99
+    },
+    "park": {
+      "index": 4,
+      "colour": "#86a05c",
+      "coverPercent": 3.0
+    },
+    "scrub": {
+      "index": 5,
+      "colour": "#74855a",
+      "coverPercent": 0.73
+    },
+    "wood": {
+      "index": 6,
+      "colour": "#4a6440",
+      "coverPercent": 4.45
+    },
+    "residential": {
+      "index": 7,
+      "colour": "#8d947a",
+      "coverPercent": 31.67
+    },
+    "hardstanding": {
+      "index": 8,
+      "colour": "#9c9c94",
+      "coverPercent": 4.4
+    },
+    "parking": {
+      "index": 9,
+      "colour": "#7d7d78",
+      "coverPercent": 2.93
+    },
+    "water": {
+      "index": 10,
+      "colour": "#5c7f8c",
+      "coverPercent": 0.66
+    },
+    "path": {
+      "index": 11,
+      "colour": "#9a9083",
+      "coverPercent": 1.14
+    },
+    "road_minor": {
+      "index": 12,
+      "colour": "#6f6f6a",
+      "coverPercent": 6.11
+    },
+    "road": {
+      "index": 13,
+      "colour": "#64645f",
+      "coverPercent": 3.31
+    },
+    "rail": {
+      "index": 14,
+      "colour": "#5f5b54",
+      "coverPercent": 0.03
+    }
+  },
+  "treeKinds": {
+    "0": "broadleaf",
+    "1": "scrub",
+    "2": "hedge"
+  },
+  "trees": 9181,
+  "treesByKind": {
+    "0": 6211,
+    "1": 352,
+    "2": 2618
+  },
+  "sources": [
+    "OpenStreetMap contributors (ODbL)"
+  ]
+}

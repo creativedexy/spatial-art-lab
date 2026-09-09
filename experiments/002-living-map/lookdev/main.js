@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
 import { buildScene, heightAtLocal, toLocal, sizeX, sizeZ } from '../golden-valley/scene.js';
 import { applyLook } from './look.js';
+import { addLandCover } from '../golden-valley/landcover.js';
 
 const app = document.getElementById('app');
 const scene = buildScene();
@@ -23,7 +24,11 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 app.appendChild(renderer.domElement);
 
-applyLook(scene, renderer);
+// ?bare renders the state before Phase 2 — the same light on a blank green
+// ground — so before and after can be captured from one identical camera.
+const bare = params.has('bare');
+applyLook(scene, renderer, { grade: bare });
+if (!bare) await addLandCover(scene, renderer);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };

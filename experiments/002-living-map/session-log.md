@@ -357,3 +357,91 @@ hand-over happens *below* the detail threshold (frame A around 150 m rather
 than 300 m, where the building field is sparser) and see whether the in-seam
 falls towards the out-seam's 1.4 %. The anchors for it are a capture run
 away.
+
+## Session E — land cover, roads and trees
+
+Date: 9 Sep 2026
+Intent in one sentence: Stop the ground reading as a lawn — Phase 2 of the look plan and the tree half of Phase 3, in one pass, from OSM we already hold.
+Tool/build/model: Python + PIL rasterisation, Three.js `InstancedMesh`, headless Chromium for stills, no paid generation.
+
+### One variable to explore
+
+Whether **surface** is really what was missing. Every session so far had gone
+into structure, and Phase 1 suggested the answer without proving it: light
+alone turned the massing model into an architectural render, but it was still
+an architectural render of a lawn.
+
+### What happened
+
+`scripts/golden_valley_landcover.py` reads the OSM extract already cached
+from the buildings run — no new fetch — and finds 327 area polygons, 1,484
+lines and 540 individually surveyed trees inside the same 2 km box. It writes
+three things:
+
+| file | size | what it is |
+|---|---|---|
+| `gv-landcover.png` | 605 KB | the ground, 1 m per texel, roads drawn in |
+| `gv-trees.bin` | 72 KB | 9,181 trees, 8 bytes each |
+| `gv-landclass.png` | 169 KB | the same raster as class indices, for Phase 4 |
+
+Two decisions carried the result.
+
+**Roads are texels, not geometry.** A service road is 4 m wide and the
+terrain mesh's triangles are 2 m, so as geometry the road network would
+z-fight and crawl at every altitude. Drawn into the ground image at 2x and
+box-downsampled, it is exact, anti-aliased, and the entire network — 1,484
+ways — costs one texture fetch. It is also why anisotropy is not optional
+here: at 1 m/texel over 2 km, the far half of an aerial view is deep in the
+mip chain, which is exactly where an aerial spends most of its pixels.
+
+**Trees carry no Y.** Each 8-byte record holds x, z, height, rotation, kind
+and canopy spread, and the map computes the ground height from the same field
+the terrain is built from. A tree therefore cannot float or sink if either
+ever changes — the one class of bug that would otherwise be invisible until a
+descent lands next to it.
+
+The vale now measures 31.7 % residential, 22.9 % farmland, 10.5 % amenity
+grass, 9.4 % carriageway, 7.1 % meadow, 4.5 % woodland, 3.0 % park, 0.66 %
+water. None of that was art-directed; it is what is there.
+
+### Two things that cost time, both worth keeping
+
+1. **PIL reads an integer colour lowest-byte-first.** `fill=0x7d9460` paints
+   `#60947d`. The whole first raster came out in BGR — a plausible-looking
+   mint-green Cheltenham that only gave itself away when I sampled a pixel
+   rather than trusting the render. Colours are tuples now.
+2. **`mergeGeometries` returns `null` for a mix of indexed and non-indexed
+   inputs.** It does not throw. The trunk is an indexed cylinder and the
+   canopy a non-indexed icosahedron, so the tree geometry came back null and
+   the failure surfaced hundreds of frames later as
+   `Cannot read properties of null (reading 'id')` inside three.module.min.js
+   — a stack trace pointing at everything except the cause.
+
+### Saved outputs
+
+Source: `scripts/golden_valley_landcover.py`,
+`experiments/002-living-map/golden-valley/landcover.js`. See it with
+`python3 -m http.server` in `experiments/002-living-map` and open
+`lookdev/index.html`; add `?bare` to render the same camera without Phase 2,
+which is how the comparison sheet was made.
+Preview: `exports/002-living-map-landcover-v001.png` (before/after),
+`exports/002-living-map-landcover-aerial-v001.png`,
+`exports/002-living-map-trees-v001.png`.
+
+### Review (Session E)
+
+What works: the answer to "I can't see the vision" is now a single image. The
+same camera, the same light, the same buildings — the only difference is that
+the ground knows what it is, and it stops being a diagram.
+What I can now change without AI: every colour in one table at the top of the
+script, tree density per land-cover class in another, and a rebuild is five
+seconds.
+One failure worth keeping: I sanity-checked the first raster by *looking* at
+it, decided the mint-green fields were a preview quirk, and moved on. The
+check that caught it was reading one pixel value. Looking at output is not
+inspecting it.
+
+Next 20-minute experiment: roof pitch from the DSM. We take the median height
+inside each footprint and throw the rest away, but the ridge and the eaves
+are both sitting in a file already on disk — the difference between the
+footprint's median and its 90th percentile is a roof.
