@@ -1340,3 +1340,128 @@ happen again.
 Next 20-minute experiment: Session K's, which is now unblocked — hand the
 `building` class from the mask to the depth-conditioned rung and see whether
 the doughnut stops being an earthwork.
+
+
+## Session M — the vision sequence, and what the ground truth said
+
+Five frames, **£0**, on the Codex subscription. Against US$1.25 for the paid
+ladder, of which US$0.95 bought two clips of our clay model in motion.
+
+### The correction to Session K
+
+Session K's video rungs were the wrong spend and the reason is specific: I had
+rung 6 — a photoreal still that kept the structure — and then animated rung 1's
+*stylised* input anyway, because the brief listed the rungs in that order. My
+own result had invalidated the brief's sequencing and I followed the brief.
+
+Second error, sharper. I checked that `kling-video/v1.6` was **live** and
+stopped there. Live is not current. `kling-video/v3/pro/image-to-video` exists,
+is up, and takes `start_image_url` **and** `end_image_url` — first and last
+frame. The right shape was two photoreal stills bridged for about £0.56. I paid
+US$0.95 to interpolate clay. Verifying that an endpoint *responds* is not
+verifying it is the one to use.
+
+### The image that reframed the work
+
+`inspiration/golden-valley/official/aerial-03.jpg` is not a CGI world. It is a
+**photomontage over a real aerial photograph of this exact hill** — GCHQ at
+bottom right, the same fields, the same crest. The scheme's own visual language
+is therefore the shape of our pipeline: real measured place as substrate,
+authored buildings painted on. Rung 6 arrived at that from the other direction
+without knowing it.
+
+It is also free ground truth. Feature by feature against our model:
+
+```
+  terrain, ridge, horizon        ours is right
+  street network                 ours is right
+  GCHQ position and ring form    ours is right
+  GCHQ roof COLOUR               ours is DARK TEAL. Real is pale ribbed metal.
+  car parks                      absent from ours; huge in reality
+  roof material variety          absent; real housing mixes slate and clay tile
+  garden and plot subdivision    absent
+  field surface variety          absent; real fields are ploughed as well as grazed
+```
+
+Everything in the top block is geometry and we have it. Everything in the
+bottom block is **class and colour** and we do not. That is the answer to
+"improve the detail", and none of it is modelling.
+
+### The dark teal roof
+
+The cleanest single object in the whole experiment. One wrong colour value in
+our renderer, and rung 1 — US$0.06 — turned the most recognisable building in
+Gloucestershire into a pond. Frame 2 fixed it for £0, with a sentence about
+ribbed metal and not one new polygon.
+
+Session K's verdict said no failure was one that geometry would fix. This is
+the positive form of the same claim: the failure that looked most like bad
+modelling was a colour.
+
+### What Codex did that the paid models did not
+
+Given three or four references at once, it **drafted, inspected its own output,
+named the drift and regenerated** — unprompted by any second call from me. On
+frames 3 and 4 it wrote itself coordinate-locked correction prompts
+("hedge must start at normalized (0.702,0.838) and exit (1,0.658)") and saved
+them alongside the images. That is the routing skill's finding holding up:
+engine plus verify-loop beat engine alone.
+
+It also reported honestly that the frames are **not survey-exact** — GCHQ sits
+slightly high in frames 1 and 2, foreground footprints differ. For a vision
+sequence that is fine. For a film where the live map hands over to the clip on
+a matched frame it is not, and that is the next problem.
+
+### Two corrections to `~/.claude/skills/image-engine-routing`
+
+- It says output is "~1086×1448 and not controllable". Every frame here came
+  back **1672×941**, which is 16:9. Either it changed or the aspect follows the
+  references.
+- It says "Blender is not installed on this machine, so Astra's main value
+  cannot be realised here." `/Applications/Blender.app` exists. Astra is
+  available — though on this project it should be pointed at pipeline work
+  (16-bit depth output, material assignment from OSM tags), not at sculpting,
+  because sculpting is the thing Session K ruled out.
+
+### Session L landed underneath this one
+
+Session L pushed while these frames were generating, and it did the two things
+this session's audit was about to ask for: the disparity encoding moved into
+`capture_passes.py` for every view and every future site, with the relief
+number measured as a standing check, and material families driven off the OSM
+tags into the structure mask.
+
+Two consequences, both worth stating rather than quietly absorbing:
+
+- The five frames here were conditioned on the **pre-Session-L** renders. They
+  should be regenerated against the new passes before anyone treats them as
+  current. Free, so there is no reason not to.
+- `aerial-depth-refit.png` and `aerial-depth-disparity.png`, made by hand in
+  Session K, are now superseded by the renderer writing the encoding directly.
+  They stay as the record of how it was diagnosed, and rungs 5 and 6 are marked
+  ARCHIVE upstream for the same reason.
+
+The audit's remaining gaps are unchanged by that work and still worth having:
+GCHQ's roof colour, car parks as a class, and field surface variety. Session L
+gave fields their working lines, which is the biggest one already closed.
+
+### Saved outputs
+
+`experiments/002-living-map/vision/` — five frames, Codex's own generation
+prompts and inspection notes, and `index.html` as the sequence.
+`inspiration/golden-valley/` — 16 reference images with provenance.
+
+### Review (Session M)
+
+What works: a free engine with a verify loop beat a paid one, and the ground
+truth told us where detail is worth adding instead of us guessing.
+What I can now change without AI: the GCHQ roof colour, the roof material
+assignment, and whether car parks are a class in the mask.
+One failure worth keeping: "the endpoint returns 200" became "the endpoint is
+the right one" without my noticing the step. The dry run protocol catches wrong
+*ids*; it has nothing to say about stale ones. Check the version, not just the
+pulse.
+
+Next 20-minute experiment: set GCHQ's roof pale in the renderer — Session L
+built the material families this slots into — then re-run rung 1 at US$0.06.
+If the pond does not come back, one colour value bought the whole correction.
