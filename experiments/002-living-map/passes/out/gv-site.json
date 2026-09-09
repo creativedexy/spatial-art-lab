@@ -22,13 +22,19 @@
   "files": {
     "beauty": "gv-site-beauty.png",
     "depth": "gv-site-depth.png",
+    "metric": "gv-site-metric.png",
     "normal": "gv-site-normal.png",
     "mask": "gv-site-mask.png"
   },
   "depth": {
     "nearMetres": 111.1,
     "farMetres": 685.1,
-    "encoding": "near=white, far=black, linear in view space, range fitted to the frame"
+    "encoding": "near=white, far=black, linear in view space, range fitted to the frame. metres = far - value/255 * (far - near).",
+    "reliefMetres": null
+  },
+  "reliefGreyLevels": {
+    "depth": 0.53,
+    "metric": 0.06
   },
   "maskColours": {
     "sky": "#000000",

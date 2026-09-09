@@ -22,13 +22,19 @@
   "files": {
     "beauty": "aerial-beauty.png",
     "depth": "aerial-depth.png",
+    "metric": "aerial-metric.png",
     "normal": "aerial-normal.png",
     "mask": "aerial-mask.png"
   },
   "depth": {
     "nearMetres": 357.1,
     "farMetres": 1580.6,
-    "encoding": "near=white, far=black, linear in view space, range fitted to the frame"
+    "encoding": "near=white, far=black, linear in view space, range fitted to the frame. metres = far - value/255 * (far - near).",
+    "reliefMetres": null
+  },
+  "reliefGreyLevels": {
+    "depth": 10.32,
+    "metric": 0.63
   },
   "maskColours": {
     "sky": "#000000",

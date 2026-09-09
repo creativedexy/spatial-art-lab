@@ -106,7 +106,10 @@ RUNGS = {
     },
     2: {
         "kind": "image",
-        "why": "the same view conditioned on depth instead of on our picture",
+        "why": "the same view conditioned on structure instead of on our "
+               "picture — now on the corrected depth encoding, which carries "
+               "10.3 grey levels of building relief where the linear one "
+               "carried 1.07 and the control net saw a bare ground ramp",
         "model": "fal-ai/flux-control-lora-depth",
         "inputs": ["aerial-depth.png"],
         "args": lambda p: {
@@ -123,11 +126,17 @@ RUNGS = {
             "num_images": 2,
         },
     },
+    # Rungs 5 and 6 are kept as the record of how the encoding was diagnosed,
+    # and they run against two images that were made by hand, once, for one
+    # view. The fix is now in the renderer instead: capture_passes.py writes
+    # the conditioning encoding as `<view>-depth.png` for every view and every
+    # site, and reports the relief it carries so a flat one cannot ship
+    # quietly again. Rung 2 is the live rung; 5 and 6 are the archaeology.
     5: {
         "kind": "image",
-        "why": "rung 2 again, on a depth pass whose range is not spent on the "
-               "ground ramp — the control test for whether rung 2 failed "
-               "because our geometry is thin or because our encoding was",
+        "why": "ARCHIVE — rung 2 again on a hand-refitted depth pass; the "
+               "control test for whether rung 2 failed because our geometry "
+               "is thin or because our encoding was",
         "model": "fal-ai/flux-control-lora-depth",
         "inputs": ["aerial-depth-refit.png"],
         "args": lambda p: {
@@ -140,9 +149,9 @@ RUNGS = {
     },
     6: {
         "kind": "image",
-        "why": "rung 2 a third time, on depth re-encoded as disparity (1/z) — "
-               "the convention control nets are trained on — so the ramp still "
-               "carries camera pitch while the buildings become legible",
+        "why": "ARCHIVE — the hand-made disparity encoding that first "
+               "recovered the structure. capture_passes.py now writes this "
+               "shape of image directly, so rung 2 is the one to run",
         "model": "fal-ai/flux-control-lora-depth",
         "inputs": ["aerial-depth-disparity.png"],
         "args": lambda p: {

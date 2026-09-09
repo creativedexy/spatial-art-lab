@@ -33,7 +33,14 @@ ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "experiments" / "002-living-map"
 OUT = SITE / "passes" / "out"
 CHROMIUM = Path("/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
-PASSES = ("beauty", "depth", "normal", "mask")
+PASSES = ("beauty", "depth", "metric", "normal", "mask")
+
+# The number that diagnosed Session K's failure, made into a standing check.
+# A depth pass carrying a smooth ramp and 1.07 grey levels of building relief
+# looks perfectly reasonable and is useless: the control net sees the ramp,
+# reproduces it faithfully, and invents the town on top. So every pass is
+# measured, and a thin one says so out loud.
+MIN_RELIEF_LEVELS = 4.0
 
 # Two views on purpose, because Session B's finding is that the generator's
 # error tracks detail density: the wide aerial holds thousands of tiny
@@ -68,6 +75,21 @@ def serve(port):
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv
+
+
+def relief_levels(path):
+    """Mean local relief in grey levels — how much of the image is *detail*
+    rather than gradient. Measured the way Session K measured it: the mean
+    absolute difference from a 9-pixel box blur, over the middle band where
+    the buildings are."""
+    from PIL import Image, ImageFilter
+    import numpy as np
+    im = Image.open(path).convert("L")
+    w, h = im.size
+    band = im.crop((0, int(h * 0.35), w, int(h * 0.85)))
+    a = np.asarray(band, dtype=float)
+    b = np.asarray(band.filter(ImageFilter.BoxBlur(4)), dtype=float)
+    return float(np.abs(a - b).mean())
 
 
 def capture(browser, url, dest, size):
@@ -134,7 +156,14 @@ def main():
                     sidecar["depth"] = meta["depth"]
                 if meta and meta.get("maskColours"):
                     sidecar["maskColours"] = meta["maskColours"]
-                print(f"  ok   {dest.name}  {dest.stat().st_size // 1024} KB")
+                note = ""
+                if p in ("depth", "metric"):
+                    lv = relief_levels(dest)
+                    sidecar.setdefault("reliefGreyLevels", {})[p] = round(lv, 2)
+                    note = f"  relief {lv:5.2f} levels"
+                    if p == "depth" and lv < MIN_RELIEF_LEVELS:
+                        note += "  <-- TOO FLAT to condition on"
+                print(f"  ok   {dest.name}  {dest.stat().st_size // 1024:4} KB{note}")
             (OUT / f"{name}.json").write_text(json.dumps(sidecar, indent=2))
             print(f"wrote {OUT / (name + '.json')}")
         browser.close()

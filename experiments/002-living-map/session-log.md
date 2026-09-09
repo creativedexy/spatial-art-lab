@@ -1295,4 +1295,48 @@ printing the confusion matrix to see that the "improvement" had cut hipped
 roofs from 658 to 392 in a town that has more than that. An accuracy that
 goes up while the output gets worse is the most flattering kind of wrong.
 
-Next 20-minute experiment: whichever way the ladder falls.
+### Then Session K's answer landed mid-session, and changed this one
+
+The ladder came back while this was running, and its verdict — *no Blender,
+the geometry carries, our depth encoding was what failed* — indicts a pass I
+had shipped that same morning. Session K fixed it by hand, once, for one
+view: two PNGs made outside the pipeline. So the last hour of this session
+was putting the fix where it belongs.
+
+`capture_passes.py` now writes the conditioning encoding directly, for every
+view and every future site: disparity for the ramp, because 1/z is what
+control nets are trained on, plus the **true height above the terrain** — the
+terrain is rendered to its own target first, so it is the real height of the
+thing above the ground it stands on rather than a high-pass filter's opinion
+of it. And it measures what it produced:
+
+```
+  aerial     10.32 grey levels of relief   (was 0.32, and 1.07 before that)
+  approach    5.26
+  gv-site     0.53   <-- TOO FLAT to condition on
+```
+
+The warning firing on `gv-site` is the check being right, not wrong: that
+site is an empty field. There is nothing standing there to condition on,
+which is exactly the case Phase 5 exists for.
+
+**The bug took four attempts and every one of them looked like a tuning
+problem.** The relief term was exactly zero and the image still looked
+plausible — a disparity ramp that simply was not very good — so the first
+three goes were spent adjusting weights. Only rendering the relief channel on
+its own showed it was flat zero, and rendering the terrain prepass to the
+screen showed the prepass itself was fine. The cause was a texture feedback
+loop: the material sampling the terrain target was the same material bound as
+`overrideMaterial` while drawing *into* that target. WebGL leaves that
+undefined and this driver resolves it by dropping the draw, silently. Giving
+the prepass its own program fixed it: relief 0.32 → 10.32.
+
+Session K's own lesson was that an image can be beautiful and wrong. This is
+the same shape one level down: a *pass* can be plausible and empty, and the
+only thing that caught it was measuring the channel instead of looking at the
+picture — which is now a standing check with a threshold, because it will
+happen again.
+
+Next 20-minute experiment: Session K's, which is now unblocked — hand the
+`building` class from the mask to the depth-conditioned rung and see whether
+the doughnut stops being an earthwork.

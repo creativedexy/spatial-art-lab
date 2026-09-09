@@ -30,10 +30,22 @@ all from one camera at one instant, wind off and birds hidden:
 | | |
 |---|---|
 | `<view>-beauty.png` | the map as it renders |
-| `<view>-depth.png` | linear view depth, near white, far black, range fitted to the frame |
+| `<view>-depth.png` | **the conditioning encoding** — disparity plus true height above the terrain. Not metres; this is the one to condition on |
+| `<view>-metric.png` | linear view depth in metres, range fitted to the frame, for anything that wants the number |
 | `<view>-normal.png` | world-space normals |
 | `<view>-mask.png` | flat colour by class **and by material family** — walls, domestic slate roofs, terrace roofs, shed roofs, civic roofs, road, hardstanding, water, field, wood, tree |
 | `<view>.json` | camera, field of view, the fitted depth planes **in metres**, the mask palette |
+
+Every capture reports the **mean local relief in grey levels** each depth
+pass carries, and warns below four. That number is the whole lesson of the
+first ladder run: a linear depth pass fitted over 357–1580 m gave a 15 m
+house 1.07 grey levels out of 255, the control net saw a ground ramp and
+nothing else, reproduced the ramp faithfully and invented a beautiful and
+completely wrong town on top of it. The corrected pass carries 10.3.
+
+It is worth knowing which way the warning can fire honestly: `gv-site`
+reports 0.53 and is **right to**. That site is an empty field. There is
+nothing there to condition on, which is exactly what Phase 5 is for.
 
 Views: `aerial` (camera A of the doughnut descent — wide and dense),
 `approach` (camera B — low, a few large masses), `gv-site` (the Golden Valley

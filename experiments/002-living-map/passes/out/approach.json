@@ -22,13 +22,19 @@
   "files": {
     "beauty": "approach-beauty.png",
     "depth": "approach-depth.png",
+    "metric": "approach-metric.png",
     "normal": "approach-normal.png",
     "mask": "approach-mask.png"
   },
   "depth": {
     "nearMetres": 71.2,
     "farMetres": 824.4,
-    "encoding": "near=white, far=black, linear in view space, range fitted to the frame"
+    "encoding": "near=white, far=black, linear in view space, range fitted to the frame. metres = far - value/255 * (far - near).",
+    "reliefMetres": null
+  },
+  "reliefGreyLevels": {
+    "depth": 5.26,
+    "metric": 1.12
   },
   "maskColours": {
     "sky": "#000000",
