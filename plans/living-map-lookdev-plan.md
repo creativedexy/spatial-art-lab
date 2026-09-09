@@ -18,7 +18,7 @@ Every session so far has gone into **structure**, and none into **surface**.
 | **Trees: woods, hedges, street trees** | **done — 9,181 instances** |
 | **Buildings that read as buildings** | **Phase 3 — done** |
 | **Weather, birds, movement** | **Phase 4a — done** |
-| **Art direction, typography, sound** | not started |
+| **Art direction, typography, sound** | **Phase 4b — done, bar sound** |
 | **The Golden Valley proposal itself** | not started — the site is an empty field |
 
 Structure was the right order. It is the part that cannot be faked, it is
@@ -174,16 +174,57 @@ weather, wind, water and a flock in it:
 **Bought:** the map stops being a render of an afternoon and becomes one.
 **Cost:** one pass. Free.
 
-### Phase 4b — Art direction *(waiting on you)*
+### Phase 4b — Art direction *(done)*
 
-Typography, a palette, hotspot markers that belong to the world rather than
-to the browser, a choreographed opening move, and sound. All of it is a brand
-decision before it is a build, and it is the one thing in this plan I should
-not choose on your behalf.
+The direction was settled by the brief itself: **keep it close to the
+inspiration**. So rather than inventing one, I went and looked at what
+explore.ownprimland.com actually does — its stylesheet, not a description of
+it — and took the register.
 
-**Buys:** it stops looking like a tool and starts looking like a brand
-experience. This is where it becomes something you would put in a pitch.
-**Cost:** one to two sessions once the direction is set.
+| | the reference | ours |
+|---|---|---|
+| display | Inferi *(Blaze Type, licensed)* | Cormorant Garamond *(OFL)* |
+| interface | Centra *(Sharp Type, licensed)* | Jost\* *(OFL)* |
+| ground | warm paper `#fffbe7` `#fffdf3` | `#f7f2e6` |
+| greens | sage `#798d73` `#4a6b4a` | `#7c8c6f` `#445041` |
+| accent | burnt amber `#a8611a` | `#a4611f` |
+
+What is borrowed is the register — a high-contrast display serif against a
+geometric sans, warm paper, sage and burnt amber, an interface restrained
+enough that the landscape carries the work. What is not borrowed is anything
+proprietary: their faces are commercial, ours are open licence and vendored
+so the map renders identically offline, and our palette is sampled from the
+world itself — the farmland green the terrain is painted with, the warmth of
+the `0xffe0b5` sun, the slate the Doughnut is picked out in.
+
+Four things changed:
+
+- **The opening.** A title over a landscape that is already moving — the
+  camera eases in for fifteen seconds behind the words, so by the time they
+  have gone the map is somewhere you have watched rather than a thing you
+  have been handed. Their device exactly: a tracked-out overline, a big
+  serif name with one word in italic, one line of invitation, and an
+  *Explore the map* pill.
+- **Markers that are planted, not floating.** A pin on the ground, a hairline
+  stem, and the label above it — the stem is the whole difference between a
+  label that belongs to a point on the map and browser chrome sitting on top
+  of a picture. They fade with distance, because three labels shouting
+  equally from a 2 km box is a legend, not a place.
+- **The place panel** in cream, with the name in the display serif and the
+  attribution stepping aside rather than disappearing when it opens — OGL and
+  ODbL both require it to stay visible.
+- **A shallow bottom vignette**, doing two jobs: seating the credit line
+  against sunlit farmland, which is the one place on this map where cream
+  type has nothing to sit on, and giving a still the bottom weight it needs.
+
+**Still missing: sound.** The reference opens with ambient nature audio and a
+*start without audio* link, and that is clearly right — but it needs an
+actual recording, and shipping the control without the file would be a dead
+switch. It is the one part of this phase waiting on an asset rather than a
+decision.
+
+**Bought:** it stops looking like a tool.
+**Cost:** one pass. Free — two open-licence typefaces, 168 KB vendored.
 
 ### Phase 5 — The proposal itself
 
@@ -264,21 +305,23 @@ not what breaks a hand-off**, and the delivery encode moved to crf 32.
 
 ## Immediate next step
 
-**Phase 4b needs a decision from you**, and it is the first thing in this plan
-that a dataset cannot answer: what this should look like as a *brand*.
-Typography, palette, how a hotspot marker should feel, whether the map opens
-on a choreographed move, whether it has sound. Everything mechanical is done.
+**The season wave**, which the reference makes the case for better than this
+plan did. Its own signature move is a toggle that shifts the landscape from
+summer to autumn, and we are unusually well placed to do it: `gv-landclass.png`
+already says which texels are woodland, which are farmland and which are mown
+grass, the tree instances already carry a kind, and Phase 4a built the clock
+it would run on. A palette per class per season, and the wave crosses the
+vale rather than cutting.
 
-Everything else is unblocked and can go in any order:
+Then, in any order:
 
 - **Phase 5, the proposal** — still blocked on HBD or council material, and
   still the one that jumps the queue the moment a pitch date lands.
+- **Ambient sound** — the last piece of Phase 4b, waiting on a recording
+  rather than a decision.
 - **Phase 6, generated descents** — newly worth buying. Both anchor frames
   were re-rendered on 9 Sep, so a generator now starts from a real-looking
   place rather than a clay model, and `--style clay` is probably the wrong
   default. The Kling clip in `descent/fal/` is a record of the old world, not
   a comparison against this one.
-- **The season wave** — a shader session, free, and the one signature move
-  the new world is ready for: the land class image already says which texels
-  are woodland, which are farmland and which are mown grass, and each turns a
-  different colour at a different time of year.
+

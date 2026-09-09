@@ -776,3 +776,107 @@ which texels are woodland, which are farmland and which are mown grass, and
 each turns a different colour at a different time of year — so the wave is a
 palette lookup against a class the ground already knows, driven by the clock
 that now exists.
+
+## Session I — Phase 4b: art direction, taken from the reference rather than described
+
+Date: 9 Sep 2026
+Intent in one sentence: Give the map a voice — and, per the brief, keep it close to the thing it is aimed at.
+Tool/build/model: CSS, two open-licence typefaces, Playwright, no paid generation.
+
+### One variable to explore
+
+Every previous phase had a dataset to be right about. This one had a
+judgement, and the brief settled it in four words: *keep it close to
+inspiration*. So the question became how to do that honestly — how to take a
+direction from explore.ownprimland.com without taking their assets.
+
+### What happened
+
+I stopped describing the reference and read it. `curl` its Nuxt bundle,
+`grep` the stylesheet:
+
+```
+@font-face families   inferi · centra · petitserif
+CSS variables         --font-family-display, --font-family-serif, --font-family-sans
+palette               #fffbe7 #fffdf3 #efeae6   warm paper
+                      #798d73 #a8a98f #4a6b4a   sage
+                      #a8611a #eab279 #f7d9bb   burnt amber
+```
+
+That is a whole direction in three lines, and it is not a guess. Their faces
+are Inferi (Blaze Type) and Centra (Sharp Type), both commercial and neither
+redistributable, so ours are Cormorant Garamond and Jost — open licence,
+same register, vendored rather than linked because a webfont that arrives
+late would change what is on screen between one capture run and the next.
+The palette is ours, sampled from the world instead of their stylesheet: the
+farmland green the terrain is painted with, the warmth of the 0xffe0b5 sun,
+the slate the Doughnut is picked out in. Close, and none of it theirs.
+
+Four things changed:
+
+1. **The opening** — a title over a landscape already in motion, the camera
+   easing in for fifteen seconds behind the words. Their structure exactly: a
+   tracked-out overline, a big serif name with one word in italic, one line
+   of invitation, an *Explore the map* pill. The move matters more than the
+   words: by the time the title has gone, the map is somewhere you have
+   watched rather than a thing you have been handed.
+2. **Markers that are planted rather than floating** — a pin on the ground, a
+   hairline stem, the label above it. The stem is the whole difference
+   between a label that belongs to a point on the map and browser chrome
+   sitting on a picture of one. They fade with distance, because three labels
+   shouting equally from a 2 km box is a legend, not a place.
+3. **The place panel** in cream, name in the display serif, and the
+   attribution *stepping aside* when it opens rather than going out — OGL and
+   ODbL both require it to stay visible.
+4. **A shallow bottom vignette** — seating the credit line against sunlit
+   farmland, the one place on this map where cream type has nothing to sit
+   on, and giving a still its bottom weight.
+
+### The find that was not the point but is the best part
+
+The case study for the reference describes their hardest problem as
+"realistic low-poly trees and foliage that would be duplicated and scattered
+across an entire vast landscape without crushing performance", and their
+atmosphere as "ambient nature sounds, birdsong, fog, drifting clouds, and
+even the ability to change seasons".
+
+We built the trees in Phase 3 and the drifting clouds and birds in Phase 4a,
+from a different direction entirely — because a surveyed place needed them,
+not because the reference had them. The season wave, which this plan had
+parked at Phase 6, turns out to be *their* signature move too, and it moves
+up: the land class image already knows which texels are woodland, farmland
+and mown grass, and Phase 4a built the clock it would run on.
+
+### What is still missing
+
+Sound. The reference opens with ambient nature audio and a *start without
+audio* link, and it is obviously right — but it needs a recording, and
+shipping the control without the file would be a dead switch. It is the only
+part of this phase waiting on an asset rather than a decision.
+
+### Saved outputs
+
+Source: `experiments/002-living-map/golden-valley/direction.css` (everything
+with a colour or a typeface in it now lives in one file), the opening in
+`golden-valley/main.js`.
+Fonts: `terrain/vendor/fonts/` with a README naming both licences.
+Tests: 8 hotspot checks — updated to walk through the opening rather than
+skip it with a parameter no visitor has — and 3 clock checks, all passing.
+Preview: `exports/002-living-map-direction-v001.png`,
+`exports/002-living-map-markers-v001.png`.
+
+### Review (Session I)
+
+What works: it stops looking like a tool. The opening in particular does the
+job the plan has been asking for since "I can't see the vision" — it says
+what this is before it says what it does.
+What I can now change without AI: the entire look, from one CSS file with
+eleven custom properties at the top, without opening a line of JavaScript.
+One failure worth keeping: my first pass drew the markers, the credit and the
+hint over the title card, because I built the opening as a layer rather than
+as a state. Three lines of `body.intro-open` fixed it, but the lesson is that
+"an overlay" and "a moment in a sequence" are different things and I had
+built the first while designing the second.
+
+Next 20-minute experiment: the season wave — one palette per land class per
+season, crossing the vale on the Phase 4a clock rather than cutting.

@@ -74,6 +74,11 @@ def main():
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(url)
         page.wait_for_function("window.__terrainReady === true", timeout=240_000)
+        # The map opens on a title over a moving landscape, which is the real
+        # first step of the real flow, so the test takes it rather than
+        # skipping past it with a parameter no visitor has.
+        page.get_by_role("button", name="Explore the map").click()
+        page.wait_for_selector("#intro", state="hidden", timeout=60_000)
         page.wait_for_selector(".hotspot", timeout=120_000)
         if shots:
             page.screenshot(path=str(shots / "01-map.png"))

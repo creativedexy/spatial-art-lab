@@ -72,10 +72,14 @@ player.prefetchClips(hotspots);
 
 for (const h of hotspots) {
   const [x, z] = toLocal(h.e, h.n);
-  h.anchor = new THREE.Vector3(x, heightAtLocal(x, z) + 40, z);
+  // The ground point, not a point in the air: the marker's stem is drawn in
+  // screen pixels from here upwards, which is what makes it read as planted
+  // in the map rather than floating over a picture of one.
+  h.anchor = new THREE.Vector3(x, heightAtLocal(x, z), z);
   h.button = document.createElement('button');
   h.button.className = 'hotspot';
-  h.button.innerHTML = `<span class="dot"></span>${h.name}`;
+  h.button.innerHTML =
+    `<span class="label">${h.name}</span><span class="stem"></span><span class="pin"></span>`;
   h.button.onclick = () => player.descend(h);
   app.appendChild(h.button);
 }
@@ -90,6 +94,7 @@ document.getElementById('panel-back').onclick = () => player.returnToMap();
 function render(state, hotspot) {
   const inPlace = state === 'arrived';
   panel.hidden = clean || !inPlace;
+  document.body.classList.toggle('in-place', inPlace && !clean);
   app.classList.toggle('flying', state === 'descending' || state === 'returning');
   if (inPlace) {
     panelTitle.textContent = hotspot.name;
@@ -98,6 +103,44 @@ function render(state, hotspot) {
       ? 'Arrived by pre-rendered descent.'
       : 'Descent flown live — no clip generated for this place yet.';
   }
+}
+
+// --- the opening ------------------------------------------------------------
+// The reference opens on a title over a moving landscape rather than on a
+// loading bar, and the move is the point: by the time the words have gone,
+// you have already watched the vale for fifteen seconds and the map is
+// somewhere you have been rather than a thing you have been handed.
+const intro = document.getElementById('intro');
+const introSkipped = clean || params.has('descend');
+if (!introSkipped) {
+  const from = new THREE.Vector3(-1220, 820, 1560);
+  const to = camera.position.clone();
+  const OPEN_MS = 15000;
+  camera.position.copy(from);
+  controls.enabled = false;
+  intro.hidden = false;
+  document.body.classList.add('intro-open');
+  const t0 = performance.now();
+  const drift = () => {
+    if (!controls.enabled) {
+      // Ease out, so the move is quickest at the start and has all but
+      // stopped by the time anyone reads as far as the button.
+      const k = Math.min(1, (performance.now() - t0) / OPEN_MS);
+      camera.position.lerpVectors(from, to, 1 - Math.pow(1 - k, 3));
+      camera.lookAt(controls.target);
+      requestAnimationFrame(drift);
+    }
+  };
+  drift();
+  document.getElementById('intro-go').onclick = () => {
+    intro.classList.add('leaving');
+    document.body.classList.remove('intro-open');
+    setTimeout(() => { intro.hidden = true; }, 900);
+    // Hand over from wherever the drift has reached, rather than cutting to
+    // the resting camera and undoing the move.
+    controls.enabled = true;
+    controls.update();
+  };
 }
 
 // --- frame ------------------------------------------------------------------
@@ -118,9 +161,14 @@ function tick() {
     // Clamp, so a place near the edge of the box still reads as a label
     // rather than half a word running off the screen.
     h.button.style.left =
-      `${THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * innerWidth, 90, innerWidth - 90)}px`;
+      `${THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * innerWidth, 140, innerWidth - 140)}px`;
     h.button.style.top =
-      `${THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * innerHeight, 30, innerHeight - 30)}px`;
+      `${THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * innerHeight, 60, innerHeight - 20)}px`;
+    // Fade with distance rather than showing every marker at the same weight:
+    // three labels shouting equally from a 2 km box is a legend, not a place.
+    const d = camera.position.distanceTo(h.anchor);
+    h.button.style.setProperty('--k',
+      THREE.MathUtils.clamp(1.3 - d / 4200, 0.45, 1).toFixed(2));
   }
 }
 tick();

@@ -1,0 +1,206 @@
+/* Art direction for the living map — Phase 4b.
+ *
+ * Taken from the reference the whole project is aimed at, explore.ownprimland.com,
+ * by looking at what it actually does rather than by describing it: a display
+ * serif against a geometric sans, a warm paper ground, sage and burnt amber,
+ * and an interface restrained enough that the landscape carries the work.
+ *
+ * What is borrowed is the register, not the assets. Their faces are Inferi and
+ * Centra, both licensed; these are Cormorant Garamond and Jost, both open
+ * font licence and vendored here so the map renders identically offline —
+ * which matters, because the descent capture runs against a local server.
+ *
+ * The palette is ours, sampled from the world itself rather than from their
+ * stylesheet: the farmland green the terrain is painted with, the warmth of
+ * the 0xffe0b5 sun, the slate the Doughnut is picked out in.
+ */
+
+@font-face {
+  font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 300;
+  font-display: swap; src: url('../terrain/vendor/fonts/CormorantGaramond-300.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond'; font-style: normal; font-weight: 400;
+  font-display: swap; src: url('../terrain/vendor/fonts/CormorantGaramond-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cormorant Garamond'; font-style: italic; font-weight: 300;
+  font-display: swap; src: url('../terrain/vendor/fonts/CormorantGaramond-300i.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Jost'; font-style: normal; font-weight: 300;
+  font-display: swap; src: url('../terrain/vendor/fonts/Jost-300.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Jost'; font-style: normal; font-weight: 400;
+  font-display: swap; src: url('../terrain/vendor/fonts/Jost-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Jost'; font-style: normal; font-weight: 500;
+  font-display: swap; src: url('../terrain/vendor/fonts/Jost-500.woff2') format('woff2');
+}
+
+:root {
+  --display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --sans: 'Jost', system-ui, -apple-system, sans-serif;
+
+  --paper: #f7f2e6;
+  --paper-veil: rgba(247, 242, 230, 0.93);
+  --ink: #29302a;
+  --ink-soft: #626b5e;
+  --sage: #7c8c6f;
+  --sage-deep: #445041;
+  --amber: #a4611f;
+  --slate: #4a6f8a;
+
+  /* One easing and two durations for the whole interface, so nothing moves in
+     a way that belongs to a different piece of software. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --quick: 220ms;
+  --calm: 900ms;
+}
+
+/* --- the opening -----------------------------------------------------------
+ * A title over the world rather than in front of it: the scrim is a gradient,
+ * not a curtain, so the vale is doing something behind the words from the
+ * first frame. The camera is moving the whole time this is up.
+ */
+#intro {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  /* A gradient and a soft pool of shade behind the words, rather than a flat
+     curtain: the vale has to be doing something behind the title from the
+     first frame, and cream type over sunlit farmland needs help. */
+  background:
+    radial-gradient(58% 46% at 50% 46%, rgba(24, 30, 26, 0.46), rgba(24, 30, 26, 0) 72%),
+    linear-gradient(180deg, rgba(28, 34, 30, 0.36) 0%, rgba(28, 34, 30, 0.06) 44%,
+                    rgba(28, 34, 30, 0.34) 100%);
+  transition: opacity var(--calm) var(--ease);
+}
+#intro[hidden] { display: none; }
+#intro.leaving { opacity: 0; pointer-events: none; }
+
+#intro .overline {
+  font: 500 11px/1 var(--sans); letter-spacing: 0.34em; text-transform: uppercase;
+  color: rgba(247, 242, 230, 0.82); margin-bottom: 18px;
+}
+#intro h1 {
+  margin: 0; font: 300 clamp(46px, 7.6vw, 104px)/0.98 var(--display);
+  letter-spacing: 0.005em; color: var(--paper);
+  text-shadow: 0 2px 34px rgba(20, 28, 22, 0.42);
+}
+#intro h1 em { font-style: italic; }
+#intro p {
+  margin: 20px 0 0; max-width: 30ch;
+  font: 300 15px/1.6 var(--sans); color: rgba(247, 242, 230, 0.88);
+}
+#intro button {
+  margin-top: 34px; padding: 12px 30px; cursor: pointer;
+  font: 500 11px/1 var(--sans); letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--paper); background: transparent;
+  border: 1px solid rgba(247, 242, 230, 0.55); border-radius: 999px;
+  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
+}
+#intro button:hover { background: var(--paper); color: var(--ink); }
+#intro .aside {
+  position: absolute; bottom: 26px;
+  font: 300 11px/1 var(--sans); letter-spacing: 0.1em;
+  color: rgba(247, 242, 230, 0.6);
+}
+
+/* --- markers ---------------------------------------------------------------
+ * Planted in the ground rather than floating over it. The stem is what does
+ * that: without it a label is browser chrome sitting on top of a picture, and
+ * with it the label belongs to a point on the map.
+ */
+.hotspot {
+  position: absolute; transform: translate(-50%, -100%);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  opacity: var(--k, 1);
+  transition: opacity var(--quick) var(--ease);
+}
+.hotspot[hidden] { display: none; }
+.hotspot .label {
+  order: -1;
+  font: 400 12px/1 var(--sans); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--paper); white-space: nowrap;
+  padding: 7px 13px; border-radius: 999px;
+  background: rgba(41, 48, 42, 0.42);
+  border: 1px solid rgba(247, 242, 230, 0.28);
+  backdrop-filter: blur(3px);
+  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
+}
+.hotspot .stem {
+  width: 1px; height: 30px;
+  background: linear-gradient(180deg, rgba(247, 242, 230, 0.75), rgba(247, 242, 230, 0.08));
+}
+.hotspot .pin {
+  width: 9px; height: 9px; margin-top: -5px; border-radius: 50%;
+  background: var(--paper); box-shadow: 0 0 0 5px rgba(247, 242, 230, 0.18);
+  transition: box-shadow var(--quick) var(--ease);
+}
+.hotspot:hover .label { background: var(--paper); color: var(--ink); }
+.hotspot:hover .pin { box-shadow: 0 0 0 9px rgba(247, 242, 230, 0.26); }
+#app.flying .hotspot { opacity: 0; transition: opacity 150ms; }
+/* Nothing competes with the title. The markers arrive when the map does. */
+body.intro-open .hotspot,
+body.intro-open #credit,
+body.intro-open #hint { opacity: 0; pointer-events: none; }
+.hotspot, #credit, #hint { transition: opacity var(--calm) var(--ease); }
+
+/* --- the place panel -------------------------------------------------------- */
+#panel {
+  position: fixed; left: 30px; bottom: 30px; width: min(380px, calc(100vw - 60px));
+  background: var(--paper-veil); border: 1px solid rgba(41, 48, 42, 0.1);
+  border-radius: 3px; padding: 26px 28px 24px;
+  box-shadow: 0 10px 40px rgba(25, 40, 35, 0.2);
+  color: var(--ink);
+  animation: rise var(--calm) var(--ease) both;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+#panel h2 {
+  margin: 0 0 12px; font: 300 30px/1.05 var(--display); letter-spacing: 0.005em;
+}
+#panel p { margin: 0 0 14px; font: 300 14px/1.65 var(--sans); color: var(--ink); }
+#panel-note {
+  font: 400 10px/1.4 var(--sans); letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--sage);
+}
+#panel-back {
+  margin-top: 20px; padding: 0 0 3px; cursor: pointer;
+  font: 500 11px/1 var(--sans); letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--amber); background: none; border: 0;
+  border-bottom: 1px solid rgba(164, 97, 31, 0.4);
+  transition: border-color var(--quick) var(--ease);
+}
+#panel-back:hover { border-bottom-color: var(--amber); }
+
+/* --- the quiet edges --------------------------------------------------------
+ * A shallow vignette along the bottom edge. It is doing two jobs: it seats
+ * the credit and the hint against sunlit farmland, which is the one place on
+ * this map where cream type has nothing to sit on, and it gives the frame the
+ * bottom weight a still needs. Above the canvas, below everything readable.
+ */
+body::after {
+  content: ''; position: fixed; inset: auto 0 0 0; height: 128px; z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(20, 27, 22, 0) 0%, rgba(20, 27, 22, 0.42) 100%);
+}
+#credit, #hint, #panel, .hotspot { z-index: 2; }
+
+/* --- the quiet edges -------------------------------------------------------- */
+#credit, #hint {
+  position: fixed; bottom: 12px;
+  font: 300 10px/1.5 var(--sans); letter-spacing: 0.04em;
+  color: rgba(247, 242, 230, 0.86);
+  /* Two shadows: a tight one for legibility against sunlit grass and a wide
+     soft one so the line still reads over the pale roofs of a retail park. */
+  text-shadow: 0 1px 2px rgba(18, 25, 20, 0.95), 0 0 14px rgba(18, 25, 20, 0.7);
+}
+#credit { left: 14px; max-width: 46vw; transition: left var(--calm) var(--ease); }
+/* The attribution is not optional — OGL and ODbL both require it — so when a
+   place panel opens it moves out of the way rather than going out. */
+body.in-place #credit { left: 440px; max-width: 38vw; }
+#hint { right: 14px; letter-spacing: 0.14em; text-transform: uppercase; font-size: 9.5px; }
