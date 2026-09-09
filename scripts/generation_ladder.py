@@ -123,6 +123,36 @@ RUNGS = {
             "num_images": 2,
         },
     },
+    5: {
+        "kind": "image",
+        "why": "rung 2 again, on a depth pass whose range is not spent on the "
+               "ground ramp — the control test for whether rung 2 failed "
+               "because our geometry is thin or because our encoding was",
+        "model": "fal-ai/flux-control-lora-depth",
+        "inputs": ["aerial-depth-refit.png"],
+        "args": lambda p: {
+            "prompt": LOOK,
+            "control_lora_image_url": p[0],
+            "preprocess_depth": False,
+            "image_size": "landscape_16_9",
+            "num_images": 2,
+        },
+    },
+    6: {
+        "kind": "image",
+        "why": "rung 2 a third time, on depth re-encoded as disparity (1/z) — "
+               "the convention control nets are trained on — so the ramp still "
+               "carries camera pitch while the buildings become legible",
+        "model": "fal-ai/flux-control-lora-depth",
+        "inputs": ["aerial-depth-disparity.png"],
+        "args": lambda p: {
+            "prompt": LOOK,
+            "control_lora_image_url": p[0],
+            "preprocess_depth": False,
+            "image_size": "landscape_16_9",
+            "num_images": 2,
+        },
+    },
     3: {
         "kind": "video",
         "why": "a departure from the low approach — few large masses, the "

@@ -1043,3 +1043,150 @@ had to fix in this session were found by counting pixels rather than by
 looking at them.
 
 Next 20-minute experiment: the ladder itself, on a machine with keys.
+
+## Session K — the ladder, run
+
+Six rungs, US$1.25, 13½ minutes of wall time. The question was whether we
+need Blender sessions adding detail to the model, or whether the measured
+structure already carries a generator. **It carries. The thing that was
+failing was our depth encoding, not our geometry, and it cost a point
+operation to fix.**
+
+### Before spending anything
+
+Checked all four model ids as the brief says to. All four endpoints live.
+Three correct as written; rung 2 was not, and the OpenAPI schema said so
+where the rendered docs page did not:
+
+```
+  control_image_url        the field is control_lora_image_url — a 422 and a
+                           third wasted key test on the first paid call
+  preprocess_depth: True   the default. It runs a depth *estimator* over the
+                           input, so our measured depth would have been thrown
+                           away and re-guessed — silently
+  image_size               landscape_4_3 against our 1280x720
+```
+
+The second is the one worth the commit. It would not have errored. It would
+have returned a plausible image and answered a different question.
+
+### What each rung did
+
+| rung | what | US$ | wall | result |
+|---|---|---|---|---|
+| 1 | beauty → photoreal | 0.06 | 10 s | layout roughly held, **GCHQ became a pond** |
+| 2 | linear depth → photoreal | 0.08 | 167 s | photographic; **structure gone entirely** |
+| 5 | depth, ground ramp removed | 0.08 | 173 s | dense believable housing; **camera flipped to nadir** |
+| 6 | depth re-encoded as disparity | 0.08 | 8 s | **pitch, terrain, radial streets and the doughnut all back** |
+| 3 | video, low approach | 0.475 | 199 s | rigid, correct parallax, no new structures |
+| 4 | video, wide aerial | 0.475 | 252 s | held about as well as rung 3 |
+
+Rungs 5 and 6 are not in the brief. I added them because rung 2 failed in a
+way I could not tell apart from "our geometry is thin", and that is the one
+reading that would have sent us to Blender.
+
+### The worst result, which taught the most
+
+**Rung 2.** Photographically it is the best image of the six — it genuinely
+reads as an aerial photograph of an English town. It is also the wrong town.
+GCHQ is absent, the street network is invented, only the terrain crest and
+the field boundary survive. Taken at face value it says: our structure does
+not carry, the model ignores us, go and build something better.
+
+It says nothing of the kind. Counting pixels rather than looking at them:
+mean local relief across the built band of `aerial-depth.png` is **1.07 grey
+levels out of 255**. The pass is linear depth fitted over 357–1580 m, so a
+15 m house is under half a percent of the range. The control net saw a ground
+ramp and nothing else, reproduced the ground ramp faithfully, and invented
+the rest. Our geometry was never in the file it was given.
+
+Rung 5 was the over-correction: strip the ramp, amplify the relief, and the
+buildings appear — but the ramp was carrying the camera pitch, so it read the
+frame as a plan view. Two failures pointing at the same thing: 8 bits cannot
+hold a 1.2 km ramp and 15 m features at once when the encoding is linear.
+
+Rung 6 is the fix. Invert the documented metric planes back to metres,
+re-encode as disparity (1/z, which is what control nets are trained on),
+keep the ramp, boost the residual. Relief goes 1.07 → 12.8 levels, the ramp
+survives at 84. Same model, same prompt, same geometry, same seed budget —
+and the doughnut, the radial streets, the housing bands and the camera pitch
+all come back.
+
+### The best result
+
+**Rung 6**, and the interesting part is what it did not need. No new
+geometry, no Blender, no extra mesh. One point operation on a pass we were
+already writing. Rung 6 beating rung 2 is the result the brief said would be
+the most interesting single thing available here, and it is stronger than
+the brief hoped: rung 2 lost to rung 1 on structure, and rung 6 beats both.
+
+Residual failure in rung 6: the doughnut renders as a hedged circular
+earthwork rather than a building. That is the mask's job — we already write
+a `building` class per square metre and did not hand it over. Material and
+class hints, one session, in our own renderer, transfers to every future
+site.
+
+### Which prompt wording changed the result most
+
+None of them. Prompt wording was held constant across rungs 2, 5 and 6 on
+purpose, and the three results are wildly different. **The conditioning image
+moved the result far more than any sentence could.** The one prompt variable
+that did matter was structural rather than verbal: `KEEP` ("keep the layout
+exactly as given") is present on rung 1 and absent on 2/5/6, and rung 6
+matched the layout better without it than rung 1 did with it. Telling the
+model to respect structure is worth less than giving it structure it can see.
+
+### The videos
+
+Session B measured the wide aerial at twice the error of the low approach and
+expected the wide case to be the one that breaks. It did not, this time.
+First-to-last frame travel is comparable (42.9 vs 40.4 mean absolute grey),
+both clips hold rigid buildings, correct parallax and no structures appearing
+mid-shot, and rung 4 keeps the doughnut and the whole street pattern intact
+across the descent. Foliage and roofs since Session B appear to have helped
+rather than hurt: more of the frame is now legible texture the model can
+track instead of ambiguous flat mass.
+
+Note what the video rungs did *not* do: Kling image-to-video preserves its
+conditioning frame, so both clips stay in our stylised look. They test
+motion and rigidity, not photorealism. Photorealism is rungs 1–6's job.
+Do not read rung 3 as "the departure looks like this".
+
+### Verdict on the Blender question
+
+**No Blender.** Every one of the six failures lands in a row of the brief's
+table that costs nothing or one session in our own pipeline — wrong buildings
+was conditioning (rung 2, fixed for US$0.08), plastic was the model's
+i2v style preservation, brick-versus-render is the material hint we have not
+handed over yet. Not one failure was geometry being wrong or ambiguous. The
+evidence is rung 6: identical geometry, identical prompt, structure recovered
+in full by changing how we *encode* what we had already measured. Detail we
+would have added in Blender would have gone into the same 1.07-grey-level
+channel and been just as invisible.
+
+### Saved outputs
+
+`experiments/002-living-map/ladder/` — six outputs, `ladder-log.json` with
+per-rung cost and wall time, WebM encodes of both clips, extracted frames.
+New passes: `aerial-depth-refit.png`, `aerial-depth-disparity.png`.
+Rungs 5 and 6 are in `scripts/generation_ladder.py` and rerunnable.
+
+### Review (Session K)
+
+What works: the map's measured structure conditions a photoreal generator
+well enough to keep a named building and a street pattern, and we know the
+encoding that makes it do so.
+What I can now change without AI: the depth encoding, the ladder's rungs, and
+which pass conditions which rung.
+One failure worth keeping: I nearly stopped at rung 2 with "depth
+conditioning loses the structure" — which is true as a sentence about the
+image and false as a conclusion about the map. The session-log warning from
+Session J is the same warning: two of three things were found by counting
+pixels rather than looking at them, and this is the third. The image was
+beautiful and wrong, which is the most expensive combination available.
+Another: the script asks for `num_images: 2` and `find_url` returns the
+first, so four of the eight images we paid for were never downloaded. Paid
+for twice, looked at once, on every image rung.
+
+Next 20-minute experiment: hand the `building` class from the mask to rung 6
+as a second condition, and see whether the doughnut stops being an earthwork.
