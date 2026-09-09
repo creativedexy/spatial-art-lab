@@ -16,7 +16,8 @@
 
 import * as THREE from 'three';
 import { buildWorld, heightAtLocal } from '../../golden-valley/scene.js';
-import { PATH, frameCount, cameraAt, makeCamera } from '../path.js';
+import { PATH, frameCount, clipSeconds, cameraAt, makeCamera } from '../path.js';
+import { updateLife } from '../../golden-valley/scene.js';
 
 const params = new URLSearchParams(location.search);
 const capturing = params.has('capture');
@@ -65,6 +66,11 @@ addEventListener('resize', fit);
 // nudges the live camera off the clip's last frame by N metres so we can ask
 // the useful question: how much drift can a fade of a given length hide?
 function placeAt(t, errorMetres = 0) {
+  // The world moves with the camera along the path, and it moves *only* with
+  // the camera: no wall clock anywhere in this page. Frame i is rendered at
+  // t = i/(frameCount-1), so this puts it at i/fps seconds, and the landing
+  // shots at t = 1 land on the same instant as the clip's final frame.
+  updateLife(t * clipSeconds());
   cameraAt(t, camera, heightAtLocal);
   if (errorMetres) {
     camera.position.x += errorMetres * 0.7;

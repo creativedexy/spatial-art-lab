@@ -17,7 +17,7 @@ Every session so far has gone into **structure**, and none into **surface**.
 | **Land cover: woods, fields, water, roads** | **Phase 2 — done** |
 | **Trees: woods, hedges, street trees** | **done — 9,181 instances** |
 | **Buildings that read as buildings** | **Phase 3 — done** |
-| **Weather, birds, movement** | not started |
+| **Weather, birds, movement** | **Phase 4a — done** |
 | **Art direction, typography, sound** | not started |
 | **The Golden Valley proposal itself** | not started — the site is an empty field |
 
@@ -51,6 +51,7 @@ flowchart TD
   style P1 fill:#4a6f8a,color:#fff
   style P2 fill:#4a6f8a,color:#fff
   style P3 fill:#4a6f8a,color:#fff
+  style P4 fill:#4a6f8a,color:#fff
 ```
 
 ### Phase 1 — Light *(proved, needs adopting)*
@@ -135,17 +136,54 @@ the air anyway.
 **Bought:** the last of the "architectural competition entry" look.
 **Cost:** one pass. Free.
 
-### Phase 4 — Life, and art direction
+### Phase 4a — Life *(done)*
 
-The "living" half of the living map, and the half that makes it feel
-authored rather than generated: birds on a boids flock, drifting cloud
-shadows, wind in the vegetation, water movement — then typography, a proper
-palette, hotspot markers that belong to the world rather than to the browser,
-a choreographed opening move, and sound.
+Cloud shadows drifting across the vale, wind in the trees with amplitude by
+height, water that catches the sun and ripples, and ninety birds actually
+flocking. The land class image Phase 2 wrote and nothing read is what tells
+the water where it is — no second material, no mask painted by hand.
+
+The interesting part was not the effects, it was the clock. Everything before
+this was still, and the descent's whole premise is that a pre-rendered clip
+and the live canvas show the same place at the same instant. Anything driven
+by `performance.now()` would put them at different moments of the same
+afternoon, and no fade hides a cloud shadow in the wrong place. So the world
+has exactly one clock:
+
+```
+   the map          updateLife(worldSeconds())      wall time, rebaseable
+   the capture      updateLife(i / fps)             frame by frame
+   a descent        pinWorld(floor(t·fps) / fps)    the clip's own frame
+                    releaseWorld(clipSeconds)       carries on, never snaps
+```
+
+The flock is the awkward case, because a simulation remembers: it steps at a
+fixed 1/60 s and rewinds to a seeded start whenever time runs backwards, so
+asking for t = 3.958 s twice gives the same ninety birds in the same places.
+`scripts/test_world_clock.py` is the check that has to keep passing if
+anything else moving is ever added.
+
+**It cost nothing at the seam.** Re-running the capture against a world with
+weather, wind, water and a flock in it:
+
+| | before Phase 4 | after |
+|---|---|---|
+| in-seam | 0.704 % | 0.700 % |
+| out-seam | 0.940 % | 0.938 % |
+
+**Bought:** the map stops being a render of an afternoon and becomes one.
+**Cost:** one pass. Free.
+
+### Phase 4b — Art direction *(waiting on you)*
+
+Typography, a palette, hotspot markers that belong to the world rather than
+to the browser, a choreographed opening move, and sound. All of it is a brand
+decision before it is a build, and it is the one thing in this plan I should
+not choose on your behalf.
 
 **Buys:** it stops looking like a tool and starts looking like a brand
 experience. This is where it becomes something you would put in a pitch.
-**Cost:** two sessions, plus a decision from you on the brand direction.
+**Cost:** one to two sessions once the direction is set.
 
 ### Phase 5 — The proposal itself
 
@@ -226,13 +264,21 @@ not what breaks a hand-off**, and the delivery encode moved to crf 32.
 
 ## Immediate next step
 
-Phase 4 — the living half — which is the first phase that needs a decision
-from you rather than a dataset: birds, cloud shadows, wind and water are free
-and mechanical, but typography, palette, the opening move and sound are brand
-direction, and that is yours.
+**Phase 4b needs a decision from you**, and it is the first thing in this plan
+that a dataset cannot answer: what this should look like as a *brand*.
+Typography, palette, how a hotspot marker should feel, whether the map opens
+on a choreographed move, whether it has sound. Everything mechanical is done.
 
-Phase 6's generated descents also became newly worth doing, and newly urgent
-to re-run: both anchor frames were re-rendered on 9 Sep, so the descent a
-generator would now produce is a descent of a real-looking place rather than
-of a clay model. The Kling clip in `descent/fal/` is a record of the old
-world, not a comparison against this one.
+Everything else is unblocked and can go in any order:
+
+- **Phase 5, the proposal** — still blocked on HBD or council material, and
+  still the one that jumps the queue the moment a pitch date lands.
+- **Phase 6, generated descents** — newly worth buying. Both anchor frames
+  were re-rendered on 9 Sep, so a generator now starts from a real-looking
+  place rather than a clay model, and `--style clay` is probably the wrong
+  default. The Kling clip in `descent/fal/` is a record of the old world, not
+  a comparison against this one.
+- **The season wave** — a shader session, free, and the one signature move
+  the new world is ready for: the land class image already says which texels
+  are woodland, which are farmland and which are mown grass, and each turns a
+  different colour at a different time of year.

@@ -10,7 +10,9 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
-import { buildWorld, heightAtLocal, toLocal, sizeX, sizeZ } from './scene.js';
+import {
+  buildWorld, updateLife, worldSeconds, heightAtLocal, toLocal, sizeX, sizeZ,
+} from './scene.js';
 import { loadHotspots } from '../descent/path.js';
 import { createDescentPlayer } from '../descent/player.js';
 
@@ -103,6 +105,10 @@ const v = new THREE.Vector3();
 function tick() {
   requestAnimationFrame(tick);
   if (controls.enabled) controls.update();
+  // One clock for the whole world, and the descent player is allowed to hold
+  // it still or rebase it — which is how a pre-rendered clip and the live
+  // canvas end up under the same cloud.
+  updateLife(worldSeconds());
   renderer.render(scene, camera);
   for (const h of hotspots) {
     // A hotspot you are standing in should not offer to take you there.

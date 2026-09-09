@@ -77,6 +77,24 @@ function neutralGrade(mesh) {
   col.needsUpdate = true;
 }
 
+/**
+ * The land class image as a texture: one texel per metre, the value being the
+ * class index rather than a colour. Nearest filtering is not an optimisation
+ * here — a bilinear tap between "water" (10) and "grass" (2) returns 6, which
+ * is a class nothing is, so anything reading this must never interpolate.
+ */
+export function loadClassTexture() {
+  const tex = new THREE.TextureLoader().load(url(coverMeta.classFile));
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.generateMipmaps = false;
+  tex.colorSpace = THREE.NoColorSpace;      // these are indices, not colour
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+
+export const classIndex = (name) => coverMeta.classes[name].index;
+
 /** Paint the surveyed ground onto whichever mesh carries vertex colours. */
 export function applyLandCover(scene, renderer) {
   const tex = loadCoverTexture(renderer);

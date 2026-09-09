@@ -680,3 +680,99 @@ the first as though it settled the second.
 Next 20-minute experiment: Phase 4's free half — cloud shadows across the
 vale, driven by a scrolling noise texture on the sun's shadow, which costs
 one shader and turns a static render into weather.
+
+## Session H — Phase 4a: weather, wind, water, birds, and one clock
+
+Date: 9 Sep 2026
+Intent in one sentence: Make the map an afternoon rather than a render of one — and do it without breaking the hand-off that everything else has been measured against.
+Tool/build/model: Three.js shader patching via `onBeforeCompile`, a boids flock in plain JS, headless Chromium capture, no paid generation.
+
+### One variable to explore
+
+Whether a living world and a measured seam can coexist. Every phase so far
+made the map more detailed but kept it *still*, and stillness is the only
+reason a pre-rendered clip could ever match a live canvas exactly. The moment
+a cloud moves, the clip's last frame and the live canvas are two different
+moments of the same afternoon, and no fade hides that.
+
+### What happened
+
+Four things move now, and none of them needed new data:
+
+- **cloud shadows** — two octaves of value noise in world XZ, drifting with a
+  wind vector that shares the sun's quarter, because a sky where cloud and
+  light disagree reads as two separate effects
+- **wind** — trees lean and recover, amplitude by `position.y²` in unit-tree
+  space, so a hedge twitches while a mature oak rolls
+- **water** — `gv-landclass.png` has been in the repo since Phase 2 with
+  nothing reading it. This is what it was kept for: the ground knows which of
+  its texels are water, so the streams and ponds ripple and go glossy with no
+  second material and no mask painted by hand
+- **birds** — ninety of them, actually flocking, holding a cruising height
+  *above the ground* rather than an altitude, because the vale rises 35 m
+  across the box and a flock at a fixed altitude flies into the escarpment
+
+### The clock, which is the actual work
+
+Nothing here reads the wall clock. Everything is a function of one number:
+
+```
+   the map          updateLife(worldSeconds())      wall time, rebaseable
+   the capture      updateLife(i / fps)             frame by frame
+   during a clip    pinWorld(floor(t·fps) / fps)    the clip's own frame
+   at hand-back     releaseWorld(clipSeconds)       carries on, never snaps
+```
+
+Two details earned their names. `clipSeconds` is how much time a clip's
+*frames* span, which is one frame less than its duration — 96 frames at 24 fps
+run to 95/24 = 3.958 s, not to 4 s. Four seconds is close enough to look right
+and wrong enough to measure. And the pin during playback is quantised to the
+clip's frame grid, because the clip is showing frame `floor(t·fps)`, not the
+continuous instant `t`.
+
+The flock is the hard case, because a simulation remembers. It steps at a
+fixed 1/60 s, indexed by an integer step count rather than by elapsed time,
+and rewinds to a seeded start whenever time runs backwards — so asking for
+t = 3.958 s twice gives the same ninety birds in the same places both times.
+`scripts/test_world_clock.py` checks exactly that, and it is the test that has
+to keep passing if anything else moving is ever added.
+
+### It cost nothing at the seam
+
+| | before Phase 4 | after |
+|---|---|---|
+| in-seam | 0.704 % | 0.700 % |
+| out-seam at 0 m | 0.940 % | 0.938 % |
+
+A world with weather, wind, water and a flock in it hands over to a
+pre-rendered clip exactly as well as a still one did. That is the whole
+result: the architecture is what made it free, and had the clock been an
+afterthought it would have cost a re-render to find out.
+
+### Saved outputs
+
+Source: `experiments/002-living-map/golden-valley/life.js`, wired in by
+`scene.js` and pinned by `descent/player.js`.
+Tests: `scripts/test_world_clock.py` (3 checks), `scripts/test_hotspot_flow.py`
+(8 checks) — all passing.
+Preview: `exports/002-living-map-weather-v001.png` (one camera, four instants,
+the cloud shadow crossing the vale), `exports/002-living-map-birds-v001.png`.
+
+### Review (Session H)
+
+What works: the map is an afternoon now. The light changes while you look at
+it, and the seam did not notice.
+What I can now change without AI: wind direction and strength, cloud scale and
+drift, flock size and cruising height, ripple speed — all constants at the top
+of one file.
+One failure worth keeping: my first flock stepped `min(FIXED_STEP, remaining)`,
+which quietly made the simulation depend on *how the caller sliced time* rather
+than on time itself. It would have passed every visual check and failed the
+seam, and the only reason it did not ship is that writing the determinism test
+forced me to say out loud what "deterministic" meant.
+
+Next 20-minute experiment: the season wave. The land class image already says
+which texels are woodland, which are farmland and which are mown grass, and
+each turns a different colour at a different time of year — so the wave is a
+palette lookup against a class the ground already knows, driven by the clock
+that now exists.

@@ -11,6 +11,15 @@ const load = async (file) => (await fetch(new URL(file, import.meta.url))).json(
 /** The control path Session C measured — also the seam test's subject. */
 export const PATH = await load('./descent-path.json');
 export const frameCount = Math.round(PATH.durationSeconds * PATH.fps);
+/**
+ * How much time the clip's *frames* span, which is one frame less than its
+ * duration: 96 frames at 24 fps run from 0 to 95/24 = 3.958 s, not to 4 s.
+ * Worth a name, because anything animated in the world has to be at 3.958 s
+ * when the live canvas takes the picture back, and 4 s is close enough to
+ * look right and wrong enough to measure.
+ */
+export const clipSeconds = (path = PATH) =>
+  (Math.round(path.durationSeconds * path.fps) - 1) / path.fps;
 
 /** Every place you can descend into, each path filled in from `defaults`. */
 export async function loadHotspots() {

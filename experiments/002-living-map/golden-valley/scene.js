@@ -9,7 +9,13 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
 import { applyLook } from './look.js';
-import { addLandCover } from './landcover.js';
+import { addLandCover, loadClassTexture, classIndex } from './landcover.js';
+import { bringToLife } from './life.js';
+
+// Re-exported so a page that draws the world imports one module to build it
+// and to move it, and cannot end up driving a different clock than the one
+// buildWorld installed.
+export { updateLife, worldSeconds, pinWorld, releaseWorld } from './life.js';
 import { buildBuildings } from './buildings.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
@@ -122,7 +128,7 @@ export function buildScene({ segments = 1000, flatBuildings = true } = {}) {
 
 /**
  * The world as it is meant to be seen: Phase 1's light, Phase 2's land cover
- * and trees, Phase 3's roofs and materials.
+ * and trees, Phase 3's roofs and materials, Phase 4's weather and movement.
  *
  * Every page that shows the map must call this and nothing else. The descent
  * hands a pre-rendered clip to a live canvas and the join is measured in
@@ -138,5 +144,12 @@ export async function buildWorld({ renderer, segments = 1000 } = {}) {
   scene.add(buildBuildings());
   applyLook(scene, renderer, { grade: false });
   await addLandCover(scene, renderer, heightAtLocal);
+  // Last, because it patches every material it can find and adds the flock —
+  // both of which need everything else to already be in the scene.
+  bringToLife(scene, {
+    groundAt: heightAtLocal,
+    classMap: loadClassTexture(),
+    waterIndex: classIndex('water'),
+  });
   return scene;
 }

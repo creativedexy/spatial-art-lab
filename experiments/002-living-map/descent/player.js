@@ -15,7 +15,8 @@
 // dropped without touching the experience around it.
 
 import * as THREE from 'three';
-import { cameraAt, matchFovToClip } from './path.js';
+import { cameraAt, matchFovToClip, clipSeconds } from './path.js';
+import { pinWorld, releaseWorld } from '../golden-valley/scene.js';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -136,11 +137,20 @@ export function createDescentPlayer({
     const endsAt = video.duration - fadeOut / 1000;
     await new Promise((resolve) => {
       const check = () => {
+        // Hold the live world at the clip's own frame while the clip is on
+        // screen. Quantised to the clip's frame grid on purpose: the clip is
+        // showing frame floor(t*fps), not the continuous instant t, and a
+        // cloud shadow half a frame ahead is exactly the sort of thing the
+        // seam measurement notices and the eye does not.
+        pinWorld(Math.floor(video.currentTime * path.fps) / path.fps);
         if (video.currentTime >= endsAt || video.ended) resolve();
         else requestAnimationFrame(check);
       };
       check();
     });
+    // The last frame the viewer will see, so the canvas underneath must be
+    // standing on that same instant before the clip fades off it.
+    pinWorld(clipSeconds(path));
     video.style.transition = `opacity ${fadeOut}ms linear`;
     video.style.opacity = '0';
     await wait(fadeOut + 20);
@@ -160,6 +170,12 @@ export function createDescentPlayer({
     // fade out of is the frame the clip fades in on.
     matchFovToClip(camera, path, container.clientWidth / container.clientHeight);
 
+    // A clip descent freezes the world for its approach so the cross-fade
+    // happens between two images of the same instant, then hands the map back
+    // a clock that carries on from where the clip ended rather than snapping
+    // to wall time. A live descent needs none of that — there is no cut in it
+    // — so it is left alone, and its clouds keep drifting all the way down.
+    if (hotspot.clip) pinWorld(0);
     await flyToStart(path, 900);
     if (hotspot.clip) {
       try {
@@ -174,12 +190,16 @@ export function createDescentPlayer({
           playClip(path, new URL(hotspot.clip, clipBase).href),
           wait(budget).then(() => { throw new Error(`clip stalled after ${budget} ms`); }),
         ]);
+        // Time runs again, continuing from the clip's last frame rather than
+        // snapping back to wall time and jumping every cloud in the vale.
+        releaseWorld(clipSeconds(path));
       } catch (err) {
         // A missing or undecodable clip must never strand the viewer in the
         // sky: fall through to the live descent along the same path.
         console.warn('descent clip failed, flying it live:', err);
         video.style.opacity = '0';
         video.hidden = true;
+        releaseWorld(0);          // the fallback is live, so let time run
         await flyPath(path, 0, 1, path.durationSeconds * 1000);
       }
     } else {

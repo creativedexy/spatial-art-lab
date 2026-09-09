@@ -15,7 +15,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
 import {
-  buildScene, buildWorld, heightAtLocal, toLocal, sizeX, sizeZ,
+  buildScene, buildWorld, updateLife, worldSeconds,
+  heightAtLocal, toLocal, sizeX, sizeZ,
 } from '../golden-valley/scene.js';
 import { applyLook } from '../golden-valley/look.js';
 import { addLandCover } from '../golden-valley/landcover.js';
@@ -67,6 +68,8 @@ controls.addEventListener('change', () => {
 function tick() {
   requestAnimationFrame(tick);
   controls.update();
+  // The earlier states have no weather in them, so this is a no-op there.
+  updateLife(worldSeconds());
   renderer.render(scene, camera);
 }
 tick();
