@@ -111,7 +111,15 @@ RUNGS = {
         "inputs": ["aerial-depth.png"],
         "args": lambda p: {
             "prompt": LOOK,
-            "control_image_url": p[0],
+            # Verified against the endpoint's OpenAPI schema, not the docs page:
+            # the field is control_lora_image_url, and preprocess_depth defaults
+            # to True — which would run a depth *estimator* over our measured
+            # depth pass and throw away the very thing this rung tests.
+            "control_lora_image_url": p[0],
+            "preprocess_depth": False,
+            # Our frame is 1280x720; the endpoint default is landscape_4_3,
+            # which would letterbox or crop the structure we are conditioning on.
+            "image_size": "landscape_16_9",
             "num_images": 2,
         },
     },
