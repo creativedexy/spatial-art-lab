@@ -28,7 +28,7 @@
   },
   "depth": {
     "nearMetres": 71.2,
-    "farMetres": 824.4,
+    "farMetres": 822.2,
     "encoding": "near=white, far=black, linear in view space, range fitted to the frame. metres = far - value/255 * (far - near).",
     "reliefMetres": null
   },

@@ -83,6 +83,34 @@
       "file": "rung4-aerial-beauty.mp4",
       "bytes": 22860852,
       "seconds": 251.9
+    },
+    {
+      "rung": 1,
+      "kind": "image",
+      "why": "our own render, straight to photoreal \u2014 the cheapest signal",
+      "model": "fal-ai/flux/dev/image-to-image",
+      "startedUtc": "2026-09-09T16:15:23.614403+00:00",
+      "inputs": [
+        "aerial-beauty.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people. Keep the layout, the building positions, the road network and the terrain exactly as given; change only materials, texture and light.",
+      "file": "rung1-aerial-beauty.jpg",
+      "bytes": 819747,
+      "seconds": 10.7
+    },
+    {
+      "rung": 2,
+      "kind": "image",
+      "why": "the same view conditioned on structure instead of on our picture \u2014 now on the corrected depth encoding, which carries 10.3 grey levels of building relief where the linear one carried 1.07 and the control net saw a bare ground ramp",
+      "model": "fal-ai/flux-control-lora-depth",
+      "startedUtc": "2026-09-09T16:16:09.046894+00:00",
+      "inputs": [
+        "aerial-depth.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people.",
+      "file": "rung2-aerial-depth.jpg",
+      "bytes": 583432,
+      "seconds": 165.6
     }
   ],
   "cost": {

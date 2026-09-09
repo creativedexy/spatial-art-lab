@@ -304,7 +304,7 @@ function maskMaterialFor(obj) {
   // is the whole reason they are separate meshes rather than one merge.
   const [family, part] = (obj.name || '').split(':');
   if (part === 'roof') return maskMaterials[`roof:${family}`] ?? maskMaterials.wall;
-  if (obj.name === 'gchq') return maskMaterials['roof:gchq'];
+  if (obj.name?.startsWith('gchq')) return maskMaterials['roof:gchq'];
   return maskMaterials.wall;
 }
 

@@ -33,6 +33,14 @@ const buildings = await (await fetch(url('gv-buildings.json'))).json();
 // actually see from the air.
 export const FAMILIES = meta.roofs.families;
 const GCHQ = 'Government Communications Headquarters';
+// The one building here whose real materials can be checked against a
+// photograph, so they are, rather than guessed. The ring's facade is glazed
+// and dark; its ROOF is pale ribbed metal. Extruding it as a single dark solid
+// gave the top cap the facade's colour, and a flat dark ellipse in green is
+// how the ladder's rung 1 came to read the most recognisable building in
+// Gloucestershire as a pond. One value, one paid generation.
+const GCHQ_WALL = 0x4a6f8a;
+const GCHQ_ROOF = 0xc9ced2;
 
 function shapeOf(b) {
   const shape = new THREE.Shape(b.ring.map(([x, z]) => new THREE.Vector2(x, -z)));
@@ -140,7 +148,8 @@ export function buildBuildings() {
 
   for (const b of buildings) {
     if (b.name === GCHQ) {
-      bin('gchq').push(walls(b, b.height));
+      bin('gchq:wall').push(walls(b, b.height));
+      bin('gchq:roof').push(flatRoof(b));
       continue;
     }
     const family = FAMILIES[b.family] ? b.family : 'house';
@@ -157,7 +166,8 @@ export function buildBuildings() {
   for (const [key, geoms] of Object.entries(parts)) {
     if (!geoms.length) continue;
     const [family, part] = key.split(':');
-    const colour = key === 'gchq' ? 0x4a6f8a
+    const colour = family === 'gchq'
+      ? (part === 'roof' ? GCHQ_ROOF : GCHQ_WALL)
       : parseInt(FAMILIES[family][part].slice(1), 16);
     const mesh = new THREE.Mesh(mergeGeometries(geoms), new THREE.MeshStandardMaterial({
       color: colour,
