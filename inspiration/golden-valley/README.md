@@ -38,3 +38,37 @@ Two consequences:
 
 Grimshaw's stated strategy: "regenerative community", native habitat mosaics, existing
 waterways and soil "left in better shape".
+
+## The overlay test, run 9 Sep
+
+`overlay-test-v001.png` — their hero above, our render below, camera matched by
+eye. **Internal only, like everything else in this folder.**
+
+Camera: local `(141, 505, 757)` looking at `(-201, 327)`, 47 deg vertical field
+of view — that is 141 m east and 757 m south of the box centre, 505 m up,
+looking north-north-west. Reproduce with:
+
+```
+python3 -m http.server 8137   # in experiments/002-living-map
+open "…/passes/index.html?pass=beauty&size=1500,825&cam=141,505,757&look=-201,327&fov=47"
+```
+
+**What it shows.** GCHQ, the Chelt's woodland belt, the Hesters Way and Benhall
+street grain, the field pattern west of the site and the A40 corridor all land
+in the same relationships in both images. The structure is the same place.
+
+**What it also shows, and this is the useful part.** Three gaps, all of them
+things to do rather than things wrong:
+
+1. **The development is missing from ours.** Their centre-left is the scheme;
+   ours is a caravan park and an empty field. That is Phase 5, and this image
+   is the argument for it.
+2. **Our box is smaller than their framing.** The photograph runs off our data
+   at the top left — they shot 3.5 x 2.6 km, we hold 2 x 2. A town-scale map
+   needs a bigger box regardless of anything else.
+3. **The match is eyeballed, not solved.** GCHQ's courtyard lands about 95 px
+   left and 30 px high in a 1500 px frame, which is roughly 60 m of apparent
+   ground offset — two or three degrees of camera error. A proper solve needs
+   correspondences the photograph cannot give: the doughnut is clipped by the
+   right edge, so its centre has to be guessed. Worth doing properly against
+   `official/aerial.jpg` if the comparison is ever going in front of anyone.
