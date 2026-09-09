@@ -40,3 +40,8 @@ venv/
 # lossless reference encode and the MP4 viewing copy are not.
 experiments/002-living-map/descent/path-frames/
 experiments/002-living-map/descent/clips/*-hq.webm
+
+# Golden Valley reference — full-res third-party originals stay local.
+# The 2000px working copies in hbd-2000/ are tracked; re-fetch originals with
+# the URLs in inspiration/golden-valley/README.md if they are ever needed.
+inspiration/golden-valley/hbd/
