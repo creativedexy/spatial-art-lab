@@ -33,6 +33,14 @@ const RAGGED = 110;           // metres of noise on the front
 
 // Shared by every material the wave touches, so they cannot disagree about
 // where the front is.
+/**
+ * Task 002. When the photogrammetry is showing, our ground is drawn ONLY
+ * where 2045 changes it — the orchards, the wetland, the new streets — and
+ * discarded everywhere else, because today's ground is now the real town and
+ * the tiles may not be modified. 0 draws the whole terrain, as it always did.
+ */
+export const groundMask = { value: 0 };
+
 export const uniforms = {
   uFront: { value: SWEEP_FROM },
   uSoft: { value: SOFT },
@@ -88,13 +96,26 @@ function share(material, patch, life = {}) {
  * ground keeps its lighting, its shadows, its wind and its cloud shadows, and
  * gains one texture fetch and a mix. Anything else would mean two terrains.
  */
+const groundMaskUniforms = [];
+
+/** Draw our ground only where 2045 changes it. */
+export function setGroundMasked(on) {
+  groundMask.value = on ? 1 : 0;
+  for (const u of groundMaskUniforms) u.value = groundMask.value;
+}
+
 export function blendGround(mesh, futureTexture) {
   const m = mesh.material;
   const previous = m.onBeforeCompile;
   m.onBeforeCompile = (shader) => {
     if (previous) previous(shader);
     Object.assign(shader.uniforms, uniforms,
-                  { uFutureMap: { value: futureTexture } });
+                  { uFutureMap: { value: futureTexture },
+                    uGroundMask: { value: 0 } });
+    // Held so setGroundMasked can move it without recompiling: a shader
+    // rebuild on a toggle is a stutter, and on a year change it would be a
+    // stutter every frame.
+    groundMaskUniforms.push(shader.uniforms.uGroundMask);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
         '#include <common>\nvarying vec3 vFutureWorld;')
@@ -113,12 +134,17 @@ export function blendGround(mesh, futureTexture) {
       .replace('#include <common>',
         `#include <common>
          uniform sampler2D uFutureMap;
+         uniform float uGroundMask;
          uniform float uFront; uniform float uSoft; uniform float uRagged;
          varying vec3 vFutureWorld;
          ${NOISE}`)
       .replace('#include <map_fragment>',
         `#include <map_fragment>
          {
+           // Discard rather than fade: a half-transparent field of our ground
+           // over photogrammetry of the same field is two grounds, and reads
+           // as neither.
+           if (uGroundMask > 0.5 && futureAt(vFutureWorld) < 0.5) discard;
            // The sampler is sRGB, so the GPU has already linearised this and
            // it can be mixed with diffuseColor directly.
            vec4 futureTexel = texture2D(uFutureMap, vMapUv);
@@ -474,6 +500,8 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
      */
     blocks,
     get wave() { return wave; },
+    /** Draw our ground only where 2045 changes it: see setGroundMasked. */
+    setGroundMasked,
     /**
      * Where the front is standing, in local metres east. The wave is the
      * scheme's argument and this is the only number that says whether it

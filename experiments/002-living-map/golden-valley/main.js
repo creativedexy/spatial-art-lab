@@ -20,6 +20,7 @@ import { legAt } from './paths.js';
 import { createPathWalk } from './walk.js';
 import { createPlaces } from './places.js';
 import { thin } from './declutter.js';
+import { addTiles } from './tiles.js';
 import { mark } from './stage.js';
 
 const app = document.getElementById('app');
@@ -315,6 +316,32 @@ function updateWave(now) {
   }
 }
 
+// --- today, streamed ---------------------------------------------------------
+// With a key, today's Cheltenham is Google's photogrammetry of the real town
+// and our 2045 scheme stands on it. Without one — which is every environment
+// that is not the local session's, including every test suite and the public
+// build — this is null and the map is exactly the measured one it has always
+// been. That fallback is not a degraded mode; it is the map most people see.
+const tiles = clean ? null : await addTiles(scene, { camera, renderer, future });
+const attribution = document.getElementById('tiles-attribution');
+
+// Photogrammetry is a picture taken from an aeroplane: come close enough and
+// it melts, because nothing ever photographed the underside of that hedge.
+// Below the threshold our measured model takes over, which is the one thing
+// it is unambiguously better at.
+function updateTiles() {
+  if (!tiles) return;
+  const above = camera.position.y - heightAtLocal(camera.position.x, camera.position.z);
+  const want = above >= tiles.meltsBelow;
+  if (want !== tiles.showing) tiles.setShowing(want);
+  tiles.update();
+  // The licence requires this to be visible whenever tiles are, and it is
+  // read from the renderer every frame because what is on screen changes it.
+  const text = tiles.showing ? tiles.attributions() : '';
+  attribution.hidden = !text;
+  if (attribution.textContent !== text) attribution.textContent = text;
+}
+
 // --- places: the photographs ------------------------------------------------
 // Each approved photograph was generated from a plate this map rendered, so
 // each one is a viewpoint with coordinates rather than a picture. Clicking a
@@ -436,6 +463,7 @@ function tick() {
   const walking = !visiting && walk.update(now);
   if (controls.enabled && !visiting && !walking) controls.update();
   updateIgnition(dtMs);
+  updateTiles();
   updateWave(now);
   if (!clean) places.updateMarkers();
   updatePick();
@@ -510,6 +538,7 @@ if (auto) {
 // for. Nothing in the page reads it.
 window.__map = {
   renderer, scene, camera, controls, paths, walk, player, hotspots, future, places,
+  tiles,
   // A capture that cannot stop the clock is photographing the weather: the
   // flock, the wind and the cloud shadows all move, so two renders of one
   // camera differ by however long the page took to get there.

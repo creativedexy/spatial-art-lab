@@ -62,6 +62,13 @@ crossfade is enough.
   glowing strip down the middle of the finished footage.
 - **Cheap first.** Every request names the cheapest rung that could answer it.
   If the cheap rung answers it, stop.
+- **Google's tiles are a live layer and never a source.** Task 002 puts
+  Photorealistic 3D Tiles under the map as today's Cheltenham, but the Map
+  Tiles terms forbid caching and offline use, so **no plate, brief, Codex
+  input or film frame may come from them, ever**. Every generated image still
+  starts from the measured map, which is also what keeps the surveyed locks
+  below meaningful. The layer needs a key that lives only on the machine that
+  holds it; with no key the map is the measured one, unchanged.
 
 ## Surveyed locks
 

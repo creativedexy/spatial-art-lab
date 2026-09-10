@@ -57,3 +57,7 @@ inspiration/golden-valley/hbd/
 
 # Google Map Tiles key, written locally at run time from the keychain. Never commit.
 experiments/002-living-map/tiles-test/key.js
+
+# The Google Maps Platform key for the tiles layer. Never committed: the map
+# reads it at run time and does without it everywhere else.
+experiments/002-living-map/**/key.js

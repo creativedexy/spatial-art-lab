@@ -26,7 +26,20 @@
   /* Same trap: .hotspot and #panel both set `display` in direction.css. */
   #panel[hidden] { display: none; }
 </style>
-<script type="importmap">{ "imports": { "three": "../terrain/vendor/three.module.min.js" } }</script>
+<!-- The tiles layer is the only thing here that is not vendored, and it is
+     fetched ONLY when a key exists: no key, no import, and the public map
+     stays the offline-first measured one at phase 7's weight. -->
+<script type="importmap">{ "imports": {
+  "three": "../terrain/vendor/three.module.min.js",
+  "three/": "https://cdn.jsdelivr.net/npm/three@0.169.0/",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "3d-tiles-renderer/three": "https://esm.sh/3d-tiles-renderer@0.5.2/three?external=three",
+  "3d-tiles-renderer/three/plugins": "https://esm.sh/3d-tiles-renderer@0.5.2/three/plugins?external=three",
+  "3d-tiles-renderer/core/plugins": "https://esm.sh/3d-tiles-renderer@0.5.2/core/plugins?external=three"
+} }</script>
+<!-- Gitignored, and absent in every environment that has no key. onerror
+     keeps the console clean when it is not there, which is the normal case. -->
+<script src="./key.js" onerror="window.GOOGLE_TILES_KEY=null"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -62,6 +75,9 @@
      phone it collapses behind a labelled control rather than shrinking,
      because four lines of licence text under the year dial is how a
      careful credit turns into noise and stops being read at all. -->
+<!-- Required, always visible, and gathered from the renderer rather than
+     typed: what is being credited changes with what is on screen. -->
+<div id="tiles-attribution" hidden></div>
 <div id="credit">
   <button id="credit-toggle" type="button" aria-expanded="false"
           aria-controls="credit-text">Data sources</button>

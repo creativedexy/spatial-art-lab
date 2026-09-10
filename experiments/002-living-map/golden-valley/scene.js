@@ -105,9 +105,13 @@ export async function buildScene({ segments = 1000, flatBuildings = true } = {})
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  scene.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
     vertexColors: true, roughness: 1, metalness: 0,
-  })));
+  }));
+  // Named because the tiles layer has to find it: with photogrammetry showing
+  // today's town, our own ground is drawn only where 2045 changes it.
+  ground.name = 'terrain';
+  scene.add(ground);
 
   if (flatBuildings) {
     const gchq = [];

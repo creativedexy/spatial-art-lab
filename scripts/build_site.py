@@ -94,6 +94,16 @@ def main():
               "The campus falls back to its extrusions. Use --internal for a "
               "pitch build.\n")
 
+    # The tiles layer reads its key from this file at run time. There is no
+    # key in a public build and there never will be one — a key in a static
+    # site is a key anyone can spend — so the stub says so explicitly rather
+    # than leaving the page to 404 for it. That 404 is harmless in the browser
+    # but it is a missing file, and a build that ships missing files trains
+    # everyone to ignore them.
+    (out / "golden-valley" / "key.js").write_text(
+        "// No key in a public build: the map is the measured one.\n"
+        "window.GOOGLE_TILES_KEY = null;\n")
+
     # The page is one folder down; a host wants something at the root.
     (out / "index.html").write_text(
         '<!doctype html><meta charset="utf-8">'
