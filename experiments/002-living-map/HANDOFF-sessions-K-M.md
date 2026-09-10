@@ -1,6 +1,12 @@
 # Handoff to the main session
 
-## Standing rule from Dex, 10 Sep 2026: images first, spend nothing
+## Standing rules from Dex, 10 Sep 2026
+
+**No empty frames.** Every generated frame must show a place of interest,
+buildings and people; transitions are a blurry zoom-in, not a journey. Full
+rule and its check in `generate/README.md`.
+
+### Images first, spend nothing
 
 - **No video generation of any kind** until Dex says he is happy with the image
   generation. That includes the Kling v3 frame-3-to-frame-4 bridge proposed
