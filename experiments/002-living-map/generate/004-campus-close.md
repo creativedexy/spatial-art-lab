@@ -74,3 +74,63 @@ where the plate is still the limiting factor. The glazing defect is already
 known — what is worth reporting is anything *else* the models get wrong at this
 distance, because that is what decides whether the next type is worth its
 credits.
+
+## Result
+
+**10 Sep 2026, local session. Done, £0, Codex `image_gen`, one correction.**
+Output: `close-2045/out/campus-ncic-photo.png`, notes in `campus-ncic-notes.md`.
+
+### Two things in this brief did not match its plate, so the plate changed
+
+1. **The brief describes the Meshy models; the plate has the written facades.**
+   The brief predates `facades.js` (73bbab9) and the NCIC wedge (e0a30a1).
+   `campus-cluster.png` was re-rendered with the current code before running.
+2. **The NCIC is not in this camera's frame, even re-rendered.** From
+   `campus-cluster.json` it sits about 51° right of the view axis, against a
+   38° half-width. So I rendered **`campus-ncic`**: the same camera position,
+   turned to look at (−190, −115), which puts the NCIC centre-right with the
+   campus blocks around it. That is the plate this result is for. The
+   original stays as specified.
+
+**`measure_leg_anchors.py` crashes on `campus-ncic.json`:** `IndexError` in
+the height lookup (`at`, line 88), called from `describe` (line 158), so a
+projected feature's ground sample falls outside the height field. Not patched
+here, as it is your tool. The locks below were taken from the plate by eye.
+
+### The rule: passes cleanly
+
+| | in the frame |
+|---|---|
+| place of interest | the NCIC's meadow wedge, glazed high end catching the sun |
+| buildings | banded campus blocks with sedum roofs, the NCIC, homes in brick with slate and tile |
+| people | on the plazas, outside the glazed ground floors, walkers and cyclists on the new street, on the footway in the foreground |
+
+Sky is about 14 % of the frame, and the ground between the blocks became sett
+plazas through wildflower. Nothing is empty.
+
+### The named failures
+
+None of the four: no towers, the meadow roof is a roof, nothing added to the
+open fields, people everywhere.
+
+### Residuals, at 1280 × 720 (locks by eye from the plate)
+
+| feature | plate | residual (Codex, ±4 px) |
+|---|---|---|
+| NCIC | x 722–905, y 268–342 | up to **51 px**; drawn about 35–40 px **high** |
+| nearest campus block | x 0–285, y 368–500 | up to 34 px |
+| second campus block | x 332–530, y 322–410 | up to 36 px |
+
+The whole scene is drawn **high** again: the sixth frame running where this
+generator lifts the composition rather than shifting it at random.
+
+### Where the plate is the limiting factor
+
+**Not the buildings, this time.** At 100–250 m the written facades carry
+straight through: the ribbon windows, stone spandrels and sedum roofs are all
+in the photo, and the NCIC reads as a wedge you could walk up. Written
+geometry is enough for Codex at this distance, and the Meshy credits for more
+types are not needed.
+
+What limited it was upstream of the generator: a brief whose camera missed its
+own place of interest, and an anchor tool that could not measure the frame.

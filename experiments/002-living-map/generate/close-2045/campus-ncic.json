@@ -10,7 +10,7 @@
   "wave": 1,
   "frames": [
     {
-      "file": "campus-cluster.png",
+      "file": "campus-ncic.png",
       "atMetres": 0,
       "pos": [
         -175,
@@ -18,9 +18,9 @@
         60
       ],
       "look": [
-        -262,
-        50.565,
-        -35
+        -190,
+        49.825,
+        -115
       ]
     }
   ]
