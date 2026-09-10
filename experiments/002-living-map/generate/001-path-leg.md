@@ -107,3 +107,74 @@ Put the outputs in `cheltenham-circular-footpath/out/`. Then flip the row in
 [`README.md`](README.md) from open to done.
 
 Never commit a key. `--dry-run` reports only whether one is set.
+
+## Result
+
+**10 Sep 2026, local session. Rung A answered, free. Rungs B and C parked.**
+
+### What ran
+
+Rung A, but **not on fal**. Dex's standing rule as of 10 Sep: spend nothing on
+generation until he is happy with the images, and no video of any kind until
+then (recorded at the top of `HANDOFF-sessions-K-M.md`). Rung A is a still-image
+question, so it ran on the Codex subscription's built-in `image_gen` instead of
+`fal-ai/flux/dev/image-to-image`.
+
+- **Engine:** Codex CLI `codex exec`, built-in `image_gen`, both plates attached
+  with `-i`, one session so light and season match across the two ends.
+- **References:** the two plates only. Nothing from `inspiration/`, per the
+  rule in `README.md`.
+- **Cost:** £0. **Wall time:** about 12 minutes for both, including one
+  self-inspected regeneration each.
+- **Also did B's end frame.** The request asks rung A for `a-start.png` only,
+  but a bridge pins both ends, so a photoreal `b-end` made in the same session
+  is the half of rung B that costs nothing.
+
+### Outputs, in `cheltenham-circular-footpath/out/`
+
+| file | what |
+|---|---|
+| `a-start-photo.png` | start of the leg, 1672×941 |
+| `b-end-photo.png` | end of the leg, 1672×941 |
+| `contact-plate-vs-photo.jpg` | plate beside photo, both ends |
+| `codex-prompts.md` | Codex's own final prompts and its drift record |
+
+### Reading, against this request's own pass/fail
+
+**Passes on photorealism.** Both read as a photograph of an English field path
+towards a housing edge: a trodden line of bare earth, tractor lines, a small
+brook with rushes, red brick and slate and tile along the horizon, one
+afternoon's light.
+
+**Partial on registration, which is the question that matters for the bridge.**
+The layout does not *move* in the sense this request means by failure — nothing
+invented, nothing relocated — but it drifts. Codex measured its own:
+
+- **A:** brook bends, housing silhouettes, tractor-line spacing and the shed's
+  surroundings shifted. GCHQ, which the plate shows edge-on as a low dark band,
+  became a long pale metal shed. At this distance that is nearly a fair reading
+  of a ring seen side-on, but it is not the building.
+- **B:** horizon about **18 px** too high and the far end of the path about
+  **15 px** left, measured at the plate's 1280×720.
+
+That is the same blocker `plans/pipeline-3d-to-web.md` names for stage 4:
+good enough for a vision frame, not good enough for an end pin that has to hand
+back to `cameraOnLeg` without a visible jump. An 18 px horizon step at the
+handover is a cut the viewer will see.
+
+### What would move it, still free
+
+- **Hold the horizon and the path as hard lines.** Both drifts are in the two
+  features that carry the registration. A second pass that states them as pixel
+  rows and columns taken from the plate (Codex did this unprompted on the site
+  frames in Session M and it tightened them) is the next free thing to try.
+- **Let the map own frame zero.** If the clip starts on the map's own render
+  rather than a regenerated one, only the far end has to be registered, which
+  halves the problem.
+
+### Parked
+
+- **Rung B** (`fal-ai/kling-video/v3/pro/image-to-video`, both ends pinned, 5 s,
+  `generate_audio:false`, about £0.45) and **Rung C** (full 18.8 s, about £1.70):
+  video, so parked until Dex is happy with the stills. When unparked, pin the two
+  photos in `out/`, not the raw plates, or the clip will be photoreal at neither end.

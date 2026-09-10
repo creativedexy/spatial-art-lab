@@ -14,7 +14,7 @@ protocol.
 
 | # | request | for | status |
 |---|---|---|---|
-| 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg | open |
+| 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg | rung A done (free, Codex); B and C parked: no video until Dex approves the stills |
 
 ## Rules that do not change
 
