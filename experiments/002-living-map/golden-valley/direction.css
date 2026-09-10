@@ -227,3 +227,23 @@ body.in-place #credit { left: 440px; max-width: 38vw; }
 /* A named route is a place; an unnamed strand is context. The amber rule is
    the only thing that separates them, and it is enough. */
 #route-label.named { border-left: 2px solid var(--amber); }
+
+/* --- 2045 -------------------------------------------------------------------
+   One button, and it only works once. A toggle that could be flipped back
+   would make the change a comparison; making it one-way makes it an arrival. */
+#future-toggle {
+  position: absolute; z-index: 5; left: 50%; bottom: 34px;
+  transform: translateX(-50%);
+  padding: 13px 30px 12px;
+  font: 500 11px/1 var(--sans); letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--paper); background: rgba(41, 48, 42, 0.42);
+  border: 1px solid rgba(247, 242, 230, 0.5);
+  cursor: pointer; backdrop-filter: blur(6px);
+  transition: background var(--quick) var(--ease), color var(--quick) var(--ease),
+              opacity var(--calm) var(--ease), border-color var(--quick) var(--ease);
+}
+#future-toggle:hover { background: var(--paper); color: var(--ink); }
+#future-toggle[disabled] { cursor: default; border-color: rgba(247, 242, 230, 0.25); }
+#future-toggle[disabled]:hover { background: rgba(41, 48, 42, 0.42); color: var(--paper); }
+#future-toggle[hidden] { display: none; }
+body.in-place #future-toggle, #app.flying #future-toggle { opacity: 0; pointer-events: none; }

@@ -9,9 +9,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
 import { applyLook } from './look.js';
-import { addLandCover, loadClassTexture, classIndex } from './landcover.js';
+import { addLandCover, loadClassTexture, classIndex, unitTree, KINDS } from './landcover.js';
 import { bringToLife } from './life.js';
 import { addPaths } from './paths.js';
+import { addFuture } from './future.js';
 
 // Re-exported so a page that draws the world imports one module to build it
 // and to move it, and cannot end up driving a different clock than the one
@@ -157,5 +158,12 @@ export async function buildWorld({ renderer, segments = 1000 } = {}) {
   // world built with paths in it is still pixel-identical to one without,
   // and the seam test measures what it always measured.
   scene.userData.paths = addPaths(scene, { groundAt: heightAtLocal });
+  // Last of all, because it patches the terrain material that bringToLife has
+  // just patched and adds meshes that need the same clock. The front starts
+  // west of the box, so a world built with 2045 in it renders as today until
+  // something moves it.
+  scene.userData.future = await addFuture(scene, renderer, {
+    groundAt: heightAtLocal, unitTree, treeKinds: KINDS,
+  });
   return scene;
 }

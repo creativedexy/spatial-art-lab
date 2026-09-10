@@ -187,6 +187,40 @@ function updateIgnition(dtMs) {
   }
 }
 
+// --- 2045 -------------------------------------------------------------------
+// One wave, west to east, once. ?future=1 renders it already arrived and
+// ?wave=0.45 holds the front part-way across, which is what a capture wants
+// since it has no button to press.
+const future = scene.userData.future;
+const WAVE_MS = 9000;
+let waveFrom = null;
+future.setWave(params.has('wave') ? Number(params.get('wave'))
+                                  : (params.has('future') ? 1 : 0));
+
+const futureButton = document.createElement('button');
+futureButton.id = 'future-toggle';
+futureButton.textContent = 'Show 2045';
+futureButton.hidden = clean || params.has('future') || params.has('wave');
+futureButton.onclick = () => {
+  if (waveFrom !== null || future.wave >= 1) return;
+  waveFrom = performance.now();
+  futureButton.disabled = true;
+  futureButton.textContent = 'The Golden Valley, 2045';
+};
+app.appendChild(futureButton);
+
+function updateWave(now) {
+  if (waveFrom === null) return;
+  const k = Math.min(1, (now - waveFrom) / WAVE_MS);
+  // Ease at both ends: the front should gather and settle rather than start
+  // and stop, which is the whole difference between weather and a wipe.
+  future.setWave(k * k * (3 - 2 * k));
+  if (k >= 1) {
+    waveFrom = null;
+    futureButton.classList.add('done');
+  }
+}
+
 // --- the place panel --------------------------------------------------------
 const panel = document.getElementById('panel');
 const panelTitle = document.getElementById('panel-title');
@@ -280,6 +314,7 @@ function tick() {
   const walking = walk.update(now);
   if (controls.enabled && !walking) controls.update();
   updateIgnition(dtMs);
+  updateWave(now);
   updatePick();
   paths.update(worldSeconds());
   // The descent clips were rendered before the network existed. Cutting to
@@ -339,7 +374,7 @@ if (auto) {
 // compositor that under software GL is slower than the render it is waiting
 // for. Nothing in the page reads it.
 window.__map = {
-  renderer, scene, camera, controls, paths, walk, player, hotspots,
+  renderer, scene, camera, controls, paths, walk, player, hotspots, future,
   groundAt: heightAtLocal,
 };
 window.__terrainReady = true;

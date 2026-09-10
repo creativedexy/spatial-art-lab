@@ -87,7 +87,14 @@ function inject(source, marker, addition, where = 'after') {
 }
 
 /** Cloud shadows on any standard material, plus whatever else is asked for. */
-function patch(material, { water = false, wind = 0, flap = 0 } = {}) {
+/**
+ * Give a material the world's clock: cloud shadows, wind, water shimmer.
+ *
+ * Exported because Phase 6 adds meshes AFTER bringToLife has run its traverse,
+ * and a new hedge that did not darken when a cloud crossed it would be the
+ * one thing in the frame that was not in the same weather as everything else.
+ */
+export function applyLife(material, { water = false, wind = 0, flap = 0 } = {}) {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
 
@@ -287,15 +294,15 @@ export function bringToLife(scene, { groundAt, classMap, waterIndex }) {
   scene.traverse((obj) => {
     const m = obj.isMesh && obj.material;
     if (!m || !m.isMeshStandardMaterial) return;
-    if (m.vertexColors && m.map) patch(m, { water: true });         // the ground
-    else if (obj.parent && obj.parent.name === 'trees') patch(m, { wind: 0.05 });
-    else patch(m);
+    if (m.vertexColors && m.map) applyLife(m, { water: true });         // the ground
+    else if (obj.parent && obj.parent.name === 'trees') applyLife(m, { wind: 0.05 });
+    else applyLife(m);
   });
 
   const material = new THREE.MeshStandardMaterial({
     color: 0x33343a, roughness: 0.9, side: THREE.DoubleSide, flatShading: true,
   });
-  patch(material, { flap: 0.32 });
+  applyLife(material, { flap: 0.32 });
   flock.mesh = new THREE.InstancedMesh(birdGeometry(), material, FLOCK);
   flock.mesh.name = 'birds';
   flock.mesh.castShadow = false;

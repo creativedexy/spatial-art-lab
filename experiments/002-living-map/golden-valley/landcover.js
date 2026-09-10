@@ -29,7 +29,7 @@ export const coverMeta = await (await fetch(url('gv-landcover.json'))).json();
 // are canopy blobs in unit-tree space: [x, y, z, radius]. More than one, and
 // off-centre, because a single sphere on a stick reads as a lollipop the
 // moment the camera comes below about 150 m.
-const KINDS = [
+export const KINDS = [
   { colour: 0x54703f, trunk: 0.34, squash: 1.0, lobes: [
     [0, 0.72, 0, 0.30], [0.15, 0.56, -0.10, 0.23], [-0.12, 0.63, 0.14, 0.21],
   ] },
@@ -115,7 +115,7 @@ export async function applyLandCover(scene, renderer) {
 
 // A unit tree: one metre tall, standing on the origin, so an instance matrix
 // scales it to its measured height and nothing else has to be recomputed.
-function unitTree(kind) {
+export function unitTree(kind) {
   const parts = [];
   if (kind.trunk > 0) {
     const trunk = new THREE.CylinderGeometry(0.03, 0.055, kind.trunk + 0.12, 5, 1, true);
