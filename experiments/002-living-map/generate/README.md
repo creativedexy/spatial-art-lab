@@ -15,7 +15,7 @@ protocol.
 | # | request | for | status |
 |---|---|---|---|
 | 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg | **closed**: an empty footpath fails the interesting-imagery rule; do not run B or C |
-| 002 | [`002-gchq.md`](002-gchq.md) | GCHQ filling the frame, with surveyed locks | open, free |
+| 002 | [`002-gchq.md`](002-gchq.md) | GCHQ filling the frame, with surveyed locks | **done** (free, Codex): passes the rule; ring drawn ~22 px high; car parks are the plate's gap |
 
 ## The interesting-imagery rule (Dex, 10 Sep 2026)
 
