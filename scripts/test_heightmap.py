@@ -1,13 +1,19 @@
-"""The terrain codec, checked in both languages.
+"""The terrain codec, checked in both languages — the ones actually shipped.
 
 Phase 7. The heightmap is the one asset the whole map is built on — the ground
 every building stands on, every path is draped over and every camera is aimed
 at — and it is now written by python and read by JavaScript. A disagreement
 between those two would not throw; it would just move Cheltenham.
 
-So: decode the shipped file with node, decode it again with a python
-implementation written from the same description, and require them to be
-identical byte for byte. Then re-encode what came back and require the shipped
+So: decode the shipped file with node, decode it again with python, and
+require them to be identical byte for byte.
+
+The python side is `scripts/heightfield.py`, the module the generators and the
+anchor tool call. That matters: this test used to compare node against a copy
+of the decoder written inside the test, so it passed while three real scripts
+were still reading the packed file as raw uint16 — and the crash that followed
+was reported as a plate looking over the edge of the box. A test that checks a
+copy of the code proves the copy. Then re-encode what came back and require the shipped
 bytes exactly, which is only possible if the quantisation, the predictor, the
 zigzag and the plane split all round-trip.
 """
@@ -43,26 +49,6 @@ def check(name, ok, detail=""):
     print(f"  {'PASS' if ok else 'FAIL'}  {name}" + (f"  — {detail}" if detail else ""))
 
 
-def python_unpack(packed, W, H, bits):
-    n = W * H
-    z = (packed[:n].astype(np.uint32) | (packed[n:2 * n].astype(np.uint32) << 8))
-    d = ((z >> 1) ^ (-(z & 1)).astype(np.uint32)).astype(np.int32).reshape(H, W)
-    q = np.zeros((H, W), dtype=np.int32)
-    for y in range(H):
-        row = q[y]
-        prev = q[y - 1] if y else None
-        for x in range(W):
-            if x:
-                left = row[x - 1]
-                up = prev[x] if y else row[x - 1]
-            else:
-                left = up = prev[0] if y else 0
-            row[x] = d[y, x] + ((left + up) >> 1)
-    up_shift, down_shift = 16 - bits, 2 * bits - 16
-    return ((q.astype(np.uint32) << up_shift)
-            | (q.astype(np.uint32) >> down_shift)).astype(np.uint16)
-
-
 def main():
     meta = json.loads((GV / "gv-meta.json").read_text())
     print("the terrain codec")
@@ -88,7 +74,8 @@ def main():
         js = np.frombuffer(out.read_bytes(), dtype="<u2").reshape(H, W)
     check("node decodes the shipped file", True, f"{js.shape[0]}x{js.shape[1]}")
 
-    py = python_unpack(packed, W, H, bits)
+    from heightfield import unpack
+    py = unpack(packed, W, H, bits)
     check("both languages decode it the same", bool(np.array_equal(js, py)),
           f"worst disagreement {int(np.abs(js.astype(int) - py.astype(int)).max())}")
 
