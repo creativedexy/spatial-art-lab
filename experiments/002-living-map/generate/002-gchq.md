@@ -97,3 +97,68 @@ residual drift measured against the numbers above. If the plate itself is the
 limiting factor — something the map does not model well enough to be described
 — say so plainly. That is the most useful thing you can send back, because it
 is the only kind of finding that changes what gets built here.
+
+## Result
+
+**10 Sep 2026, local session. Done, £0, two passes on Codex `image_gen`.**
+Plate only attached; nothing from `inspiration/`.
+
+### Outputs, in `gchq/out/`
+
+| file | what |
+|---|---|
+| `gchq-photo.png` | the frame, 1672×941 |
+| `contact-plate-vs-photo.jpg` | plate beside photo |
+| `codex-notes.md` | Codex's passes, corrections, final prompt, its own residuals |
+
+### The rule: passes cleanly
+
+GCHQ is the unmistakable focal point: pale ribbed roof, continuous glazing on
+the inner face, glazed bands over brick outside, and the notch in the plate
+read as a glazed entrance block. The annexes and Hesters Way give built form
+from the bottom of the frame to the horizon. The car parks are full, cars are
+moving on the perimeter road, and there are people at the entrance and on the
+path between the annexes. Sky is about a quarter of the frame.
+
+### The four named failures
+
+| | |
+|---|---|
+| courtyard filled with water or enlarged | **no.** Dry, planted, three trees; within ~5 px of the lock horizontally |
+| ring turned into a shed, stadium or roundabout | **no** |
+| landscape invented above the horizon | fixed on the second pass; the first put the horizon at y 202 |
+| car parks left empty | **no.** Full on both sides and behind |
+
+### Residuals against the locks, at 1280×720
+
+| feature | lock | result | residual |
+|---|---|---|---|
+| ring, left/right | x 312–1064 | x ~315–1060 | within ~5 px (roof edge ~11 px in, as a roof should be) |
+| ring, top of roof | y 285 | y 263 | **−22 px** (measured: pale-roof extent in the result) |
+| ring, front base | y 539 | y ~511 | **about −25 to −28 px** (my read; Codex reports −14) |
+| courtyard | x 529–832, y 307–365 | x ~524–833, y ~285–347 | x within 5 px; **y about −20 px** |
+| horizon | y 174 | y ~178 | +4 px |
+
+So the ring is **drawn uniformly about 20–25 px high**, with its width and its
+courtyard proportions held, over a correct horizon. That is outside the ~15 px
+tolerance the brief set.
+
+It is also **the same drift as Session M's frames 1 and 2**, where Codex
+reported "GCHQ sits higher in frame" both times. Three frames, same direction,
+similar size: a systematic tendency of this generator on this building, not
+noise. For a blurred zoom-in transition, 25 px is invisible. For a frame that
+has to hand back to the live map without a jump it is not, and a third
+correction pass is unlikely to cure a bias the first two did not.
+
+### Where the plate is the limiting factor
+
+**The car parks.** They are now the largest single area of life in the frame,
+the rule makes them compulsory, and the map has no class for them. The plate
+shows them as bare grey hard surface, so every rank, aisle and entrance in
+this picture is the generator's invention. It invented them plausibly, but not
+where they really are.
+
+That is the one finding here that changes what gets built: **a car-park class
+in the land raster** (OSM `amenity=parking`, with `parking_space` where
+tagged), drawn as ranks in the plate the way Session L drew fields as working
+lines. It also closes one of the last two audit rows Session M left absent.
