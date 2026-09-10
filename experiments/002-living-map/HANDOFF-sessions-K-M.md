@@ -2,6 +2,11 @@
 
 ## Standing rules from Dex, 10 Sep 2026
 
+**Look approved, 10 Sep, after 003.** Dex likes the 2045 set. Next: closer
+shots, Meshy models of the key buildings, a video plan and the start of the
+interactive web work. **No far-field terrain skirt**, which was 003's
+suggestion; Dex does not think it is needed, so do not build it.
+
 **No empty frames.** Every generated frame must show a place of interest,
 buildings and people; transitions are a blurry zoom-in, not a journey. Full
 rule and its check in `generate/README.md`.
