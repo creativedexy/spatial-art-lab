@@ -34,33 +34,49 @@ already a place in it. Make them clickable destinations:
 **Done when:** from the live map you can reach every row above and back again
 on a phone, and each photo lands on the viewpoint it was generated from.
 
-## Part 2: real buildings on the 2045 footprints (set it up now, fill it later)
+## Part 2: procedural facades on the 2045 buildings (rewritten 10 Sep)
 
-The close-up plates failed the no-empty-frames rule because at 100 m the
-campus is blank 38 × 17 m slabs on grass. Meshy models are being made locally
-(approved, 70 credits) and will land in `experiments/002-living-map/meshy/`
-as GLBs:
+**Changed from Meshy placement.** The two Meshy models (`meshy/`, see its
+README) were not good enough: generative image-to-3D gives soft, blobby
+architecture, and it turned every pane of glass into holes and spikes. Dex's
+call after seeing them: explore better realism. The finding is that Meshy is
+the wrong tool for straight-lined buildings, and these are two primitives: a
+bar and a wedge. **Build them from rules instead**, on the extrusions the map
+already makes. Every footprint comes out exact, the payload is tiny, and it
+carries over to every future site. Keep the Meshy GLBs parked, not deleted.
 
-- `campus-block.glb`: one bar building, modelled at 38 : 17 : 14.
-- `ncic.glb`: the National Cyber Innovation Centre, the sloping meadow-roof
-  building from HBD's aerial, roughly 60 × 35 m.
+**Campus blocks** (all 20 are 38 × 17 m, 11.9–17 m tall, flat roof):
+- storey height 3.4 m (17 m / 5); ground floor **fully glazed**, opaque dark
+  reflective glass with slim dark mullions, recessed under a pale timber soffit
+- upper storeys: linear buff-grey stone / brick-slip in **strong horizontal
+  bands**, a window every ~3 m bay, each window **deeply recessed**
+  (real inset geometry or a normal map, not flat paint)
+- 0.6 m parapet; sedum roof material; a PV patch on some roofs
+- UVs in metres, so the facade tiles at true scale on any length
+- the vocabulary is `generate/003-golden-valley-2045.md`'s: pale timber and
+  buff stone, never curtain wall
 
-Build the placement now, with a placeholder box, so dropping a GLB in is a
-one-file change:
+**The NCIC** (no footprint yet: choose its cell by a written rule, as before):
+- a wedge on a ~60 × 27 m rectangle: roof plane from ground at the low end to
+  **~16 m** at the high end, one continuous **wildflower meadow** material,
+  framed by a pale stone edge
+- side walls pale buff stone with long horizontal glazing bands; the high end
+  fully glazed (opaque reflective, as above)
 
-- every `campus` footprint in `gv-2045-buildings.json` gets one instance of the
-  campus model, scaled to its footprint (all 20 are 38 × 17 m) and to its own
-  height (11.9–17 m), turned to the footprint's long axis, sat on its `base`.
-  Glasshouses the same way when a `glasshouse.glb` follows.
-- **The NCIC has no footprint in the scheme.** Choose its cell by a written
-  rule, as the rest of the scheme is (for example: the campus cell nearest
-  GCHQ with a named route frontage), not by hand, and say which rule.
-- Keep the untextured extrusions as the fallback when a GLB is missing, so
-  nothing renders empty.
+**Rules for both:** textures generated procedurally (canvas or shader), not
+image downloads; no transparent glass anywhere; the untextured extrusion stays
+as the fallback. Glasshouses and homes can follow the same pattern later.
 
-**Done when:** the campus plate re-rendered from `generate/close-2045/campus-cluster.json`
-shows models rather than slabs. That plate then gets re-briefed through the
-`generate/` queue as close-up 004.
+**Done when:** the campus plate re-rendered from
+`generate/close-2045/campus-cluster.json` shows crisp banded buildings with
+recessed windows and a glazed ground floor, not slabs. That plate then goes
+back through the `generate/` queue as close-up 004.
+
+**In parallel, locally:** the local session is testing Google Photorealistic
+3D Tiles as a *live* context layer for the existing town. Its terms forbid
+caching and offline use, so tiles can never feed plates, Codex or a film.
+They could only ever be what a viewer sees in the live map. Nothing for you
+to do on that unless it lands.
 
 ## Not in scope
 
