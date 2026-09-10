@@ -385,6 +385,101 @@ material-hint problem, and material hints are cheap raster work in the
 pipeline we own. Only a failure that *geometry* would fix earns a Blender
 session.
 
+## Phase 5 — the path network
+
+> "frame 3 & 4 are pointlessly looking at a field. I'm also thinking we need
+> an aerial shot that gives us some interactive options — we need pathways."
+
+Right on both counts, and the second fixes the first. A field dissolving into
+houses is the most-made image in the industry, and it puts the viewer above a
+plot looking down like a surveyor. Paths put them on the ground with somewhere
+to go.
+
+The structural gap was small and specific. The footpaths were already in the
+map — `golden_valley_landcover.py` paints them into `gv-landcover.png` at a
+metre a texel, which is the right way to make them *look* correct. What a
+texel cannot do is have a name, a pair of ends, or a state. So the same routes
+come out a second time as polylines, and the two forms do different jobs:
+
+| | what it is | what it does |
+|---|---|---|
+| `gv-landcover.png` | pixels | how a path **looks** |
+| `gv-paths.json` | polylines | what a path **is** |
+
+**What OSM actually carries here.** 443 walkable ways in the box, chained
+through their shared nodes into 66 routes over 14.26 km. Three of them are
+named route relations, and one matters: the **Cheltenham Circular Footpath**
+runs north-south through the box and passes within **160 m** of the Golden
+Valley phase 1 site. We are not inventing a route to sell the scheme — we are
+revealing one that walks past it today. The **Gloucestershire Cycle Spine**
+crosses the whole box east-west, 378 m from GCHQ. NCN 41 is the same tarmac
+as the Spine and is deduplicated away: two lines over each other is a brighter
+line, not a second route.
+
+Everything else — 63 strands above 80 m — is drawn as a fainter web, so the
+vale reads as somewhere with a grain rather than somewhere with two lines on
+it.
+
+**Two tiers, one file.** `named` routes are labelled and offered; `strand`
+routes are context. Neither carries a Y: height comes from the same field the
+terrain is built from, exactly as the tree instances do, so a route cannot
+float over a hill or sink into one if either ever changes.
+
+**A leg is the unit of travel.** Clicking two kilometres of cycle route cannot
+mean "fly all of it" — at a speed that fits in a shot it is a blur, and at a
+speed you could walk it is twenty minutes. So a click takes the ~320 m around
+the point you pointed at. That is a watchable arrival, and — not by accident —
+exactly the span a generated clip would later stand in for. **The leg is also
+the unit of generation.**
+
+### Four bugs worth writing down
+
+1. **`smoothstep` is undefined when `edge0 >= edge1`.** The lit-behind-the-head
+   term was written as `smoothstep(uProgress, uProgress - 0.05, vU)`, which is
+   the descending form and is not in the specification. The driver returned
+   zero and the whole network drew nothing. `1.0 - smoothstep(a, b, x)` is the
+   defined way to say it.
+2. **`pow()` is undefined for a negative base.** The travelling flare squared
+   its ramp with `pow(d, 2.0)`, and half of that ramp is negative. `d * d`.
+3. **A flat ribbon has no consistent winding.** The quad for a stretch heading
+   north comes out the opposite way round from one heading south, so under the
+   default `FrontSide` most of every route was back-face culled and what
+   survived read as scattered chevrons. There is no back of a path to cull.
+4. **Half a metre of lift is below the depth buffer's resolution** two
+   kilometres out with the near plane at 2 m. The bias belongs in depth-buffer
+   units — `polygonOffset` — where it is the same bias at every distance.
+
+Only the first three were visible as "nothing is drawn", and the first two
+were found by shouting: pure red, glow 8, width 40 m. A diagnostic that makes
+the failure *loud* separates "not drawn" from "drawn and invisible" in one
+frame, and those have completely different causes.
+
+### The camera does not ride at eye height, and that is a finding
+
+The walker was written at 2.4 m — a tall walker — because "on the ground" was
+the point. The first plate captured for a generator settled it: the land cover
+is a 1 m image seen at a grazing angle with no grass, kerb or verge geometry
+under it, so the bottom half of the frame is a smear and a building four
+metres away is a featureless slab. The map is surveyed to the metre **from the
+air**. It is not a walk simulator, and pretending otherwise makes both the
+picture and the conditioning worse.
+
+`RIDE` in `walk.js` is now 14 m, with a 70 m look-ahead. At that height the
+texture resolves, the worn line of the path reads, the field working lines and
+the stream give parallax, and the settlement edge anchors the horizon — while
+it still plainly reads as travelling the route rather than looking down at it.
+8 m works too and feels more like walking; it is one constant either way.
+
+### What it cost, and what is next
+
+Nothing. Five steps — extract, drape, draw, pick, walk — and no generation.
+The map now offers real routes, lit, named and walkable, before a penny is
+spent. The next thing that costs money is one leg: capture the passes along
+it and buy about five seconds of photoreal video, roughly 45p. If it comes
+back wrong we lose 45p and the map still works, because every leg falls back
+to the live walk exactly as every hotspot already falls back to a live
+descent.
+
 ## Immediate next step
 
 **The season wave**, which the reference makes the case for better than this

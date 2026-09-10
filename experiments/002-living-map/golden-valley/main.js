@@ -15,6 +15,8 @@ import {
 } from './scene.js';
 import { loadHotspots } from '../descent/path.js';
 import { createDescentPlayer } from '../descent/player.js';
+import { legAt } from './paths.js';
+import { createPathWalk } from './walk.js';
 
 const app = document.getElementById('app');
 
@@ -84,12 +86,117 @@ for (const h of hotspots) {
   app.appendChild(h.button);
 }
 
+// --- the path network -------------------------------------------------------
+// The footpaths are already painted into the land cover; this is the same
+// routes as lines you can point at. ?paths=off leaves the network dark,
+// ?paths=on lights it immediately — which is what a capture wants, since it
+// has no camera to settle.
+const paths = scene.userData.paths;
+const pathMode = params.get('paths') ?? (clean ? 'off' : 'auto');
+paths.setViewport(renderer);
+if (pathMode === 'on') paths.igniteNow();
+if (pathMode === 'off') paths.setVisible(false);
+
+const walk = createPathWalk({
+  camera,
+  controls,
+  groundAt: heightAtLocal,
+  onState: (state, leg) => renderWalk(state, leg),
+});
+
+// The label that follows the pointer along a route. One element, moved,
+// rather than one per route: at 65 routes the DOM would be doing more work
+// than the renderer.
+const routeLabel = document.createElement('div');
+routeLabel.id = 'route-label';
+routeLabel.hidden = true;
+app.appendChild(routeLabel);
+
+const KIND_NAMES = {
+  foot: 'Footpath', cycle: 'Cycle route', bridle: 'Bridleway',
+  steps: 'Steps', track: 'Track',
+};
+const routeTitle = (r) => r.name ?? KIND_NAMES[r.kind] ?? 'Path';
+
+// Picking runs at most once a frame, driven by a dirty flag, because a
+// pointer emits moves faster than the map draws and there is nothing to be
+// learned from testing the same 3,642 points twice between two pictures.
+let pointer = null;
+let pointerDirty = false;
+const canvas = renderer.domElement;
+
+canvas.addEventListener('pointermove', (e) => {
+  pointer = [e.clientX, e.clientY];
+  pointerDirty = true;
+});
+canvas.addEventListener('pointerleave', () => {
+  pointer = null;
+  pointerDirty = true;
+});
+
+// A left-drag pans the map, so a click has to be told apart from the start of
+// a drag by how far the pointer travelled — not by which button it was.
+let downAt = null;
+canvas.addEventListener('pointerdown', (e) => {
+  downAt = e.button === 0 ? [e.clientX, e.clientY] : null;
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (!downAt) return;
+  const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]);
+  downAt = null;
+  if (moved > 4 || player.busy || walk.busy || pathMode === 'off') return;
+  const hit = paths.pick(e.clientX, e.clientY, camera, innerWidth, innerHeight);
+  // A leg, not the route: clicking two kilometres of cycle route has to mean
+  // the stretch you were pointing at.
+  if (hit) walk.walk(legAt(hit.route, hit.index));
+});
+
+function updatePick() {
+  if (!pointerDirty) return;
+  pointerDirty = false;
+  const hit = (pointer && !player.busy && !walk.busy && pathMode !== 'off')
+    ? paths.pick(pointer[0], pointer[1], camera, innerWidth, innerHeight)
+    : null;
+  paths.setHover(hit?.route ?? null);
+  canvas.style.cursor = hit ? 'pointer' : '';
+  routeLabel.hidden = !hit;
+  if (hit) {
+    const r = hit.route;
+    routeLabel.textContent =
+      `${routeTitle(r)} · ${(r.lengthMetres / 1000).toFixed(2)} km`;
+    routeLabel.classList.toggle('named', r.tier === 'named');
+    routeLabel.style.left = `${hit.screen[0]}px`;
+    routeLabel.style.top = `${hit.screen[1]}px`;
+  }
+}
+
+// Ignition waits for the camera to settle, which is the moment the map stops
+// being something you are moving and starts being something you are reading.
+// It happens once: lighting is film, staying lit is interface.
+let ignitionStarted = pathMode !== 'auto';
+let stillMs = 0;
+const lastCam = camera.position.clone();
+function updateIgnition(dtMs) {
+  if (ignitionStarted || !controls.enabled) return;
+  const moved = camera.position.distanceTo(lastCam);
+  lastCam.copy(camera.position);
+  stillMs = moved < 0.8 ? stillMs + dtMs : 0;
+  if (stillMs > 650) {
+    paths.ignite(worldSeconds());
+    ignitionStarted = true;
+  }
+}
+
 // --- the place panel --------------------------------------------------------
 const panel = document.getElementById('panel');
 const panelTitle = document.getElementById('panel-title');
 const panelBody = document.getElementById('panel-body');
 const panelNote = document.getElementById('panel-note');
-document.getElementById('panel-back').onclick = () => player.returnToMap();
+// One button, two ways of having arrived somewhere.
+document.getElementById('panel-back').onclick = () => {
+  if (walk.inside) walk.returnToMap();
+  else player.returnToMap();
+};
 
 function render(state, hotspot) {
   const inPlace = state === 'arrived';
@@ -103,6 +210,23 @@ function render(state, hotspot) {
       ? 'Arrived by pre-rendered descent.'
       : 'Descent flown live — no clip generated for this place yet.';
   }
+}
+
+function renderWalk(state, leg) {
+  const arrived = state === 'arrived';
+  panel.hidden = clean || !arrived;
+  document.body.classList.toggle('in-place', arrived && !clean);
+  app.classList.toggle('flying', state === 'diving' || state === 'returning');
+  routeLabel.hidden = routeLabel.hidden || walk.busy;
+  if (!arrived) return;
+  const r = leg.route;
+  panelTitle.textContent = routeTitle(r);
+  panelBody.textContent =
+    `${Math.round(leg.length)} m of it, walked. The whole route runs `
+    + `${(r.lengthMetres / 1000).toFixed(2)} km inside this box — surveyed by `
+    + `OpenStreetMap, laid on Environment Agency LiDAR, and here before `
+    + `anything is built.`;
+  panelNote.textContent = 'Walked live — no clip generated for this leg yet.';
 }
 
 // --- the opening ------------------------------------------------------------
@@ -145,9 +269,23 @@ if (!introSkipped) {
 
 // --- frame ------------------------------------------------------------------
 const v = new THREE.Vector3();
+let lastFrame = performance.now();
 function tick() {
   requestAnimationFrame(tick);
-  if (controls.enabled) controls.update();
+  const now = performance.now();
+  const dtMs = Math.min(now - lastFrame, 100);
+  lastFrame = now;
+  // The walker owns the camera while it has it, so orbit damping must not
+  // fight it for the same three numbers.
+  const walking = walk.update(now);
+  if (controls.enabled && !walking) controls.update();
+  updateIgnition(dtMs);
+  updatePick();
+  paths.update(worldSeconds());
+  // The descent clips were rendered before the network existed. Cutting to
+  // one with the paths lit would show a seam that is nothing to do with the
+  // ground, so they go dark for the descent and come back as they were.
+  if (pathMode !== 'off') paths.setVisible(!player.busy && !player.inside);
   // One clock for the whole world, and the descent player is allowed to hold
   // it still or rebase it — which is how a pre-rendered clip and the live
   // canvas end up under the same cloud.
@@ -155,7 +293,7 @@ function tick() {
   renderer.render(scene, camera);
   for (const h of hotspots) {
     // A hotspot you are standing in should not offer to take you there.
-    const hide = player.busy || player.inside === h;
+    const hide = player.busy || player.inside === h || walk.busy || !!walk.inside;
     v.copy(h.anchor).project(camera);
     h.button.hidden = hide || v.z > 1;
     // Clamp, so a place near the edge of the box still reads as a label
@@ -176,6 +314,9 @@ tick();
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  // The ribbon's minimum width is in pixels, so it has to be told how many
+  // pixels tall the window now is or every path changes width on a resize.
+  paths.setViewport(renderer);
   player.resize(camera.aspect);
   renderer.setSize(innerWidth, innerHeight);
 });
@@ -192,4 +333,13 @@ if (auto) {
   else console.warn(`no hotspot with id "${auto}"`);
 }
 
+// A handle on the running map, for the capture scripts and the flow tests.
+// Everything here is already reachable from the page; naming it saves a test
+// from reaching into module scope, and saves a capture from screenshotting a
+// compositor that under software GL is slower than the render it is waiting
+// for. Nothing in the page reads it.
+window.__map = {
+  renderer, scene, camera, controls, paths, walk, player, hotspots,
+  groundAt: heightAtLocal,
+};
 window.__terrainReady = true;

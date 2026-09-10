@@ -204,3 +204,26 @@ body::after {
    place panel opens it moves out of the way rather than going out. */
 body.in-place #credit { left: 440px; max-width: 38vw; }
 #hint { right: 14px; letter-spacing: 0.14em; text-transform: uppercase; font-size: 9.5px; }
+
+/* --- the path network -------------------------------------------------------
+   The ribbons themselves are drawn in WebGL — this is only the label that
+   follows the pointer along one. Deliberately quieter than a hotspot marker:
+   a hotspot is an offer the map makes to you, a route label is an answer to a
+   question you asked by pointing at it. */
+#route-label {
+  position: absolute; z-index: 4; pointer-events: none;
+  transform: translate(14px, -50%);
+  padding: 5px 10px 4px;
+  font: 400 11px/1 var(--sans); letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--ink); background: var(--paper-veil);
+  border: 1px solid rgba(41, 48, 42, 0.12);
+  white-space: nowrap;
+  /* Its own fade, not `rise`: that keyframe animates `transform`, which is
+     also what holds this label off the pointer and centred on it. */
+  animation: label-in 200ms var(--ease) both;
+}
+@keyframes label-in { from { opacity: 0; } }
+#route-label[hidden] { display: none; }
+/* A named route is a place; an unnamed strand is context. The amber rule is
+   the only thing that separates them, and it is enough. */
+#route-label.named { border-left: 2px solid var(--amber); }

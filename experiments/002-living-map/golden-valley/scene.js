@@ -11,6 +11,7 @@ import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
 import { applyLook } from './look.js';
 import { addLandCover, loadClassTexture, classIndex } from './landcover.js';
 import { bringToLife } from './life.js';
+import { addPaths } from './paths.js';
 
 // Re-exported so a page that draws the world imports one module to build it
 // and to move it, and cannot end up driving a different clock than the one
@@ -151,5 +152,10 @@ export async function buildWorld({ renderer, segments = 1000 } = {}) {
     classMap: await loadClassTexture(),
     waterIndex: classIndex('water'),
   });
+  // After bringToLife, so the wind shader never finds the ribbons and tries
+  // to bend them. The network starts unlit — every fragment discarded — so a
+  // world built with paths in it is still pixel-identical to one without,
+  // and the seam test measures what it always measured.
+  scene.userData.paths = addPaths(scene, { groundAt: heightAtLocal });
   return scene;
 }
