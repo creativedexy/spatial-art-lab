@@ -125,6 +125,7 @@ PROBE = """async () => {
   });
 
   out.models = { ...m.models.placed };
+  out.built = { ...m.models.built };
   out.ncic = m.models.ncicSite && {
     cx: Math.round(m.models.ncicSite.cx), cz: Math.round(m.models.ncicSite.cz),
     toGchq: Math.round(m.models.ncicSite.toGchq),
@@ -133,6 +134,17 @@ PROBE = """async () => {
     fallback: m.models.ncicSite.usedFallback,
     clearance: Math.round(m.models.ncicSite.clearance),
   };
+  const wedge = m.scene.getObjectByName('future:ncic');
+  if (wedge) {
+    wedge.geometry.computeBoundingBox();
+    const bb = wedge.geometry.boundingBox;
+    const surf = {};
+    for (const v of wedge.geometry.attributes.aSurface.array) surf[v] = (surf[v] || 0) + 1;
+    out.wedge = { rise: +(bb.max.y - bb.min.y).toFixed(2),
+                  span: +Math.hypot(bb.max.x - bb.min.x, bb.max.z - bb.min.z).toFixed(1),
+                  surfaces: Object.keys(surf).length,
+                  built: m.models.built.ncic };
+  }
   out.blocksVisible = {};
   for (const [family, mesh] of m.future.blocks) out.blocksVisible[family] = mesh.visible;
   const campus = m.future.blocks.get('campus');
@@ -248,9 +260,12 @@ def check_map(port, doc):
           f"{r['driftMetres']} m adrift, wave back to {r['wave']}")
 
     # --- part 2, rewritten 10 Sep: procedural facades, not Meshy placement ---
+    # `placed` says something stands there; `built` says how it got there.
+    # The wedge sets placed.ncic too, so parked has to be read off `built`.
+    loaded = [k for k, v in out["built"].items() if v == "model"]
     check("the Meshy models stay parked",
-          not out["models"],
-          f"{out['models']}" if out["models"] else "nothing loaded, as intended")
+          not loaded,
+          f"loaded: {loaded}" if loaded else "nothing loaded from a GLB")
     check("every family keeps its own buildings",
           all(out["blocksVisible"].get(f) is True
               for f in ("campus", "homes", "glasshouse")),
@@ -279,6 +294,13 @@ def check_map(port, doc):
           f"({n['cx']},{n['cz']}) — {n['toGchq']} m to GCHQ, "
           f"{n['toRoute']} m to a named route, {n['fields']} fields"
           if n else "no site")
+    w = out.get("wedge")
+    check("the NCIC stands on it, written rather than modelled",
+          w is not None and w["built"] == "written" and w["surfaces"] == 3
+          and abs(w["rise"] - 16) < 0.1,
+          f"a wedge {w['rise']} m at the high end, {w['span']} m corner to corner, "
+          f"{w['surfaces']} surfaces" if w else "no wedge in the scene")
+
     # 60 m long and 26.6 m wide, so it needs the courtyard to be clear of the
     # blocks round it by more than half its diagonal.
     check("the NCIC fits the courtyard it was given",

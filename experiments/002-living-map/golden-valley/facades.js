@@ -202,6 +202,78 @@ export const CAMPUS_FRAGMENT = NOISE + /* glsl */`
 `;
 
 /**
+ * The National Cyber Innovation Centre. A wedge, so three surfaces and no
+ * repetition worth speaking of: the meadow you can walk up, the stone edge
+ * that frames it, the flank, and the glazed head.
+ *
+ * `aSurface` is 0 for a flank, 1 for the roof, 2 for the high end.
+ */
+export const NCIC_FRAGMENT = NOISE + /* glsl */`
+  vec3 fNcic(vec2 m, float surf, float head, inout vec3 nrm, inout float rough,
+             vec3 base) {
+    vec3 stone  = vec3(0.87, 0.83, 0.74);
+    vec3 glass  = vec3(0.10, 0.13, 0.16);
+
+    // --- the roof: one continuous wildflower meadow ------------------------
+    if (surf > 0.5 && surf < 1.5) {
+      // m.x runs up the slope in metres, m.y across the width. A 1.2 m stone
+      // edge frames it on all four sides — the detail that stops a planted
+      // roof reading as a green triangle stuck on the side of a building.
+      float edge = 1.0
+        - fBand(m.x, 1.2, ${(60 * 1.0353).toFixed(1)} - 1.2) * fBand(m.y, 1.2, 25.8);
+      vec3 meadow = base * vec3(0.94, 1.02, 0.86);
+      // Wildflower, not lawn: a coarse grain of grass with sparse warm and
+      // pale flecks through it, which is what a species-rich roof looks like
+      // from anywhere further than arm's length.
+      float grain = fHash(m * 3.1) * 0.26 + fHash(m * 0.9) * 0.16;
+      vec3 c = meadow * (0.80 + grain);
+      float flower = fHash(m * 7.3 + 11.0);
+      c = mix(c, vec3(0.86, 0.80, 0.44), step(0.965, flower) * 0.55);
+      c = mix(c, vec3(0.80, 0.70, 0.74), step(0.986, flower) * 0.45);
+      rough = 0.97;
+      c = mix(c, stone, edge);
+      rough = mix(rough, 0.8, edge);
+      return c;
+    }
+
+    // --- the high end: fully glazed, and opaque ----------------------------
+    if (surf > 1.5) {
+      // Mullions every 1.5 m and a transom at each storey, so the head reads
+      // as a glazed wall at a real size rather than as a dark panel. No
+      // transparency: this is the surface Meshy turned into holes.
+      float mull = fBand(fract(m.x / 1.5), 0.04, 0.96);
+      float tran = fBand(fract(m.y / ${STOREY.toFixed(1)}), 0.05, 0.95);
+      vec3 c = mix(glass * 0.45, glass, mull * tran);
+      // Sky sits in the top of a glazed wall and ground in the bottom, which
+      // is most of what makes glass look like glass at this distance.
+      c = mix(c * 0.86, c * 1.5, clamp(m.y / max(head, 1.0), 0.0, 1.0));
+      rough = mix(0.5, 0.09, mull * tran);
+      nrm = normalize(nrm + vec3(0.0, 0.0, 0.06) * (1.0 - mull * tran));
+      return c;
+    }
+
+    // --- the flanks: buff stone with long horizontal glazing ---------------
+    // The wedge is a triangle on this face, so the glazing is banded by
+    // height and runs the length of it: two ribbons, the way a section
+    // through a stacked floorplate would read.
+    float up = m.y;
+    vec3 c = stone * (0.97 + fHash(m * 0.8) * 0.06);
+    rough = 0.85;
+    float band = fBand(fract(up / ${(STOREY * 1.6).toFixed(2)}), 0.30, 0.72);
+    // Stop the ribbon short of the sloping edge, or it runs off into the sky
+    // where the wall has already ended.
+    float within = 1.0 - fEdge(up, ${(16 / 60).toFixed(4)} * m.x - 1.1);
+    float pane = band * within * fEdge(m.x, 3.0);
+    c = mix(c, glass, pane);
+    rough = mix(rough, 0.12, pane);
+    nrm = normalize(nrm + vec3(0.0, fEdge(fract(up / ${(STOREY * 1.6).toFixed(2)}), 0.30)
+                                    - fEdge(fract(up / ${(STOREY * 1.6).toFixed(2)}), 0.72),
+                               0.0) * 0.4 * within);
+    return c;
+  }
+`;
+
+/**
  * Patch a standard material so its fragment shader draws the facade.
  *
  * Written as a function of the material rather than a replacement for it,
@@ -211,7 +283,25 @@ export const CAMPUS_FRAGMENT = NOISE + /* glsl */`
  * material would quietly undo all of it.
  */
 export function facadeChunk(kind) {
-  if (kind !== 'campus') return null;
+  if (kind !== 'campus' && kind !== 'ncic') return null;
+  if (kind === 'ncic') {
+    return {
+      vertex: FACADE_VERTEX,
+      vertexBody: FACADE_VERTEX_BODY,
+      fragment: FACADE_VARYINGS + NCIC_FRAGMENT,
+      fragmentBody: /* glsl */`
+        {
+          float fRough = roughnessFactor;
+          vec3 fNormal = normal;
+          vec3 fCol = fNcic(vFacade, vSurface, vWallTop, fNormal, fRough,
+                            diffuseColor.rgb);
+          diffuseColor.rgb = fCol;
+          normal = fNormal;
+          roughnessFactor = fRough;
+        }
+      `,
+    };
+  }
   return {
     vertex: FACADE_VERTEX,
     vertexBody: FACADE_VERTEX_BODY,

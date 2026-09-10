@@ -366,6 +366,26 @@ ${RISE_BODY}${facade ? facade.vertexBody : ''}`);
   return m;
 }
 
+/**
+ * A mesh that belongs to 2045: it grows with the front, casts a shadow that
+ * grows with it, and carries whatever facade its family has.
+ *
+ * Exported so a building that is NOT in `gv-2045-buildings.json` — the
+ * National Cyber Innovation Centre, which the scheme sites by rule rather
+ * than by footprint — can be one of the scheme's buildings rather than an
+ * ornament placed on top of it. The alternative was a second copy of the rise
+ * transform, and the shadow pass has already caught this project out once:
+ * two copies drift the first time either changes.
+ */
+export function riseMesh(geometry, family) {
+  const mesh = new THREE.Mesh(geometry, riseMaterial(family));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.frustumCulled = false;
+  mesh.customDepthMaterial = depthFor(RISE, RISE_BODY, 'future:rise:depth');
+  return mesh;
+}
+
 // --- new trees ---------------------------------------------------------------
 
 function growMaterial(base) {

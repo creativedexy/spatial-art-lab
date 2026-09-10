@@ -7,20 +7,20 @@
       720
     ]
   },
-  "wave": 1,
+  "wave": 1.0,
   "frames": [
     {
-      "file": "campus-cluster.png",
+      "file": "ncic-flank.png",
       "atMetres": 0,
       "pos": [
-        -175,
-        92,
-        60
+        -112,
+        57.119,
+        -253
       ],
       "look": [
-        -262,
-        48.565,
-        -35
+        -145,
+        50.642,
+        -196
       ]
     }
   ]
