@@ -181,6 +181,11 @@ export function createPlaces({ camera, controls, container, future, onState = ()
      * here: one clock drives this world and a second one would be a second
      * opinion about where the camera is.
      */
+    /** The markers as declutter.js wants them: an element and a ground point. */
+    get markers() {
+      return places.map((p) => ({ el: p.button, anchor: p.anchor }));
+    },
+
     updateMarkers() {
       const hide = api.busy || state === 'there';
       for (const p of places) {

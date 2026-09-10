@@ -19,9 +19,21 @@ import { createDescentPlayer } from '../descent/player.js';
 import { legAt } from './paths.js';
 import { createPathWalk } from './walk.js';
 import { createPlaces } from './places.js';
+import { thin } from './declutter.js';
 import { mark } from './stage.js';
 
 const app = document.getElementById('app');
+
+// The licence line is required by OGL and ODbL both, so on a phone it is
+// collapsed to one tappable line rather than shortened or dropped. Opening it
+// is the whole interaction; there is nothing to close because it takes the
+// space it needs and gives it back on the next tap.
+const credit = document.getElementById('credit');
+const creditToggle = document.getElementById('credit-toggle');
+creditToggle.addEventListener('click', () => {
+  const open = credit.classList.toggle('open');
+  creditToggle.setAttribute('aria-expanded', String(open));
+});
 
 // ?cam=x,y,z&look=x,z frames a specific shot (used to render descent
 // endpoints); ?clean=1 hides every overlay for capture.
@@ -455,6 +467,13 @@ function tick() {
     h.button.style.setProperty('--k',
       THREE.MathUtils.clamp(1.3 - d / 4200, 0.45, 1).toFixed(2));
   }
+  // Last, once everything has been positioned for this frame: the places and
+  // the descent hotspots are two systems to us and one thing to a viewer, and
+  // they stand on the same ground — GCHQ has both — so they are thinned
+  // together or not at all.
+  if (!clean) thin([...places.markers, ...hotspots.map((h) => ({
+    el: h.button, anchor: h.anchor,
+  }))], camera);
 }
 tick();
 

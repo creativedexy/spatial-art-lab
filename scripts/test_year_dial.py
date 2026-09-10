@@ -1,4 +1,4 @@
-"""The dial that carries the argument.
+"""The dial that carries the argument, and the interface around it at 390 px.
 
 Phase 8. The wave was a button that fired once. The claim the map makes to a
 client is that you can take the future in your hand and stop it half way —
@@ -10,6 +10,14 @@ What matters, in the order it matters: that dragging it actually moves the
 front in the world (not just a number on screen), that it goes back as well as
 forward, that the readout tells the truth even when something other than the
 dial moved the wave, and that a thumb can work it at 390 px.
+
+The second half is legibility, which phase 8 found by looking rather than by
+reasoning: every marker in this map had been checked on its own — big enough
+to hit, planted on the right ground — and at 390 px they came out as five
+overlapping plates in one band with the doughnut's name buried under three
+others, while four lines of licence text ran through the dial and off the
+side. Each part was right and the screen was unreadable. These are the checks
+that would have caught it.
 
   python3 scripts/test_year_dial.py
 """
@@ -140,6 +148,60 @@ def main():
               box["play"] >= MIN_TAP and box["track"] >= 24,
               f"play {box['play']} px, track {box['track']} px, "
               f"{box['bottom']} px clear of the bottom edge")
+
+        # --- legibility -----------------------------------------------------
+        page.goto(f"http://127.0.0.1:{args.port}/golden-valley/index.html",
+                  wait_until="load", timeout=900000)
+        page.wait_for_function("window.__terrainReady === true", timeout=900000)
+        page.evaluate("() => { const i = document.getElementById('intro');"
+                      " if (i) i.hidden = true;"
+                      " document.body.classList.remove('intro-open'); }")
+        page.wait_for_timeout(2500)
+        print("\n  the interface at 390 px")
+
+        labels = page.evaluate("""() => {
+          const els = [...document.querySelectorAll('.place-marker, .hotspot')]
+            .filter((e) => !e.hidden);
+          const boxes = els.map((e) => {
+            const r = e.querySelector('.label').getBoundingClientRect();
+            return { name: e.querySelector('.label').textContent.trim(),
+                     l: r.left, r: r.right, t: r.top, b: r.bottom };
+          });
+          const clashes = [];
+          for (let i = 0; i < boxes.length; i++)
+            for (let j = i + 1; j < boxes.length; j++) {
+              const a = boxes[i], b = boxes[j];
+              if (!(a.r < b.l || a.l > b.r || a.b < b.t || a.t > b.b))
+                clashes.push(`${a.name} / ${b.name}`);
+            }
+          return { showing: boxes.map((b) => b.name), clashes };
+        }""")
+        check("no two names sit on top of each other",
+              not labels["clashes"],
+              "; ".join(labels["clashes"][:3])
+              or f"showing {', '.join(labels['showing'])}")
+        check("something is still offered", len(labels["showing"]) >= 1,
+              f"{len(labels['showing'])} of 8 markers")
+
+        hit = page.evaluate("""() => {
+          const b = document.getElementById('credit-toggle');
+          const r = b.getBoundingClientRect();
+          if (!r.width) return { shown: false };
+          const top = document.elementFromPoint((r.left + r.right) / 2,
+                                                (r.top + r.bottom) / 2);
+          return { shown: true, tall: Math.round(r.height),
+                   mine: b.contains(top) || top === b,
+                   over: top ? (top.id || top.className || top.tagName) : 'nothing' };
+        }""")
+        check("the sources control is the thing you hit when you tap it, "
+              f"at {MIN_TAP} px",
+              hit.get("shown") and hit.get("mine")
+              and hit.get("tall", 0) >= MIN_TAP,
+              f"{hit.get('over')} is on top" if not hit.get("mine")
+              else f"{hit.get('tall')} px tall")
+        check("no mouse instructions on a phone",
+              page.evaluate("() => getComputedStyle("
+                            "document.getElementById('hint')).display === 'none'"))
 
         # And it must be out of the way of a capture, or every plate since
         # phase 5 would suddenly have a slider across it.

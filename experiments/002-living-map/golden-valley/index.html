@@ -58,7 +58,15 @@
   <div id="panel-note"></div>
   <button id="panel-back">Return to the map</button>
 </div>
-<div id="credit">Terrain, building heights and roof shapes: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints, land cover, roads and trees &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</div>
+<!-- Attribution is not optional: OGL v3 and ODbL both require it. On a
+     phone it collapses behind a labelled control rather than shrinking,
+     because four lines of licence text under the year dial is how a
+     careful credit turns into noise and stops being read at all. -->
+<div id="credit">
+  <button id="credit-toggle" type="button" aria-expanded="false"
+          aria-controls="credit-text">Data sources</button>
+  <span id="credit-text">Terrain, building heights and roof shapes: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints, land cover, roads and trees &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</span>
+</div>
 <div id="hint">click a place to descend &middot; drag: pan &middot; right-drag: orbit &middot; scroll: zoom</div>
 <script type="module" src="./main.js"></script>
 </body>
