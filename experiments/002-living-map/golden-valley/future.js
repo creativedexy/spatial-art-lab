@@ -229,6 +229,14 @@ const RISE_BODY = /* glsl */`
                        smoothstep(0.0, 0.22, f));
   transformed.y = aBase + (transformed.y - aBase) * f;
 `;
+// For a placed model: its origin is at the base of its own footprint and its
+// instance matrix carries the position, so the same collapse-and-rise the
+// extrusions get needs no attributes at all.
+const MODEL_BODY = /* glsl */`
+  float f = futureAt(vec3(instanceMatrix[3].x, 0.0, instanceMatrix[3].z));
+  transformed.xz *= smoothstep(0.0, 0.22, f);
+  transformed.y *= f;
+`;
 const GROW_BODY = /* glsl */`
   // The instance's own translation is its position on the ground, so a tree
   // needs no extra attribute to know where it is.
@@ -245,6 +253,23 @@ const GROW_BODY = /* glsl */`
  * field with twenty crisp black rectangles lying in it and nothing standing
  * up is a stranger sight than either state on its own.
  */
+/**
+ * Make a placed model rise with the front, like everything else 2045 adds.
+ *
+ * The material comes from the GLB, so it is patched in place rather than built
+ * here — its texture, its roughness and its double-sidedness are what the
+ * model was made with, and none of that is ours to decide.
+ */
+export function riseModel(material) {
+  share(material, function riseModel(shader) {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${GROW}\n${NOISE}`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>\n${MODEL_BODY}`);
+  });
+  return { material, depth: depthFor(GROW, MODEL_BODY, 'future:model:depth') };
+}
+
+
 function depthFor(declarations, body, key) {
   const d = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   d.onBeforeCompile = (shader) => {
@@ -295,17 +320,28 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   group.name = 'future';
 
   const buildings = await (await fetch(url(futureMeta.buildingFile))).json();
-  // One mesh for all of them, with wall and roof carried as vertex colours.
-  // Two meshes per family was the first shape and it drew every building
-  // twice: the roof pass rebuilt the walls underneath it.
-  const masses = new THREE.Mesh(
-    futureGeometry(buildings, futureMeta.families), riseMaterial());
-  masses.name = 'future:buildings';
-  masses.castShadow = true;
-  masses.receiveShadow = true;
-  masses.frustumCulled = false;
-  masses.customDepthMaterial = depthFor(RISE, RISE_BODY, 'future:rise:depth');
-  group.add(masses);
+  // One mesh per family rather than one for all of them. Wall and roof are
+  // still vertex colours — two meshes per family drew every building twice —
+  // but a family has to be able to stand down on its own, because the moment
+  // a real model exists for the campus blocks the extrusions underneath them
+  // are z-fighting rubbish rather than a fallback.
+  const byFamily = new Map();
+  for (const b of buildings) {
+    if (!byFamily.has(b.family)) byFamily.set(b.family, []);
+    byFamily.get(b.family).push(b);
+  }
+  const blocks = new Map();
+  for (const [family, list] of byFamily) {
+    const mesh = new THREE.Mesh(
+      futureGeometry(list, futureMeta.families), riseMaterial());
+    mesh.name = `future:blocks:${family}`;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    mesh.customDepthMaterial = depthFor(RISE, RISE_BODY, 'future:rise:depth');
+    group.add(mesh);
+    blocks.set(family, mesh);
+  }
 
   const trees = await loadFutureTrees(groundAt, unitTree, treeKinds);
   if (trees) group.add(trees);
@@ -337,6 +373,13 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   let wave = 0;
   return {
     group,
+    /**
+     * The extruded blocks, per family, so a family that gets a real model can
+     * hide its own. They stay in the scene rather than being removed: a
+     * missing GLB has to fall back to something, and an empty field where a
+     * campus should be is worse than a plain box.
+     */
+    blocks,
     get wave() { return wave; },
     /** 0 = today, 1 = the front has crossed the whole box. */
     setWave(t) {

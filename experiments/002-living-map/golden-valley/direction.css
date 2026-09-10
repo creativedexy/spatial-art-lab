@@ -247,3 +247,108 @@ body.in-place #credit { left: 440px; max-width: 38vw; }
 #future-toggle[disabled]:hover { background: rgba(41, 48, 42, 0.42); color: var(--paper); }
 #future-toggle[hidden] { display: none; }
 body.in-place #future-toggle, #app.flying #future-toggle { opacity: 0; pointer-events: none; }
+
+/* --- places: the photographs you can go to ---------------------------------
+   Mobile first, because this is the half of the map anyone will actually be
+   shown on a phone. The marker's hit area is the whole button and never drops
+   below 44 px tall; the photograph fills the viewport under `cover`, matching
+   the live camera's narrowed field of view. */
+.place-marker {
+  position: absolute; z-index: 4;
+  transform: translate(-50%, -100%);
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  min-height: 44px; padding: 0 4px;
+  background: none; border: 0; cursor: pointer;
+  opacity: var(--k, 1);
+  transition: opacity var(--quick) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.place-marker[hidden] { display: none; }
+.place-marker .label {
+  padding: 8px 14px 7px;
+  font: 500 12px/1 var(--sans); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink); background: var(--paper-veil); white-space: nowrap;
+  border: 1px solid rgba(41, 48, 42, 0.14);
+  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
+}
+/* The year is the whole point of a place, so it is on the marker rather than
+   waiting inside it. */
+.place-marker .year {
+  margin-top: -1px; padding: 3px 8px 2px;
+  font: 500 9.5px/1 var(--sans); letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--paper); background: var(--ink);
+}
+.place-marker.future .year { background: var(--amber); }
+.place-marker .stem {
+  width: 1px; height: 16px; background: rgba(247, 242, 230, 0.85);
+}
+.place-marker .pin {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--paper); box-shadow: 0 0 0 5px rgba(247, 242, 230, 0.2);
+  transition: box-shadow var(--quick) var(--ease);
+}
+.place-marker:hover .label, .place-marker:focus-visible .label {
+  background: var(--paper); color: var(--ink);
+}
+.place-marker:hover .pin { box-shadow: 0 0 0 10px rgba(247, 242, 230, 0.28); }
+
+/* The crossfade. An opacity ramp and nothing else — no blur, no scale, no
+   filter. Dex ruled transition effects out and the tooling is deliberately
+   absent so it cannot creep back in. */
+.place-photo {
+  position: absolute; inset: 0; z-index: 6;
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 700ms var(--ease);
+}
+.place-photo.shown { opacity: 1; }
+.place-photo[hidden] { display: none; }
+
+.place-caption {
+  position: absolute; z-index: 7; left: 16px; bottom: 16px;
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 10px 16px 9px;
+  background: var(--paper-veil); border: 1px solid rgba(41, 48, 42, 0.12);
+  animation: label-in 700ms var(--ease) both;
+}
+.place-caption[hidden] { display: none; }
+.place-caption strong {
+  font: 400 15px/1 var(--display); letter-spacing: 0.01em; color: var(--ink);
+}
+.place-caption span {
+  font: 500 9.5px/1 var(--sans); letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+#place-back {
+  position: absolute; z-index: 7; right: 16px; bottom: 16px;
+  min-height: 44px; padding: 0 20px;
+  font: 500 10.5px/1 var(--sans); letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--paper); background: rgba(41, 48, 42, 0.5);
+  border: 1px solid rgba(247, 242, 230, 0.5);
+  cursor: pointer; backdrop-filter: blur(6px);
+  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
+}
+#place-back:hover { background: var(--paper); color: var(--ink); }
+#place-back[hidden] { display: none; }
+
+/* While a flight is running nothing else may be clicked, and the other layers
+   get out of the way. */
+#app.place-flying .hotspot,
+#app.place-flying .place-marker,
+#app.place-flying #future-toggle { opacity: 0; pointer-events: none; }
+
+@media (min-width: 760px) {
+  .place-caption { left: 22px; bottom: 22px; padding: 12px 20px 11px; }
+  .place-caption strong { font-size: 18px; }
+  #place-back { right: 22px; bottom: 22px; }
+}
+
+/* Standing in a photograph, everything the map wants to say gets out of its
+   way — the picture is the whole point of being here. */
+body.in-photo .hotspot,
+body.in-photo .place-marker,
+body.in-photo #future-toggle,
+body.in-photo #hint,
+body.in-photo #credit { opacity: 0; pointer-events: none; }

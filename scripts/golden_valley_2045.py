@@ -385,6 +385,11 @@ def make_buildings(cells, heights, meta, parcel_1m, W):
                     "ring": [[round(x, 2), round(z, 2)] for x, z in foot],
                     "holes": [], "base": base, "height": h,
                     "family": c["use"],
+                    # Which field it belongs to. The map needs this to put a
+                    # one-off building in a courtyard, and recovering it by
+                    # clustering the blocks afterwards is a guess about
+                    # something the generator already knows.
+                    "cell": c["centre"],
                 }
                 if roof == "flat":
                     b2.update(roof="flat", axis=None, eaves=h, ridge=h)
@@ -423,7 +428,7 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
             out.append({"ring": [[round(x, 2), round(z, 2)] for x, z in foot],
                         "holes": [], "base": base, "height": 6.5,
                         "family": "glasshouse", "roof": "flat", "axis": None,
-                        "eaves": 6.5, "ridge": 6.5})
+                        "eaves": 6.5, "ridge": 6.5, "cell": c["centre"]})
     return out
 
 

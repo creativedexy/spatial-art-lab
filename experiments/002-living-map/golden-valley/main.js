@@ -17,6 +17,7 @@ import { loadHotspots } from '../descent/path.js';
 import { createDescentPlayer } from '../descent/player.js';
 import { legAt } from './paths.js';
 import { createPathWalk } from './walk.js';
+import { createPlaces } from './places.js';
 
 const app = document.getElementById('app');
 
@@ -144,7 +145,8 @@ canvas.addEventListener('pointerup', (e) => {
   if (!downAt) return;
   const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]);
   downAt = null;
-  if (moved > 4 || player.busy || walk.busy || pathMode === 'off') return;
+  if (moved > 4 || player.busy || walk.busy || places.busy || places.inside
+      || pathMode === 'off') return;
   const hit = paths.pick(e.clientX, e.clientY, camera, innerWidth, innerHeight);
   // A leg, not the route: clicking two kilometres of cycle route has to mean
   // the stretch you were pointing at.
@@ -154,7 +156,8 @@ canvas.addEventListener('pointerup', (e) => {
 function updatePick() {
   if (!pointerDirty) return;
   pointerDirty = false;
-  const hit = (pointer && !player.busy && !walk.busy && pathMode !== 'off')
+  const hit = (pointer && !player.busy && !walk.busy && !places.busy && !places.inside
+               && pathMode !== 'off')
     ? paths.pick(pointer[0], pointer[1], camera, innerWidth, innerHeight)
     : null;
   paths.setHover(hit?.route ?? null);
@@ -220,6 +223,33 @@ function updateWave(now) {
     futureButton.classList.add('done');
   }
 }
+
+// --- places: the photographs ------------------------------------------------
+// Each approved photograph was generated from a plate this map rendered, so
+// each one is a viewpoint with coordinates rather than a picture. Clicking a
+// marker goes to that camera and crossfades the photograph over it.
+// Declared before the places, because their state callback closes over it and
+// a temporal dead zone is a silly way to lose a first render.
+const placeBack = document.createElement('button');
+placeBack.id = 'place-back';
+placeBack.type = 'button';
+placeBack.textContent = 'Back to the map';
+placeBack.hidden = true;
+app.appendChild(placeBack);
+
+const places = createPlaces({
+  camera,
+  controls,
+  container: app,
+  future,
+  onState: (state) => {
+    const there = state === 'there';
+    placeBack.hidden = clean || !there;
+    document.body.classList.toggle('in-photo', there && !clean);
+  },
+});
+placeBack.onclick = () => places.leave();
+if (clean) for (const p of places.places) p.button.hidden = true;
 
 // --- the place panel --------------------------------------------------------
 const panel = document.getElementById('panel');
@@ -311,10 +341,12 @@ function tick() {
   lastFrame = now;
   // The walker owns the camera while it has it, so orbit damping must not
   // fight it for the same three numbers.
-  const walking = walk.update(now);
-  if (controls.enabled && !walking) controls.update();
+  const visiting = places.update(now);
+  const walking = !visiting && walk.update(now);
+  if (controls.enabled && !visiting && !walking) controls.update();
   updateIgnition(dtMs);
   updateWave(now);
+  if (!clean) places.updateMarkers();
   updatePick();
   paths.update(worldSeconds());
   // The descent clips were rendered before the network existed. Cutting to
@@ -328,7 +360,8 @@ function tick() {
   renderer.render(scene, camera);
   for (const h of hotspots) {
     // A hotspot you are standing in should not offer to take you there.
-    const hide = player.busy || player.inside === h || walk.busy || !!walk.inside;
+    const hide = player.busy || player.inside === h || walk.busy || !!walk.inside
+      || places.busy || !!places.inside;
     v.copy(h.anchor).project(camera);
     h.button.hidden = hide || v.z > 1;
     // Clamp, so a place near the edge of the box still reads as a label
@@ -354,6 +387,10 @@ addEventListener('resize', () => {
   paths.setViewport(renderer);
   player.resize(camera.aspect);
   renderer.setSize(innerWidth, innerHeight);
+  // After the renderer, and after the camera's own aspect: a place holds a
+  // narrowed field of view so its photograph and the live canvas frame the
+  // same ground, and it has to be reapplied on top of the plain resize.
+  places.resize();
 });
 
 // ?descend=<id> runs a descent immediately, which is how arrival stills are
@@ -374,7 +411,8 @@ if (auto) {
 // compositor that under software GL is slower than the render it is waiting
 // for. Nothing in the page reads it.
 window.__map = {
-  renderer, scene, camera, controls, paths, walk, player, hotspots, future,
+  renderer, scene, camera, controls, paths, walk, player, hotspots, future, places,
+  models: scene.userData.models,
   groundAt: heightAtLocal,
 };
 window.__terrainReady = true;

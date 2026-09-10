@@ -13,6 +13,8 @@ import { addLandCover, loadClassTexture, classIndex, unitTree, KINDS } from './l
 import { bringToLife } from './life.js';
 import { addPaths } from './paths.js';
 import { addFuture } from './future.js';
+import { addModels } from './models.js';
+import { pathMeta } from './paths.js';
 
 // Re-exported so a page that draws the world imports one module to build it
 // and to move it, and cannot end up driving a different clock than the one
@@ -164,6 +166,14 @@ export async function buildWorld({ renderer, segments = 1000 } = {}) {
   // something moves it.
   scene.userData.future = await addFuture(scene, renderer, {
     groundAt: heightAtLocal, unitTree, treeKinds: KINDS,
+  });
+  // After the future, because a placed model hides the extrusion it replaces
+  // and the extrusions do not exist until addFuture has made them.
+  scene.userData.models = await addModels(scene, {
+    future: scene.userData.future,
+    buildings: await (await fetch(url('gv-2045-buildings.json'))).json(),
+    namedRoutes: pathMeta.routes.filter((r) => r.tier === 'named'),
+    groundAt: heightAtLocal,
   });
   return scene;
 }
