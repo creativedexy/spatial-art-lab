@@ -173,6 +173,47 @@ def describe(leg_file):
                 continue
             (near if base[2] < 200 else far_).append((b, base, top))
 
+        # Named buildings, wherever they are. GCHQ sits 764 m from the start of
+        # this leg and is edge-on, a low dark band a few pixels tall — and a
+        # generator asked to interpret a low dark band made it a long pale
+        # shed. Naming it, and saying exactly which pixels it occupies, is the
+        # difference between a material instruction and an invitation.
+        named_b = []
+        for b, base, top in near + far_:
+            if not b.get("name"):
+                continue
+            ring = b["ring"]
+            us, vs = [], []
+            for x, z in ring:
+                for y in (b["base"], b["base"] + b["height"]):
+                    q = cam.project((x, y, z))
+                    if q:
+                        us.append(q[0])
+                        vs.append(q[1])
+            if not us:
+                continue
+            named_b.append({
+                "name": b["name"], "metres": base[2],
+                "u": [round(min(us), 3), round(max(us), 3)],
+                "v": [round(min(vs), 3), round(max(vs), 3)],
+            })
+        # One entry per name: a campus arrives as many footprints and the
+        # prompt wants the box round all of them.
+        merged = {}
+        for n in named_b:
+            m = merged.setdefault(n["name"], dict(n))
+            m["u"] = [min(m["u"][0], n["u"][0]), max(m["u"][1], n["u"][1])]
+            m["v"] = [min(m["v"][0], n["v"][0]), max(m["v"][1], n["v"][1])]
+            m["metres"] = min(m["metres"], n["metres"])
+        # Only the ones that are actually a shape in the picture. OSM names
+        # every shop on Coronation Square, and a kebab house 1.5 km away
+        # occupying four thousandths of the frame is noise in a prompt, not a
+        # lock — it buries the one entry that matters.
+        anchors["namedBuildings"] = sorted(
+            (n for n in merged.values()
+             if n["u"][1] - n["u"][0] >= 0.035 and n["metres"] <= 1200),
+            key=lambda n: -(n["u"][1] - n["u"][0]))[:4]
+
         anchors["nearBuildings"] = [
             {"name": b.get("name"), "metres": base[2],
              "u": base[0], "vBase": base[1], "vRoof": top[1] if top else None}
@@ -221,6 +262,9 @@ def main():
             print(f"  {m['kind']:<14} {m['nearestMetres']:>4} m   enters "
                   f"u={m['enters']['u']},v={m['enters']['v']}  leaves "
                   f"u={m['leaves']['u']},v={m['leaves']['v']}")
+        for n in a.get("namedBuildings", []):
+            print(f"  NAMED          {n['metres']:>5.0f} m   u={n['u'][0]}..{n['u'][1]}  "
+                  f"v={n['v'][0]}..{n['v'][1]}   {n['name']}")
         for n in a.get("nearBuildings", []):
             print(f"  near building  {n['metres']:>5.0f} m   u={n['u']:<7} "
                   f"base v={n['vBase']:<7} roof v={n['vRoof']}"

@@ -2,7 +2,8 @@
 
 The cloud session builds the map and renders the plates. It has no API keys
 and should never have any. The local session on the Mac has the keys and the
-subscriptions. This folder is how one asks the other for something.
+subscriptions, and checks this branch every 15 minutes. This folder is how one
+asks the other for something.
 
 **If you are the local session:** read the highest-numbered request below that
 has no `## Result` section, do it, write the outputs into the folder the
@@ -14,10 +15,18 @@ protocol.
 
 | # | request | for | status |
 |---|---|---|---|
-| 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg, in Codex, at £0 | open |
+| 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg | **rung A done** (free, Codex). B and C are video and stay parked. |
+| 002 | [`002-leg-registration.md`](002-leg-registration.md) | the same two frames again, with surveyed locks instead of estimated ones | open, free |
 
 ## Rules that do not change
 
+- **Images first, spend nothing.** Dex's standing rule from 10 Sep: no video
+  generation of any kind until he is happy with the stills, and no paid image
+  tests either. Also recorded at the top of `../HANDOFF-sessions-K-M.md`.
+- **Codex for imagery.** Session M measured it — Codex on the ChatGPT
+  subscription beat the paid models outright at £0, and the paid image rungs
+  put a shed where GCHQ is. A paid call is for the thing Codex cannot do,
+  which today means video and nothing else, and that is parked.
 - **Never commit, echo or paste an API key.** A dry run reports only whether
   one is *set*.
 - **`inspiration/` is private reference.** Third-party copyright. Do not
@@ -26,10 +35,6 @@ protocol.
 - **Plates are rendered with the interface hidden.** The amber path ribbon is
   how a viewer *chooses* a route; a generator conditioned on it will paint a
   glowing strip down the middle of the finished footage.
-- **Codex first, for imagery.** Session M measured it: Codex on the ChatGPT
-  subscription beat the paid models outright at £0, and the paid image rungs
-  put a shed where GCHQ is. A paid call is for the thing Codex cannot do —
-  which today means video, and nothing else.
 - **Cheap first, within that.** Every request names the cheapest step that
   could answer it. If the cheap step answers it, stop.
 

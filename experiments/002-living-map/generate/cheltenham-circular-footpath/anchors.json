@@ -5,103 +5,137 @@
     {
       "file": "a-start.png",
       "anchors": {
-        "horizonV": 0.452,
+        "horizonV": 0.463,
         "path": [
           {
             "metresAhead": 40,
-            "u": 0.5,
-            "v": 0.825
+            "u": 0.557,
+            "v": 0.84
           },
           {
             "metresAhead": 80,
-            "u": 0.5,
-            "v": 0.634
+            "u": 0.481,
+            "v": 0.635
           },
           {
             "metresAhead": 160,
-            "u": 0.5,
-            "v": 0.543
+            "u": 0.415,
+            "v": 0.536
           },
           {
             "metresAhead": 320,
-            "u": 0.5,
-            "v": 0.482
+            "u": 0.382,
+            "v": 0.495
           }
         ],
         "landmarks": [
           {
             "kind": "stream",
-            "nearestMetres": 67,
+            "nearestMetres": 77,
             "enters": {
-              "u": 0.528,
-              "v": 0.473
+              "u": 0.391,
+              "v": 0.472
             },
             "leaves": {
-              "u": 0.932,
-              "v": 0.704
+              "u": 0.976,
+              "v": 0.662
             },
             "spanU": [
-              0.528,
-              0.932
+              0.391,
+              0.976
             ]
           },
           {
             "kind": "hedge",
-            "nearestMetres": 157,
+            "nearestMetres": 181,
             "enters": {
-              "u": 0.123,
-              "v": 0.475
+              "u": 0.035,
+              "v": 0.474
             },
             "leaves": {
-              "u": 0.008,
-              "v": 0.528
+              "u": 0.109,
+              "v": 0.513
             },
             "spanU": [
-              0.008,
-              0.123
+              0.035,
+              0.109
             ]
           },
           {
             "kind": "hedge",
-            "nearestMetres": 500,
+            "nearestMetres": 425,
             "enters": {
-              "u": 0.961,
-              "v": 0.446
+              "u": 0.878,
+              "v": 0.48
             },
             "leaves": {
-              "u": 0.947,
-              "v": 0.446
+              "u": 0.885,
+              "v": 0.48
             },
             "spanU": [
-              0.947,
-              0.961
+              0.873,
+              0.909
             ]
           },
           {
             "kind": "hedge",
-            "nearestMetres": 508,
+            "nearestMetres": 426,
             "enters": {
-              "u": 0.973,
-              "v": 0.446
+              "u": 0.913,
+              "v": 0.483
             },
             "leaves": {
-              "u": 0.965,
-              "v": 0.446
+              "u": 0.913,
+              "v": 0.483
             },
             "spanU": [
-              0.964,
-              0.973
+              0.89,
+              0.913
             ]
           }
         ],
-        "nearBuildings": [],
+        "namedBuildings": [
+          {
+            "name": "Government Communications Headquarters",
+            "metres": 700.8,
+            "u": [
+              0.72,
+              0.924
+            ],
+            "v": [
+              0.424,
+              0.454
+            ]
+          },
+          {
+            "name": "Royal Court",
+            "metres": 1037.8,
+            "u": [
+              0.45,
+              0.488
+            ],
+            "v": [
+              0.45,
+              0.458
+            ]
+          }
+        ],
+        "nearBuildings": [
+          {
+            "name": null,
+            "metres": 48.6,
+            "u": 0.232,
+            "vBase": 0.757,
+            "vRoof": 0.67
+          }
+        ],
         "settlementEdge": {
-          "count": 1965,
-          "uFrom": 0.21,
+          "count": 2308,
+          "uFrom": 0.061,
           "uTo": 1.0,
-          "vRooflineTop": 0.436,
-          "vBaseTypical": 0.451,
-          "nearestMetres": 277
+          "vRooflineTop": 0.443,
+          "vBaseTypical": 0.458,
+          "nearestMetres": 331
         }
       }
     },
@@ -113,118 +147,108 @@
           {
             "metresAhead": 40,
             "u": 0.5,
-            "v": 0.734
+            "v": 0.738
           },
           {
             "metresAhead": 80,
             "u": 0.5,
-            "v": 0.556
+            "v": 0.539
           },
           {
             "metresAhead": 160,
-            "u": 0.542,
-            "v": 0.458
+            "u": 0.5,
+            "v": 0.44
           },
           {
             "metresAhead": 320,
-            "u": 0.09,
-            "v": 0.448
+            "u": 0.534,
+            "v": 0.401
           }
         ],
         "landmarks": [
           {
             "kind": "stream",
-            "nearestMetres": 43,
+            "nearestMetres": 79,
             "enters": {
-              "u": 0.622,
-              "v": 0.528
-            },
-            "leaves": {
-              "u": 0.903,
-              "v": 0.757
-            },
-            "spanU": [
-              0.622,
-              0.903
-            ]
-          },
-          {
-            "kind": "hedge",
-            "nearestMetres": 401,
-            "enters": {
-              "u": 0.654,
-              "v": 0.384
-            },
-            "leaves": {
               "u": 0.552,
-              "v": 0.396
+              "v": 0.42
+            },
+            "leaves": {
+              "u": 0.987,
+              "v": 0.554
             },
             "spanU": [
               0.552,
-              0.681
+              0.987
             ]
           },
           {
             "kind": "hedge",
-            "nearestMetres": 491,
+            "nearestMetres": 532,
             "enters": {
-              "u": 0.629,
-              "v": 0.38
+              "u": 0.624,
+              "v": 0.375
             },
             "leaves": {
-              "u": 0.474,
-              "v": 0.381
+              "u": 0.539,
+              "v": 0.383
             },
             "spanU": [
-              0.474,
-              0.629
+              0.539,
+              0.644
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 622,
+            "enters": {
+              "u": 0.605,
+              "v": 0.372
+            },
+            "leaves": {
+              "u": 0.479,
+              "v": 0.373
+            },
+            "spanU": [
+              0.479,
+              0.605
             ]
           }
         ],
-        "nearBuildings": [
+        "namedBuildings": [
           {
-            "name": null,
-            "metres": 167.4,
-            "u": 0.963,
-            "vBase": 0.437,
-            "vRoof": 0.4
+            "name": "Royal Court",
+            "metres": 703.5,
+            "u": [
+              0.629,
+              0.689
+            ],
+            "v": [
+              0.364,
+              0.375
+            ]
           },
           {
-            "name": null,
-            "metres": 169.9,
-            "u": 0.986,
-            "vBase": 0.437,
-            "vRoof": 0.417
-          },
-          {
-            "name": null,
-            "metres": 170.8,
-            "u": 0.935,
-            "vBase": 0.437,
-            "vRoof": 0.397
-          },
-          {
-            "name": null,
-            "metres": 171.2,
-            "u": 1.003,
-            "vBase": 0.436,
-            "vRoof": 0.402
-          },
-          {
-            "name": null,
-            "metres": 173.8,
-            "u": 1.007,
-            "vBase": 0.435,
-            "vRoof": 0.41
+            "name": "Shaftesbury Place",
+            "metres": 749.3,
+            "u": [
+              0.599,
+              0.636
+            ],
+            "v": [
+              0.364,
+              0.373
+            ]
           }
         ],
+        "nearBuildings": [],
         "settlementEdge": {
-          "count": 1779,
-          "uFrom": 0.002,
+          "count": 1929,
+          "uFrom": 0.118,
           "uTo": 1.0,
-          "vRooflineTop": 0.361,
-          "vBaseTypical": 0.381,
-          "nearestMetres": 201
+          "vRooflineTop": 0.356,
+          "vBaseTypical": 0.375,
+          "nearestMetres": 227
         }
       }
     }

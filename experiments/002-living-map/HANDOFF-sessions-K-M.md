@@ -1,5 +1,18 @@
 # Handoff to the main session
 
+## Standing rule from Dex, 10 Sep 2026: images first, spend nothing
+
+- **No video generation of any kind** until Dex says he is happy with the image
+  generation. That includes the Kling v3 frame-3-to-frame-4 bridge proposed
+  below: parked, not cancelled.
+- **No paid image tests either.** The clear-air rung 2 re-run that `b96332e`
+  asked for will not be run; Dex called it a waste of money.
+- **Image work runs on the free Codex subscription.** The local session watches
+  this branch every 15 minutes and will carry out any image brief committed
+  here. Write it as a file (a `*BRIEF*.md` under `experiments/002-living-map/`
+  is easiest to spot) that names the frames, the references to attach, and what
+  must not move.
+
 Written 9 Sep 2026 from the local session that ran the ladder and the vision
 frames. Everything here is on `claude/maps-generative-video-ia8733`, rebased
 cleanly on top of Session L. Sessions K and M in `session-log.md`.
