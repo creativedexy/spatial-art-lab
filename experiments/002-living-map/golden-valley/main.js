@@ -232,36 +232,74 @@ function updateIgnition(dtMs) {
 }
 
 // --- 2045 -------------------------------------------------------------------
-// One wave, west to east, once. ?future=1 renders it already arrived and
-// ?wave=0.45 holds the front part-way across, which is what a capture wants
-// since it has no button to press.
+// The wave used to be a button that fired once, west to east, and that was
+// that. But the idea of the whole piece is dragging the future across the vale
+// and *stopping half way* — one field already an orchard while the next is
+// still stubble, and the seam between them somewhere you can put your thumb.
+// The shader has always taken a continuous front; only the interface was
+// missing. So: a dial from 2026 to 2045 you can push either way, and a play
+// button for the reveal, because the sweep is worth watching once before you
+// start steering it.
+//
+// ?future=1 renders it already arrived and ?wave=0.45 holds the front
+// part-way across, which is what a capture wants since it has no thumb.
 const future = scene.userData.future;
+const YEAR_FROM = 2026;
+const YEAR_TO = 2045;
+// Nine seconds for the whole vale, and pro rata for part of it, so playing
+// the last tenth is not the same nine seconds as playing all of it.
 const WAVE_MS = 9000;
-let waveFrom = null;
+const yearAt = (w) => Math.round(YEAR_FROM + (YEAR_TO - YEAR_FROM) * w);
+
 future.setWave(params.has('wave') ? Number(params.get('wave'))
                                   : (params.has('future') ? 1 : 0));
 
-const futureButton = document.createElement('button');
-futureButton.id = 'future-toggle';
-futureButton.textContent = 'Show 2045';
-futureButton.hidden = clean || params.has('future') || params.has('wave');
-futureButton.onclick = () => {
-  if (waveFrom !== null || future.wave >= 1) return;
-  waveFrom = performance.now();
-  futureButton.disabled = true;
-  futureButton.textContent = 'The Golden Valley, 2045';
+const dial = document.getElementById('year-dial');
+const range = document.getElementById('year-range');
+const readout = document.getElementById('year-read');
+const play = document.getElementById('year-play');
+dial.hidden = clean || params.has('future') || params.has('wave');
+
+let sweep = null;                  // { from, to, startedAt, ms } while playing
+let dragging = false;
+
+range.addEventListener('pointerdown', () => { dragging = true; });
+addEventListener('pointerup', () => { dragging = false; });
+range.addEventListener('input', () => {
+  // A hand on the dial outranks a sweep in progress. Anything else means the
+  // control fights the person using it, which is the one thing a control may
+  // never do.
+  sweep = null;
+  future.setWave(range.valueAsNumber / 1000);
+});
+
+play.onclick = () => {
+  const from = future.wave;
+  const to = from >= 0.999 ? 0 : 1;
+  sweep = { from, to, startedAt: performance.now(),
+            ms: Math.max(900, WAVE_MS * Math.abs(to - from)) };
 };
-app.appendChild(futureButton);
 
 function updateWave(now) {
-  if (waveFrom === null) return;
-  const k = Math.min(1, (now - waveFrom) / WAVE_MS);
-  // Ease at both ends: the front should gather and settle rather than start
-  // and stop, which is the whole difference between weather and a wipe.
-  future.setWave(k * k * (3 - 2 * k));
-  if (k >= 1) {
-    waveFrom = null;
-    futureButton.classList.add('done');
+  if (sweep) {
+    const k = Math.min(1, (now - sweep.startedAt) / sweep.ms);
+    // Ease at both ends: the front should gather and settle rather than start
+    // and stop, which is the whole difference between weather and a wipe.
+    const e = k * k * (3 - 2 * k);
+    future.setWave(sweep.from + (sweep.to - sweep.from) * e);
+    if (k >= 1) sweep = null;
+  }
+  // Read from the world rather than from whatever last set it. Flying to a
+  // place moves the wave too, and a dial that only knew about its own input
+  // would sit there reading 2026 over a photograph of 2045.
+  if (dial.hidden) return;
+  const w = future.wave;
+  readout.textContent = yearAt(w);
+  dial.classList.toggle('arrived', w >= 0.999);
+  dial.classList.toggle('today', w <= 0.001);
+  if (!dragging) {
+    const v = Math.round(w * 1000);
+    if (range.valueAsNumber !== v) range.value = String(v);
   }
 }
 

@@ -381,6 +381,13 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
      */
     blocks,
     get wave() { return wave; },
+    /**
+     * Where the front is standing, in local metres east. The wave is the
+     * scheme's argument and this is the only number that says whether it
+     * actually moved: a dial can change a year on screen without the ground
+     * under it changing at all, and that failure looks exactly like success.
+     */
+    get frontX() { return uniforms.uFront.value; },
     /** 0 = today, 1 = the front has crossed the whole box. */
     setWave(t) {
       wave = THREE.MathUtils.clamp(t, 0, 1);

@@ -37,6 +37,21 @@
   <button id="intro-go">Explore the map</button>
   <div class="aside">Environment Agency LiDAR &middot; OpenStreetMap</div>
 </div>
+<!-- The year dial. The wave was a button that fired once; the idea of the
+     piece is dragging the future across the vale and stopping half way, with
+     one field an orchard while the next is still stubble. The shader always
+     took a continuous front — only the interface was missing. -->
+<div id="year-dial" hidden>
+  <button id="year-play" type="button" aria-label="Play the change to 2045">
+    <span class="glyph" aria-hidden="true"></span>
+  </button>
+  <div class="track">
+    <input id="year-range" type="range" min="0" max="1000" value="0" step="1"
+           aria-label="How far the scheme has arrived, 2026 to 2045">
+    <div class="ends"><span>2026</span><span>2045</span></div>
+  </div>
+  <output id="year-read" for="year-range">2026</output>
+</div>
 <div id="panel" hidden>
   <h2 id="panel-title"></h2>
   <p id="panel-body"></p>
