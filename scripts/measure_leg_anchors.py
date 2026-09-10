@@ -95,6 +95,13 @@ def describe(leg_file):
     meta = load("gv-meta.json")
     paths = load("gv-paths.json")
     buildings = load("gv-buildings.json")
+    # A plate rendered with the wave up also has the 2045 blocks standing in
+    # it, and they are most of what the frame is about. They carry no names —
+    # nothing invented gets to be a landmark — so they are reported as a band
+    # and a few largest blocks rather than as places.
+    future = []
+    if leg.get("wave", 0) >= 0.5 and (GV / "gv-2045-buildings.json").exists():
+        future = load("gv-2045-buildings.json")
     ground = height_field(meta)
 
     # A composed plate has no route through it; a leg does. Everything else
@@ -163,6 +170,36 @@ def describe(leg_file):
             })
         marks.sort(key=lambda m: m["nearestMetres"])
         anchors["landmarks"] = marks[:4]
+
+        # The 2045 development, if this plate has it.
+        if future:
+            seen = []
+            for b in future:
+                ring = b["ring"]
+                cx2 = sum(p[0] for p in ring) / len(ring)
+                cz2 = sum(p[1] for p in ring) / len(ring)
+                base = cam.project((cx2, b["base"], cz2))
+                top = cam.project((cx2, b["base"] + b["height"], cz2))
+                if on_frame(base) and base[2] < 2000:
+                    seen.append((b, base, top))
+            if seen:
+                fam = {}
+                for b, base, top in seen:
+                    fam[b["family"]] = fam.get(b["family"], 0) + 1
+                big = sorted(seen, key=lambda x: -x[0]["height"])[:3]
+                anchors["development"] = {
+                    "blocksInFrame": len(seen),
+                    "byFamily": fam,
+                    "uFrom": round(min(x[1][0] for x in seen), 3),
+                    "uTo": round(min(1.0, max(x[1][0] for x in seen)), 3),
+                    "vFrom": round(min(x[2][1] for x in seen if x[2]), 3),
+                    "vTo": round(max(x[1][1] for x in seen), 3),
+                    "nearestMetres": round(min(x[1][2] for x in seen)),
+                    "tallest": [{"family": b["family"], "heightMetres": b["height"],
+                                 "u": base[0], "vBase": base[1],
+                                 "vRoof": top[1] if top else None}
+                                for b, base, top in big],
+                }
 
         # Buildings, split by distance, because the two groups are different
         # instructions. Anything close is an individual object a generator can
@@ -266,7 +303,14 @@ def main():
     args = ap.parse_args()
 
     leg, frames = describe(args.leg)
-    dest = Path(args.leg).resolve().with_name("anchors.json")
+    # Named after its input unless the input is the canonical `leg.json` or
+    # `plate.json`, whose sidecars two published briefs already point at. A
+    # fixed name was fine while a folder held one plate and silently wrong the
+    # moment it held three: each run overwrote the last and every table in the
+    # brief came out identical.
+    src = Path(args.leg).resolve()
+    dest = src.with_name("anchors.json" if src.stem in ("leg", "plate")
+                         else f"{src.stem}-anchors.json")
     dest.write_text(json.dumps({
         "note": ("Surveyed features projected through this leg's own camera, "
                  "as normalised image coordinates: u is 0 at the left edge and "
@@ -282,6 +326,14 @@ def main():
         print(f"  horizon        v={a['horizonV']}")
         for p in a["path"]:
             print(f"  path {p['metresAhead']:>4} m ahead   u={p['u']:<7} v={p['v']}")
+        if a.get("development"):
+            d2 = a["development"]
+            print(f"  DEVELOPMENT    {d2['blocksInFrame']} blocks {d2['byFamily']}, "
+                  f"u={d2['uFrom']}..{d2['uTo']}  v={d2['vFrom']}..{d2['vTo']}, "
+                  f"nearest {d2['nearestMetres']} m")
+            for t in d2["tallest"]:
+                print(f"     {t['family']:<11} {t['heightMetres']:>5.1f} m   "
+                      f"u={t['u']}  base v={t['vBase']}  roof v={t['vRoof']}")
         for m in a.get("landmarks", []):
             print(f"  {m['kind']:<14} {m['nearestMetres']:>4} m   enters "
                   f"u={m['enters']['u']},v={m['enters']['v']}  leaves "

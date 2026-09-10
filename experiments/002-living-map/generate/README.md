@@ -16,6 +16,7 @@ protocol.
 |---|---|---|---|
 | 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg | **closed**: an empty footpath fails the interesting-imagery rule; do not run B or C |
 | 002 | [`002-gchq.md`](002-gchq.md) | GCHQ filling the frame, with surveyed locks | **done** (free, Codex): passes the rule; ring drawn ~22 px high; car parks are the plate's gap |
+| 003 | [`003-golden-valley-2045.md`](003-golden-valley-2045.md) | the Golden Valley in 2045 — three frames, one session | open, free |
 
 ## The interesting-imagery rule (Dex, 10 Sep 2026)
 

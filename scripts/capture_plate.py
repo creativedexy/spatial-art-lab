@@ -44,8 +44,10 @@ class Server(socketserver.ThreadingTCPServer):
         pass
 
 
-SHOOT = """async ({ cam, look, lift }) => {
+SHOOT = """async ({ cam, look, lift, eye, wave }) => {
   const m = window.__map;
+  // How far 2045 has arrived. 0 is today; 1 is the front all the way across.
+  m.future.setWave(wave);
   // No interface in the plate, and nothing else touching the camera: the
   // page's own frame loop calls controls.update() on its own animation frame
   // and the orbit limits will drag a composed shot back to something else.
@@ -53,7 +55,11 @@ SHOOT = """async ({ cam, look, lift }) => {
   m.controls.enabled = false;
   const target = new (m.camera.position.constructor)(
     look[0], m.groundAt(look[0], look[1]) + lift, look[1]);
-  m.camera.position.set(cam[0], cam[1], cam[2]);
+  // `eye` puts the camera that many metres above the ground under it, which
+  // is the only way to frame a low shot without knowing the terrain height
+  // here; `cam[1]` is an absolute height when eye is null.
+  const y = eye === null ? cam[1] : m.groundAt(cam[0], cam[2]) + eye;
+  m.camera.position.set(cam[0], y, cam[2]);
   m.camera.lookAt(target);
   m.camera.updateMatrixWorld();
   m.controls.target.copy(target);
@@ -73,17 +79,30 @@ def main():
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True, help="folder to write under generate/")
-    ap.add_argument("--cam", required=True, help="x,y,z in local metres")
-    ap.add_argument("--look", required=True, help="x,z in local metres")
+    ap.add_argument("--cam", help="x,y,z in local metres (single view)")
+    ap.add_argument("--look", help="x,z in local metres (single view)")
     ap.add_argument("--lift", type=float, default=0,
                     help="metres above the ground the look target sits")
+    ap.add_argument("--eye", type=float, default=None,
+                    help="metres above the ground the camera sits, "
+                         "instead of the absolute y in --cam")
+    ap.add_argument("--wave", type=float, default=0,
+                    help="how far 2045 has arrived: 0 today, 1 fully built")
+    ap.add_argument("--views", help="JSON: {name: {cam, look, eye, lift, wave}} "
+                                    "— several plates from one browser session, "
+                                    "which is most of the cost")
     ap.add_argument("--file", default="plate.png")
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--port", type=int, default=8185)
     args = ap.parse_args()
 
-    cam = [float(v) for v in args.cam.split(",")]
-    look = [float(v) for v in args.look.split(",")]
+    if args.views:
+        views = json.loads(args.views)
+    else:
+        views = {args.name: {"cam": [float(v) for v in args.cam.split(",")],
+                             "look": [float(v) for v in args.look.split(",")],
+                             "eye": args.eye, "lift": args.lift,
+                             "wave": args.wave}}
 
     srv = Server(("127.0.0.1", args.port), Handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
@@ -100,28 +119,35 @@ def main():
                   "?clean=1&descend=x", wait_until="load", timeout=180000)
         page.wait_for_function("window.__terrainReady === true", timeout=300000)
         page.wait_for_timeout(3000)
-        shot = page.evaluate(SHOOT, {"cam": cam, "look": look, "lift": args.lift})
+        shots = {}
+        for name, v in views.items():
+            shots[name] = page.evaluate(SHOOT, {
+                "cam": v["cam"], "look": v["look"],
+                "lift": v.get("lift", 0), "eye": v.get("eye"),
+                "wave": v.get("wave", 0)})
         browser.close()
     srv.shutdown()
     for e in errors[:5]:
         print(f"  page error: {e}")
 
-    dest = Path(args.out) / args.name
-    dest.mkdir(parents=True, exist_ok=True)
-    f = dest / args.file
-    f.write_bytes(base64.b64decode(shot["png"].split(",", 1)[1]))
-    doc = {
-        "note": ("One composed plate from the map, rendered with the path "
-                 "network hidden. Local metres, x east, z south, origin at the "
-                 "box centre. Same shape as a leg's sidecar so "
-                 "measure_leg_anchors.py can read either."),
-        "camera": {"fov": shot["fov"], "size": list(SIZE)},
-        "frames": [{"file": f.name, "atMetres": 0,
-                    "pos": shot["pos"], "look": shot["look"]}],
-    }
-    (dest / "plate.json").write_text(json.dumps(doc, indent=2) + "\n")
-    print(f"  wrote {f.relative_to(ROOT)}  {f.stat().st_size / 1024:.0f} KB")
-    print(f"  wrote {(dest / 'plate.json').relative_to(ROOT)}")
+    for name, shot in shots.items():
+        v = views[name]
+        dest = Path(args.out) / args.name
+        dest.mkdir(parents=True, exist_ok=True)
+        f = dest / (f"{name}.png" if args.views else args.file)
+        f.write_bytes(base64.b64decode(shot["png"].split(",", 1)[1]))
+        doc = {
+            "note": ("One composed plate from the map, rendered with the path "
+                     "network hidden. Local metres, x east, z south, origin at "
+                     "the box centre. Same shape as a leg's sidecar so "
+                     "measure_leg_anchors.py can read either."),
+            "camera": {"fov": shot["fov"], "size": list(SIZE)},
+            "wave": v.get("wave", 0),
+            "frames": [{"file": f.name, "atMetres": 0,
+                        "pos": shot["pos"], "look": shot["look"]}],
+        }
+        (dest / f"{f.stem}.json").write_text(json.dumps(doc, indent=2) + "\n")
+        print(f"  wrote {f.relative_to(ROOT)}  {f.stat().st_size / 1024:.0f} KB")
 
 
 if __name__ == "__main__":
