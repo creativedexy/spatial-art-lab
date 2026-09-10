@@ -149,6 +149,47 @@ def main():
               f"play {box['play']} px, track {box['track']} px, "
               f"{box['bottom']} px clear of the bottom edge")
 
+        # --- the scheme band ------------------------------------------------
+        print("\n  what the scheme is, while it arrives")
+        page.evaluate(SET, 0)
+        page.wait_for_timeout(300)
+        at0 = page.evaluate("() => ({ ha: window.__map.scheme.arrivedHectares(),"
+                            " say: document.querySelector('#scheme .say').textContent })")
+        check("at 2026 nothing has changed and it says so",
+              at0["ha"] == 0 and "2045" in at0["say"], f"{at0['say']!r}")
+
+        page.evaluate(SET, 1000)
+        page.wait_for_timeout(400)
+        at1 = page.evaluate("() => ({ ha: window.__map.scheme.arrivedHectares(),"
+                            " total: window.__map.scheme.grandHectares,"
+                            " say: document.querySelector('#scheme .say').textContent })")
+        check("at 2045 the whole scheme is counted",
+              abs(at1["ha"] - at1["total"]) < 0.05,
+              f"{at1['ha']:.1f} of {at1['total']:.1f} ha — {at1['say']!r}")
+
+        # The check that matters: measured, not tweened. The scheme is not
+        # spread evenly — the wetland follows the brook and is westernmost —
+        # so a linear ramp would be wrong here by a lot.
+        page.evaluate(SET, 500)
+        page.wait_for_timeout(400)
+        half = page.evaluate("() => window.__map.scheme.arrivedHectares()")
+        linear = at1["total"] / 2
+        check("half way across is measured area, not half the total",
+              abs(half - linear) > 1.0,
+              f"{half:.1f} ha behind the front, against {linear:.1f} if it "
+              f"were tweened")
+
+        opened = page.evaluate("""() => {
+          document.getElementById('scheme').click();
+          const s = document.getElementById('scheme-sheet');
+          return { open: !s.hidden, rows: s.querySelectorAll('tbody tr').length,
+                   text: s.textContent.replace(/\s+/g, ' ').slice(0, 80) };
+        }""")
+        check("the band opens the figures behind it",
+              opened["open"] and opened["rows"] >= 5,
+              f"{opened['rows']} land-use rows")
+        page.evaluate("() => document.getElementById('scheme').click()")
+
         # --- legibility -----------------------------------------------------
         page.goto(f"http://127.0.0.1:{args.port}/golden-valley/index.html",
                   wait_until="load", timeout=900000)

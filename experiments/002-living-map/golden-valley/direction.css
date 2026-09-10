@@ -219,7 +219,10 @@ body.in-place #credit { left: 440px; max-width: 38vw; }
 @media (max-width: 759px) {
   #hint { display: none; }
   #credit {
-    left: 16px; right: 16px; bottom: 96px; max-width: none;
+    /* Clear of the dial, which grew a scheme band on top of it in phase 8.
+       Checked rather than eyeballed: test_year_dial.py taps the control and
+       fails if anything is over it. */
+    left: 16px; right: 16px; bottom: 152px; max-width: none;
   }
   #credit-toggle {
     /* The same 44 px the markers and the dial are held to. It was 25 px here
@@ -295,14 +298,87 @@ body.in-place #credit { left: 440px; max-width: 38vw; }
    to read while you are dragging it — which is the only moment it matters. */
 #year-dial {
   position: absolute; z-index: 5; left: 16px; right: 16px; bottom: 26px;
-  display: flex; align-items: center; gap: 14px;
-  padding: 10px 16px 10px 10px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 0;
+  padding: 0;
   background: rgba(41, 48, 42, 0.42);
   border: 1px solid rgba(247, 242, 230, 0.5);
   backdrop-filter: blur(6px);
   transition: opacity var(--calm) var(--ease);
 }
 #year-dial[hidden] { display: none; }
+#year-dial .row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 16px 10px 10px;
+}
+
+/* --- the scheme band ---------------------------------------------------------
+   What 2045 does to this ground, filling as the front crosses it. Sits on top
+   of the dial inside the same panel, because the two are one thing: drag the
+   year and watch the hectares accrue. Measured area, not the totals tweened —
+   see scheme.js for why that distinction is worth the extra file. */
+#scheme {
+  display: block; width: 100%;
+  padding: 9px 16px 8px; margin: 0;
+  background: none; border: 0; border-bottom: 1px solid rgba(247, 242, 230, 0.22);
+  text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background var(--quick) var(--ease);
+}
+#scheme:hover, #scheme:focus-visible { background: rgba(247, 242, 230, 0.09); }
+#scheme .bar {
+  display: flex; height: 7px; width: 100%;
+  background: rgba(247, 242, 230, 0.16);
+  overflow: hidden;
+}
+#scheme .seg {
+  display: block; min-width: 0; flex-basis: 0;
+  transition: flex-grow 120ms linear, opacity var(--quick) var(--ease);
+}
+#scheme .say {
+  display: block; margin-top: 6px;
+  font: 500 10px/1.35 var(--sans); letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(247, 242, 230, 0.9);
+  /* Two lines rather than an ellipsis. The line ends in the numbers, so
+     truncating it cuts off the part that is the point. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#scheme.empty .say { color: rgba(247, 242, 230, 0.55); }
+
+#scheme-sheet {
+  position: absolute; z-index: 7; left: 16px; right: 16px; bottom: 122px;
+  max-height: 56vh; overflow: auto;
+  padding: 16px 18px 14px;
+  background: rgba(24, 30, 26, 0.88); backdrop-filter: blur(8px);
+  border: 1px solid rgba(247, 242, 230, 0.28);
+  color: var(--paper);
+}
+#scheme-sheet[hidden] { display: none; }
+#scheme-sheet h3 {
+  margin: 0 0 8px; font: 300 20px/1.1 var(--display); letter-spacing: 0.01em;
+}
+#scheme-sheet .lede, #scheme-sheet .foot {
+  margin: 0 0 12px; font: 300 12px/1.55 var(--sans);
+  color: rgba(247, 242, 230, 0.88);
+}
+#scheme-sheet .foot {
+  margin: 12px 0 0; padding-top: 10px;
+  border-top: 1px solid rgba(247, 242, 230, 0.2);
+  color: rgba(247, 242, 230, 0.66);
+}
+#scheme-sheet table { width: 100%; border-collapse: collapse; }
+#scheme-sheet th, #scheme-sheet td {
+  padding: 5px 0; text-align: left;
+  font: 400 12px/1.2 var(--sans); letter-spacing: 0.06em;
+}
+#scheme-sheet td { text-align: right; font-variant-numeric: tabular-nums; }
+#scheme-sheet tfoot th, #scheme-sheet tfoot td {
+  border-top: 1px solid rgba(247, 242, 230, 0.3); font-weight: 500;
+}
+body.in-place #scheme-sheet, body.in-photo #scheme-sheet { display: none; }
+/* The sheet takes the screen while it is open: the sources control sitting
+   under a translucent panel is neither readable nor hidden. */
+body.scheme-open #credit, body.scheme-open .place-marker,
+body.scheme-open .hotspot { opacity: 0; pointer-events: none; }
 
 #year-play {
   flex: none; width: 44px; height: 44px;
@@ -383,6 +459,11 @@ body.in-place #year-dial, #app.flying #year-dial,
     left: 50%; right: auto; bottom: 34px;
     transform: translateX(-50%);
     width: min(560px, calc(100vw - 48px));
+  }
+  #scheme-sheet {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: min(560px, calc(100vw - 48px));
+    bottom: 130px;
   }
 }
 

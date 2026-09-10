@@ -21,6 +21,7 @@ import { createPathWalk } from './walk.js';
 import { createPlaces } from './places.js';
 import { thin } from './declutter.js';
 import { addTiles } from './tiles.js';
+import { addScheme } from './scheme.js';
 import { mark } from './stage.js';
 
 const app = document.getElementById('app');
@@ -293,6 +294,12 @@ play.onclick = () => {
             ms: Math.max(900, WAVE_MS * Math.abs(to - from)) };
 };
 
+// What the scheme is, filling as it arrives. It lives inside the dial rather
+// than beside it because they are one object to a viewer: the control, and
+// what the control is doing to the vale.
+const scheme = clean ? null : await addScheme({ future, root: app });
+if (scheme) dial.insertBefore(scheme.band, dial.firstChild);
+
 function updateWave(now) {
   if (sweep) {
     const k = Math.min(1, (now - sweep.startedAt) / sweep.ms);
@@ -314,6 +321,7 @@ function updateWave(now) {
     const v = Math.round(w * 1000);
     if (range.valueAsNumber !== v) range.value = String(v);
   }
+  scheme?.update();
 }
 
 // --- today, streamed ---------------------------------------------------------
@@ -436,18 +444,28 @@ if (!introSkipped) {
   intro.hidden = false;
   document.body.classList.add('intro-open');
   const t0 = performance.now();
+  // Its own flag, not `controls.enabled`. Using the controls as the liveness
+  // test meant the drift ran for as long as anything had them switched off —
+  // so a capture, or anything else that takes the camera while the intro is
+  // still up, had its camera quietly overwritten every frame and never knew.
+  // It cost an afternoon of screenshots that all came out at the same view.
+  let drifting = true;
   const drift = () => {
-    if (!controls.enabled) {
-      // Ease out, so the move is quickest at the start and has all but
-      // stopped by the time anyone reads as far as the button.
-      const k = Math.min(1, (performance.now() - t0) / OPEN_MS);
-      camera.position.lerpVectors(from, to, 1 - Math.pow(1 - k, 3));
-      camera.lookAt(controls.target);
-      requestAnimationFrame(drift);
-    }
+    if (!drifting) return;
+    // Ease out, so the move is quickest at the start and has all but stopped
+    // by the time anyone reads as far as the button.
+    const k = Math.min(1, (performance.now() - t0) / OPEN_MS);
+    camera.position.lerpVectors(from, to, 1 - Math.pow(1 - k, 3));
+    camera.lookAt(controls.target);
+    if (k >= 1) drifting = false;
+    else requestAnimationFrame(drift);
   };
   drift();
+  // Anything that means to drive the camera can say so, whether or not it
+  // wants the controls back.
+  intro.addEventListener('dismiss', () => { drifting = false; });
   document.getElementById('intro-go').onclick = () => {
+    drifting = false;
     intro.classList.add('leaving');
     document.body.classList.remove('intro-open');
     setTimeout(() => { intro.hidden = true; }, 900);
@@ -547,7 +565,7 @@ if (auto) {
 // for. Nothing in the page reads it.
 window.__map = {
   renderer, scene, camera, controls, paths, walk, player, hotspots, future, places,
-  tiles,
+  tiles, scheme,
   // A capture that cannot stop the clock is photographing the weather: the
   // flock, the wind and the cloud shadows all move, so two renders of one
   // camera differ by however long the page took to get there.
