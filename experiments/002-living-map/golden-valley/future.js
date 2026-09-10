@@ -21,6 +21,7 @@
 
 import * as THREE from 'three';
 import { applyLife } from './life.js';
+import { loadClassTexture } from './landcover.js';
 import { facadeChunk } from './facades.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
@@ -104,13 +105,15 @@ export function setGroundMasked(on) {
   for (const u of groundMaskUniforms) u.value = groundMask.value;
 }
 
-export function blendGround(mesh, futureTexture) {
+export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
   const m = mesh.material;
   const previous = m.onBeforeCompile;
   m.onBeforeCompile = (shader) => {
     if (previous) previous(shader);
     Object.assign(shader.uniforms, uniforms,
                   { uFutureMap: { value: futureTexture },
+                    uTodayClass: { value: todayClasses ?? null },
+                    uFutureClass: { value: futureClasses ?? null },
                     uGroundMask: { value: 0 } });
     // Held so setGroundMasked can move it without recompiling: a shader
     // rebuild on a toggle is a stutter, and on a year change it would be a
@@ -134,6 +137,8 @@ export function blendGround(mesh, futureTexture) {
       .replace('#include <common>',
         `#include <common>
          uniform sampler2D uFutureMap;
+         uniform sampler2D uTodayClass;
+         uniform sampler2D uFutureClass;
          uniform float uGroundMask;
          uniform float uFront; uniform float uSoft; uniform float uRagged;
          varying vec3 vFutureWorld;
@@ -141,10 +146,23 @@ export function blendGround(mesh, futureTexture) {
       .replace('#include <map_fragment>',
         `#include <map_fragment>
          {
-           // Discard rather than fade: a half-transparent field of our ground
-           // over photogrammetry of the same field is two grounds, and reads
-           // as neither.
-           if (uGroundMask > 0.5 && futureAt(vFutureWorld) < 0.5) discard;
+           // Over photogrammetry, our ground is drawn ONLY where 2045
+           // actually changes it — an orchard where there was stubble, wet
+           // meadow where there was a culverted brook — and never where the
+           // scheme leaves a field alone. The first version of this masked by
+           // the wave instead, which meant that once the front had crossed,
+           // our terrain covered the real town completely and the whole layer
+           // was pointless. The class maps answer it exactly: two indices,
+           // and they either differ or they do not.
+           //
+           // Discard rather than fade: half our field over a photograph of
+           // the same field is two grounds, and reads as neither.
+           if (uGroundMask > 0.5) {
+             float wasClass = texture2D(uTodayClass, vMapUv).r;
+             float willClass = texture2D(uFutureClass, vMapUv).r;
+             bool changed = abs(wasClass - willClass) > 0.002;
+             if (!changed || futureAt(vFutureWorld) < 0.5) discard;
+           }
            // The sampler is sRGB, so the GPU has already linearised this and
            // it can be mixed with diffuseColor directly.
            vec4 futureTexel = texture2D(uFutureMap, vMapUv);
@@ -478,7 +496,15 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     futureTexture.anisotropy = renderer
       ? renderer.capabilities.getMaxAnisotropy() : 8;
     futureTexture.wrapS = futureTexture.wrapT = THREE.ClampToEdgeWrapping;
-    blendGround(ground, futureTexture);
+    // Both class maps, so the shader can answer the only question that
+    // matters over photogrammetry: did 2045 CHANGE this square metre? Indices,
+    // so nearest filtering and no colour management — a bilinear tap between
+    // "water" and "grass" returns a class nothing is.
+    const [todayClasses, futureClasses] = await Promise.all([
+      loadClassTexture(),
+      loadClassTexture(futureMeta.classFile),
+    ]);
+    blendGround(ground, futureTexture, todayClasses, futureClasses);
   }
 
   // GCHQ's roof is a change to a building that already exists, so it is a
@@ -488,6 +514,12 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   const gchqRoof = scene.getObjectByName('gchq:roof');
   const gchqFrom = gchqRoof && gchqRoof.material.color.clone();
   const gchqTo = change && new THREE.Color(change.roof);
+  // How far the front has passed the ring, 0 to 1. Kept because the tiles
+  // layer needs it: over photogrammetry our GCHQ roof is the ONLY part of our
+  // town still drawn, and it has to arrive with the meadow rather than sit
+  // there from the start covering the real one.
+  let meadowAt = 0;
+  let overTiles = false;
 
   let wave = 0;
   return {
@@ -503,6 +535,22 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     /** Draw our ground only where 2045 changes it: see setGroundMasked. */
     setGroundMasked,
     /**
+     * Over photogrammetry, our whole town is hidden except one thing: the
+     * ring's 2045 meadow roof, laid over the real building. Overlaying our own
+     * geometry is allowed; modifying a tile is not, and this modifies nothing.
+     */
+    setOverTiles(on) {
+      overTiles = !!on;
+      if (!gchqRoof) return;
+      gchqRoof.material.transparent = overTiles;
+      gchqRoof.material.depthWrite = !overTiles;
+      gchqRoof.material.opacity = overTiles ? meadowAt : 1;
+      gchqRoof.visible = overTiles ? meadowAt > 0.01 : true;
+      gchqRoof.material.needsUpdate = true;
+    },
+    /** How far the front has crossed the ring, 0 to 1. */
+    get gchqMeadow() { return meadowAt; },
+    /**
      * Where the front is standing, in local metres east. The wave is the
      * scheme's argument and this is the only number that says whether it
      * actually moved: a dial can change a year on screen without the ground
@@ -516,9 +564,16 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
       if (gchqRoof && gchqTo) {
         // GCHQ sits at x = 123, so its roof turns when the front reaches it
         // rather than when the toggle is pressed.
-        const at = THREE.MathUtils.clamp(
+        meadowAt = THREE.MathUtils.clamp(
           (uniforms.uFront.value - 123 + SOFT) / (SOFT * 2), 0, 1);
-        gchqRoof.material.color.copy(gchqFrom).lerp(gchqTo, at);
+        gchqRoof.material.color.copy(gchqFrom).lerp(gchqTo, meadowAt);
+        if (overTiles) {
+          // Fading rather than switching: the real ring is underneath, and a
+          // meadow that appears all at once on a photograph of a metal roof
+          // reads as a glitch rather than as a proposal.
+          gchqRoof.material.opacity = meadowAt;
+          gchqRoof.visible = meadowAt > 0.01;
+        }
       }
     },
   };

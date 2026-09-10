@@ -30,6 +30,26 @@
 //   derived from the tiles. Ours come from LiDAR, OSM and written rules, so
 //   they qualify — and that is worth keeping true.
 //
+// ── What our ground still draws, measured ─────────────────────────────────
+//
+// Tiles may not be modified, so 2045's orchards and wetland cannot be painted
+// onto them: our terrain is drawn on top instead, and only where the scheme
+// actually changes the ground. Comparing the two class maps square metre by
+// square metre, that is **68.6 ha of the 400 in the box — 17.2%**:
+//
+//   orchard      21.9 ha      the ring of new planting around everything built
+//   grass        17.9 ha      the ground the new buildings stand on
+//   wetland      15.5 ha      the brook corridor let go
+//   agrivoltaic   9.6 ha      the west-facing slopes under panels
+//   roads         2.5 ha      the new streets between the blocks
+//   scrub         1.3 ha
+//
+// The other 331 ha is the real town, showing through: 126.6 ha of existing
+// residential, 56.3 ha of farmland the scheme does not touch, 26.1 ha of
+// grass, 24.4 ha of minor road, 17.8 ha of wood, 17.6 ha of hardstanding and
+// 12 ha of park. That is the point — a scheme is a change to a place, and
+// this is the only version of the map where the place is not also ours.
+//
 // ── Two things that cost money or credibility if got wrong ───────────────
 //
 //   Billing is per root tileset request, which is one per TilesRenderer. So
@@ -57,6 +77,40 @@ export const ORIGIN = { lat: 51.900076, lon: -2.126397, geoid: 48.6 };
  * reported as melting, so nothing under 60 m is trusted.
  */
 export const MELT_METRES = 60;
+
+/**
+ * Metres to lift the photogrammetry so its ground agrees with ours.
+ *
+ * Our heights are Environment Agency LiDAR to ordnance datum. Google's are
+ * photogrammetry over the ellipsoid, placed here through a geoid separation
+ * of 48.6 m. Those two will not agree exactly, and every 2045 building in
+ * this map stands on OUR ground — so whatever they differ by is the height
+ * the scheme floats above, or sinks into, the real town.
+ *
+ * The tiles move, not our scheme. One number in one place, applied to the
+ * photogrammetry, so nothing measured is perturbed: the plates, the places,
+ * the paths and every test go on meaning exactly what they meant.
+ *
+ * Sign, stated because it is the kind of thing that gets pasted in backwards:
+ * this is what to ADD to the tiles' height. `probe_tiles.py` reports
+ * `theirs − ours` at each point, so what goes here is the NEGATIVE of its
+ * median — if their ground reads 0.7 m above ours, the value is −0.7.
+ *
+ * UNMEASURED, and 0 until it is. The probe samples GCHQ, the campus field,
+ * the brook and Princess Elizabeth Way; it will not be one number, so the
+ * median goes here and the spread is a residual worth stating rather than
+ * hiding. `?tileLift=-0.7` overrides it while that is being worked out.
+ */
+export const GROUND_OFFSET_METRES = 0;
+
+/**
+ * The melt switch has two thresholds, not one. A single one at the altitude
+ * where the tiles give up means a camera hovering there flips the entire town
+ * between two versions of itself every few frames — and the walk, which rides
+ * at a fixed height over rolling ground, would do exactly that all the way
+ * along a route.
+ */
+export const MELT_HYSTERESIS = 15;
 
 const D = THREE.MathUtils.DEG2RAD;
 
@@ -96,7 +150,7 @@ function measureBasis(tiles) {
  * Local metres are x east, y above ordnance datum, z SOUTH — so north is −z,
  * which is the sign that catches everyone including the first draft of this.
  */
-function intoLocalFrame(b) {
+export function intoLocalFrame(b, lift = 0) {
   // Columns of the basis we are mapping FROM: east, up, south.
   const m = new THREE.Matrix4().makeBasis(b.e, b.u, b.n.clone().negate());
   // Orthonormal, so the inverse is the transpose — and doing it that way
@@ -104,6 +158,10 @@ function intoLocalFrame(b) {
   // vectors, where a general inverse would quietly amplify the "nearly".
   m.transpose();
   const back = b.o.clone().applyMatrix4(m).negate();
+  // The vertical agreement, applied to them rather than to us. Positive
+  // raises the photogrammetry: the translation goes on after the rotation, so
+  // this simply adds to every tile's height in our frame.
+  back.y += lift;
   m.setPosition(back);
   return m;
 }
@@ -115,9 +173,10 @@ function intoLocalFrame(b) {
  * @param {THREE.Scene} scene
  * @param {{ camera, renderer, future }} ctx
  */
-export async function addTiles(scene, { camera, renderer, future }) {
+export async function addTiles(scene, { camera, renderer, future, lift }) {
   const key = globalThis.GOOGLE_TILES_KEY;
   if (!key) return null;
+  const offset = Number.isFinite(lift) ? lift : GROUND_OFFSET_METRES;
 
   // Imported here and not at module scope, so a map with no key never fetches
   // the library at all. Phase 7 spent a day on the first load; this must not
@@ -189,6 +248,19 @@ export async function addTiles(scene, { camera, renderer, future }) {
       for (const [k, o] of Object.entries(ours)) {
         if (o) o.visible = showing ? false : wasVisible[k];
       }
+      // One exception, and it is the point of the exercise: the ring's 2045
+      // meadow roof stays, laid over the real building. Our own geometry over
+      // a tile is allowed; changing a tile is not, and this changes nothing.
+      // The buildings group has to stay visible to carry it — a hidden parent
+      // hides every child however visible the child thinks it is.
+      if (ours.buildings) {
+        ours.buildings.visible = true;
+        for (const child of ours.buildings.children) {
+          child.visible = showing ? child.name === 'gchq:roof' : true;
+        }
+        if (!showing) ours.buildings.visible = wasVisible.buildings;
+      }
+      future?.setOverTiles?.(showing);
       // Our ground comes back where 2045 changes it — orchards, wetland, the
       // new streets — because tiles may not be modified, so anything the
       // scheme paints has to be drawn on top rather than into them.
@@ -198,6 +270,18 @@ export async function addTiles(scene, { camera, renderer, future }) {
 
     /** Metres above the ground, below which the tiles are not trusted. */
     meltsBelow: MELT_METRES,
+    /** How far the photogrammetry was lifted to meet our datum. */
+    lift: offset,
+
+    /**
+     * Should the tiles be on at this height above the ground? Two thresholds,
+     * so a camera sitting near the line does not flip the town on and off.
+     */
+    wantsShowing(aboveGround) {
+      return showing
+        ? aboveGround >= MELT_METRES
+        : aboveGround >= MELT_METRES + MELT_HYSTERESIS;
+    },
 
     update() {
       if (!showing) return;
@@ -205,7 +289,7 @@ export async function addTiles(scene, { camera, renderer, future }) {
       // group's matrix is not yet the one the plugin means.
       if (!placed && tiles.root) {
         frame.matrixAutoUpdate = false;
-        frame.matrix.copy(intoLocalFrame(measureBasis(tiles)));
+        frame.matrix.copy(intoLocalFrame(measureBasis(tiles), offset));
         frame.updateMatrixWorld(true);
         placed = true;
       }

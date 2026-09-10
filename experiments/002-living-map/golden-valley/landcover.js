@@ -87,8 +87,8 @@ function neutralGrade(mesh) {
  * here — a bilinear tap between "water" (10) and "grass" (2) returns 6, which
  * is a class nothing is, so anything reading this must never interpolate.
  */
-export async function loadClassTexture() {
-  const tex = await new THREE.TextureLoader().loadAsync(url(coverMeta.classFile));
+export async function loadClassTexture(file = coverMeta.classFile) {
+  const tex = await new THREE.TextureLoader().loadAsync(url(file));
   tex.magFilter = THREE.NearestFilter;
   tex.minFilter = THREE.NearestFilter;
   tex.generateMipmaps = false;

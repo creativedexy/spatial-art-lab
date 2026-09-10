@@ -322,7 +322,13 @@ function updateWave(now) {
 // that is not the local session's, including every test suite and the public
 // build — this is null and the map is exactly the measured one it has always
 // been. That fallback is not a degraded mode; it is the map most people see.
-const tiles = clean ? null : await addTiles(scene, { camera, renderer, future });
+const tiles = clean ? null : await addTiles(scene, {
+  camera, renderer, future,
+  // ?tileLift=0.7 while the offset between our LiDAR and their photogrammetry
+  // is still being measured, so the local session can find it live without
+  // an edit and a redeploy.
+  lift: params.has('tileLift') ? Number(params.get('tileLift')) : undefined,
+});
 const attribution = document.getElementById('tiles-attribution');
 
 // Photogrammetry is a picture taken from an aeroplane: come close enough and
@@ -332,7 +338,10 @@ const attribution = document.getElementById('tiles-attribution');
 function updateTiles() {
   if (!tiles) return;
   const above = camera.position.y - heightAtLocal(camera.position.x, camera.position.z);
-  const want = above >= tiles.meltsBelow;
+  // Two thresholds, not one: a camera sitting near the line would otherwise
+  // flip the whole town between two versions of itself every few frames, and
+  // the walk rides at a fixed height over rolling ground.
+  const want = tiles.wantsShowing(above);
   if (want !== tiles.showing) tiles.setShowing(want);
   tiles.update();
   // The licence requires this to be visible whenever tiles are, and it is

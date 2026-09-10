@@ -182,6 +182,13 @@ def main():
             print(f"\n  median offset {mid:+.2f} m "
                   f"(spread {max(offs) - min(offs):.2f} m)")
             report["medianOffset"] = mid
+            # The layer wants what to ADD to the tiles, which is the other
+            # way round from what this measures. Printed rather than left as
+            # an exercise, because a sign pasted backwards puts the whole town
+            # out by twice the error and nothing complains.
+            report["groundOffsetMetres"] = round(-mid, 2)
+            print(f"  -> GROUND_OFFSET_METRES = {-mid:.2f}   "
+                  f"(and ?tileLift={-mid:.2f} to try it live)")
 
         print("\n  the melt threshold — where the finest tile stops being fine "
               "enough\n")
@@ -212,8 +219,10 @@ def main():
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(report, indent=2) + "\n")
     print(f"\nsaved {out.relative_to(ROOT)}")
-    print("Put both numbers in golden-valley/tiles.js (MELT_METRES and the "
-          "offset) and quote them in the commit.")
+    print("Put both numbers in golden-valley/tiles.js — MELT_METRES and "
+          "GROUND_OFFSET_METRES — and quote them, with the spread, in the "
+          "commit. scripts/test_tiles_frame.py checks the sign convention "
+          "holds; it does not know the value.")
     return 0
 
 
