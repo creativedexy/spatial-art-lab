@@ -1,4 +1,4 @@
 {
-  "note": "Which type models this copy of the map has. Phase 7: the public build ships without campus-block.glb and ncic.glb, because they derive from HBD's renders and meshy/README.md says pitch work only — and a map that finds that out by requesting them fires a 404 per type on every load, in front of anyone who opens the console. So it is written down instead. scripts/build_site.py rewrites this file for a public build; the copy in the repository lists everything that is here.",
-  "available": ["campus", "ncic"]
+  "note": "Which type models this copy of the map has. Both Meshy GLBs are PARKED as of task 001 part 2 (10 Sep): image-to-3D gave soft, blobby architecture and turned every pane of glass into holes, so the campus block and the NCIC are built from rules in facades.js instead \u2014 exact on every footprint, crisp at any distance, and about ninety lines of GLSL against 11.32 MB of GLB. The files stay in meshy/ rather than being deleted; this list is how the map is told not to ask for them. scripts/build_site.py rewrites this file for a public build.",
+  "available": []
 }

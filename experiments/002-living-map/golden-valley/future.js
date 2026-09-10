@@ -21,6 +21,7 @@
 
 import * as THREE from 'three';
 import { applyLife } from './life.js';
+import { facadeChunk } from './facades.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 export const futureMeta = await (await fetch(url('gv-2045-meta.json'))).json();
@@ -143,16 +144,40 @@ function futureGeometry(list, palette) {
   const base = [];
   const anchor = [];
   const col = [];
+  // Phase 8. Two more attributes, both for the facades.
+  //
+  // `aFacade` is the surface in METRES — how far along the wall, and how far
+  // up it — not the 0..1 a texture usually wants. That is the whole trick: a
+  // rule written in metres ("a window every 3 m, a storey every 3.4 m, the
+  // ground floor glazed to 3.4") then holds on a 38 m block and a 17 m one
+  // without a single number changing, and a facade never stretches to fit.
+  //
+  // `aSurface` says whether a triangle is a wall or a roof, because a family
+  // is one mesh and the shader has to tell sedum from stone.
+  const uv = [];
+  const surface = [];
+  const bays = [];
+  const walls = [];
   let tint = new THREE.Color();
-  const push = (x, y, z, b, ax, az) => {
+  let kind = 0;
+  let bayWidth = 3;
+  let wallHeight = 0;
+  const push = (x, y, z, b, ax, az, u = 0, v = 0) => {
     pos.push(x, y, z);
     base.push(b);
     anchor.push(ax, az);
     col.push(tint.r, tint.g, tint.b);
+    uv.push(u, v);
+    surface.push(kind);
+    bays.push(bayWidth);
+    walls.push(wallHeight);
   };
-  const quad = (a, b, c, d, bs, ax, az) => {
-    push(...a, bs, ax, az); push(...b, bs, ax, az); push(...c, bs, ax, az);
-    push(...a, bs, ax, az); push(...c, bs, ax, az); push(...d, bs, ax, az);
+  const quad = (a, b, c, d, bs, ax, az, uvs = null) => {
+    const t = uvs ?? [[0, 0], [0, 0], [0, 0], [0, 0]];
+    push(...a, bs, ax, az, ...t[0]); push(...b, bs, ax, az, ...t[1]);
+    push(...c, bs, ax, az, ...t[2]);
+    push(...a, bs, ax, az, ...t[0]); push(...c, bs, ax, az, ...t[2]);
+    push(...d, bs, ax, az, ...t[3]);
   };
 
   for (const b of list) {
@@ -166,18 +191,38 @@ function futureGeometry(list, palette) {
     const az = ring.reduce((s, p) => s + p[1], 0) / ring.length;
     const eaves = y0 + (b.roof === 'flat' ? b.height : b.eaves);
 
+    kind = 0;
+    // `run` is metres travelled around the building, so a bay grid starts at a
+    // corner and stays continuous around it rather than restarting per wall.
+    let run = 0;
+    const wallTop = eaves - y0;
     for (let i = 0; i < ring.length; i++) {
       const [x1, z1] = ring[i];
       const [x2, z2] = ring[(i + 1) % ring.length];
+      const span = Math.hypot(x2 - x1, z2 - z1);
+      // Bays divide THIS elevation exactly, which is what an architect does:
+      // a 35.2 m wall gets twelve bays of 2.93 m, not eleven of 3.0 and a
+      // sliver. Still metres — the wall's own bay width travels with it, so
+      // the shader keeps working in real sizes rather than in fractions.
+      bayWidth = span / Math.max(1, Math.round(span / 3.0));
+      wallHeight = wallTop;
       quad([x1, y0, z1], [x2, y0, z2], [x2, eaves, z2], [x1, eaves, z1],
-           y0, ax, az);
+           y0, ax, az,
+           [[0, 0], [span, 0], [span, wallTop], [0, wallTop]]);
+      run += span;
     }
 
     tint = roofColour;
+    kind = 1;
     if (b.roof === 'flat') {
       const [p, q, r, s] = ring;
+      // The roof is metres too, measured from the building's own corner, so a
+      // PV array lands on a grid rather than on a stretched square.
+      const ru = (t) => [Math.hypot(t[0] - p[0], t[1] - p[1]), 0];
+      const rv = (t) => Math.hypot(t[0] - q[0], t[1] - q[1]);
       quad([p[0], eaves, p[1]], [q[0], eaves, q[1]],
-           [r[0], eaves, r[1]], [s[0], eaves, s[1]], y0, ax, az);
+           [r[0], eaves, r[1]], [s[0], eaves, s[1]], y0, ax, az,
+           [[0, 0], [ru(q)[0], 0], [ru(q)[0], rv(r)], [0, rv(s)]]);
     } else {
       // A gable on a quad: the ridge runs between the midpoints of the two
       // ends, which for these blocks is the long axis by construction.
@@ -204,6 +249,10 @@ function futureGeometry(list, palette) {
   g.setAttribute('aBase', new THREE.Float32BufferAttribute(base, 1));
   g.setAttribute('aAnchor', new THREE.Float32BufferAttribute(anchor, 2));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('aFacade', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('aSurface', new THREE.Float32BufferAttribute(surface, 1));
+  g.setAttribute('aBay', new THREE.Float32BufferAttribute(bays, 1));
+  g.setAttribute('aWallTop', new THREE.Float32BufferAttribute(walls, 1));
   g.computeVertexNormals();
   return g;
 }
@@ -282,15 +331,39 @@ function depthFor(declarations, body, key) {
   return d;
 }
 
-function riseMaterial() {
+function riseMaterial(family) {
   const m = new THREE.MeshStandardMaterial({
     vertexColors: true, roughness: 0.85 });
-  return share(m, function future(shader) {
+  // Phase 8. A family whose facade is written gets it here, layered onto the
+  // same material that already carries the wave and the world's clock rather
+  // than replacing it — replacing it would silently drop the growth transform
+  // and the buildings would arrive fully built with no front at all.
+  const facade = facadeChunk(family);
+  share(m, function future(shader) {
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', `#include <common>\n${RISE}\n${NOISE}`)
+      .replace('#include <common>',
+               `#include <common>\n${RISE}\n${NOISE}${facade ? `\n${facade.vertex}` : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-${RISE_BODY}`);
+${RISE_BODY}${facade ? facade.vertexBody : ''}`);
+    if (!facade) return;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${facade.fragment}`)
+      // After <normal_fragment_maps> and not a line earlier. Three's fragment
+      // chunks run roughnessmap → metalnessmap → normal_fragment_begin →
+      // normal_fragment_maps, so `normal` does not exist yet at the roughness
+      // chunk: patching there compiles nothing, and a material that fails to
+      // compile does not draw — while its customDepthMaterial, untouched by
+      // any of this, goes on casting shadows. Twenty campus blocks vanished
+      // and left their shadows lying in the fields.
+      .replace('#include <normal_fragment_maps>',
+               `#include <normal_fragment_maps>\n${facade.fragmentBody}`);
   });
+  // Three caches compiled programs by this key, and every family used to
+  // return the same one. With a facade on only some of them that would hand
+  // the campus's shader to the houses, or the houses' to the campus —
+  // whichever compiled first, silently, and differently between runs.
+  m.customProgramCacheKey = () => `future:rise:${family}`;
+  return m;
 }
 
 // --- new trees ---------------------------------------------------------------
@@ -333,7 +406,7 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   const blocks = new Map();
   for (const [family, list] of byFamily) {
     const mesh = new THREE.Mesh(
-      futureGeometry(list, futureMeta.families), riseMaterial());
+      futureGeometry(list, futureMeta.families), riseMaterial(family));
     mesh.name = `future:blocks:${family}`;
     mesh.castShadow = true;
     mesh.receiveShadow = true;

@@ -10,17 +10,17 @@
   "wave": 1.0,
   "frames": [
     {
-      "file": "campus-cluster.png",
+      "file": "facade-study.png",
       "atMetres": 0,
       "pos": [
-        -175,
-        92,
-        60
+        -262,
+        54,
+        20
       ],
       "look": [
-        -262,
-        48.565,
-        -35
+        -298.5,
+        47.493,
+        61.5
       ]
     }
   ]

@@ -104,7 +104,10 @@ PROBE = """async () => {
   const m = window.__map;
   const out = {};
 
-  const markers = [...document.querySelectorAll('.place-marker')];
+  // Only the ones actually being offered. Phase 8 thins overlapping markers
+  // — nearest wins — and a hidden marker has a zero-size box, so measuring
+  // the whole set reports a 0 px tap target for something nobody can tap.
+  const markers = [...document.querySelectorAll('.place-marker')].filter((e) => !e.hidden);
   out.markers = markers.map((el) => {
     // The part of the marker a thumb can actually hit, which is not the same
     // as the part of it you can see: the stem and the pin below the label are
@@ -132,6 +135,13 @@ PROBE = """async () => {
   };
   out.blocksVisible = {};
   for (const [family, mesh] of m.future.blocks) out.blocksVisible[family] = mesh.visible;
+  const campus = m.future.blocks.get('campus');
+  const attr = campus && campus.geometry.attributes;
+  out.facade = attr ? {
+    aFacade: !!attr.aFacade, aBay: !!attr.aBay, aWallTop: !!attr.aWallTop,
+    maxU: attr.aFacade ? Math.max(...attr.aFacade.array.filter((_, i) => i % 2 === 0)) : 0,
+    bay: attr.aBay ? attr.aBay.array[0] : 0,
+  } : {};
 
   // Visit a 2045 place and drive the flight on a synthetic clock, because a
   // software renderer takes seconds a frame and real time would land the
@@ -188,6 +198,12 @@ def check_map(port, doc):
         page = browser.new_page(viewport=PHONE)
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
+        # A shader that fails to compile does not throw. Three logs it and
+        # carries on, the mesh quietly stops drawing, and its depth material
+        # goes on casting shadows into an empty field.
+        shader_errors = []
+        page.on("console", lambda msg: shader_errors.append(msg.text)
+                if msg.type == "error" and "Shader Error" in msg.text else None)
         page.goto(f"http://127.0.0.1:{port}/golden-valley/index.html?descend=x",
                   wait_until="load", timeout=300000)
         page.wait_for_function("window.__terrainReady === true", timeout=480000)
@@ -195,14 +211,16 @@ def check_map(port, doc):
         out = page.evaluate(PROBE)
         browser.close()
     srv.shutdown()
+    out["shaderErrors"] = shader_errors
 
     check("no page errors", not errors, "; ".join(errors[:2]))
 
     small = [m for m in out["markers"] if m["h"] < MIN_TAP]
-    check(f"every marker is at least {MIN_TAP} px tall at {PHONE['width']} px wide",
-          len(out["markers"]) == len(doc["places"]) and not small,
-          f"{len(out['markers'])} markers, shortest "
-          f"{min((m['h'] for m in out['markers']), default=0)} px")
+    check(f"every marker on offer is at least {MIN_TAP} px tall "
+          f"at {PHONE['width']} px wide",
+          out["markers"] and not small,
+          f"{len(out['markers'])} of {len(doc['places'])} places showing, "
+          f"shortest {min((m['h'] for m in out['markers']), default=0)} px")
 
     place = next(p for p in doc["places"] if p["id"] == "campus-courtyards")
     a = out["arrived"]
@@ -229,20 +247,34 @@ def check_map(port, doc):
           and r["photoHidden"],
           f"{r['driftMetres']} m adrift, wave back to {r['wave']}")
 
-    # --- part 2 ---
-    check("a type model stands on every campus footprint",
-          out["models"].get("campus") == 20, f"{out['models']}")
-    check("the campus extrusions stand down, the others do not",
-          out["blocksVisible"].get("campus") is False
-          and out["blocksVisible"].get("homes") is True
-          and out["blocksVisible"].get("glasshouse") is True,
+    # --- part 2, rewritten 10 Sep: procedural facades, not Meshy placement ---
+    check("the Meshy models stay parked",
+          not out["models"],
+          f"{out['models']}" if out["models"] else "nothing loaded, as intended")
+    check("every family keeps its own buildings",
+          all(out["blocksVisible"].get(f) is True
+              for f in ("campus", "homes", "glasshouse")),
           json.dumps(out["blocksVisible"]))
+    # The facade is written in metres, so the geometry has to carry metres.
+    # Without these attributes the shader silently falls back to zero and
+    # every building comes out as one flat band.
+    check("the campus carries a facade written in metres",
+          all(out["facade"].get(k) for k in ("aFacade", "aBay", "aWallTop"))
+          and out["facade"]["maxU"] > 10,
+          f"walls up to {out['facade']['maxU']:.1f} m long, "
+          f"bays of {out['facade']['bay']:.2f} m")
+    # The bug that cost twenty buildings: a shader patched at the wrong chunk
+    # fails to compile, the mesh does not draw, and its depth material — which
+    # nothing patched — goes on casting shadows into an empty field. Nothing
+    # throws. Nothing in any suite noticed.
+    check("every shader compiled", not out["shaderErrors"],
+          "; ".join(out["shaderErrors"][:1])[:160] or "no shader errors")
 
     n = out["ncic"]
     # The rule: campus field with frontage on a named route within 150 m, and
     # of those the one nearest GCHQ.
-    check("the NCIC site is the one the rule picks",
-          n is not None and out["models"].get("ncic") == 1
+    check("the NCIC site is still the one the rule picks",
+          n is not None
           and n["fields"] == 4 and not n["fallback"] and n["toRoute"] <= 150,
           f"({n['cx']},{n['cz']}) — {n['toGchq']} m to GCHQ, "
           f"{n['toRoute']} m to a named route, {n['fields']} fields"
