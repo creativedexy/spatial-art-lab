@@ -114,3 +114,9 @@ supplies photos, loops and GLBs.
 2. Meshy a + b: **approved by Dex, 70 credits**, then the campus close-ups pass.
 3. Video loops (**$1.68, awaiting Dex's yes**).
 4. Web build in the map: main session, task 001.
+
+## Next phases
+
+The four items above are done or waiting on money. What comes after is in
+[the next phases](golden-valley-next-phases.md): the link, the argument, life
+in the frames, and proof the pipeline transfers.
