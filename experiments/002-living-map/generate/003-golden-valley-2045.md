@@ -140,3 +140,78 @@ the numbers above, and — as on 002 — where the **plate** is the limiting
 factor rather than the prompt. That last one is the finding that changes what
 gets built here, and 002's answer (the map has no car-park ranks) was worth
 more than the frame.
+
+## Result
+
+**10 Sep 2026, local session. Done, £0, one Codex session for all three
+frames, one correction pass each.** Plates only attached; nothing from
+`inspiration/`. Outputs in `golden-valley-2045/out/`: the three photos at
+1280×720, `contact-sheet.png`, and Codex's `codex-notes.md` and `prompts.json`.
+
+### The rule: all three pass
+
+| | place of interest | buildings | people |
+|---|---|---|---|
+| A | campus with GCHQ on the skyline, meadow roof, dry planted courtyard | timber-and-stone campus blocks, Hesters Way, Leonardo Hotels | walkers and farm workers in the fields, cars in the car parks |
+| B | the campus courtyards and new streets | campus blocks with sedum roofs and PV, existing Cheltenham along the top | walkers and cyclists on the orchard paths and streets, people in the courtyards |
+| C | the agrivoltaic fields and glasshouse quarter, GCHQ beyond | campus, glasshouses, GCHQ | a tractor and workers between the panel rows, people on the paths |
+
+C is the strongest frame of the whole experiment: raised panel rows with crop
+growing between them (not a slab), the glasshouses, the campus and the meadow
+roof on GCHQ in one picture. It is the proposition in one image, as the brief
+intended.
+
+### The six named failures
+
+| | A | B | C |
+|---|---|---|---|
+| GCHQ courtyard water, enlarged, or roof back to metal | no | — | no |
+| landscape above the horizon / sky in B | see drift | **no sky**, held | see drift |
+| glass business park or suburban estate | no; first pass was too glazed, corrected to opaque timber and stone | no | no |
+| panels as an unbroken slab | — | — | **no**; thin raised rows, mostly field |
+| brook widened into a river | no | no; narrow in a wet-meadow corridor | no |
+| no people | no | no | no |
+
+Two things not on the list. **B has panel rows the plate does not ask for**:
+Codex put a few raised canopies into the orchards. **The set is not an exact
+colour match**: A and C agree, B is warmer and more golden.
+
+### Residuals against the locks, at 1280×720
+
+| | lock | residual |
+|---|---|---|
+| A, GCHQ ring | x 557–719, y 343–379 | about **50 px high** (Codex: 53) |
+| A, tallest campus roof | y 412 | about 49 px high (Codex) |
+| A, horizon | y 235 | **20–45 px high**. Codex measures 45; a sky/land detector says 20. The distant hills are hazy blue, so the edge is soft |
+| B, tallest campus roof | y 486 | about 31 px high (Codex) |
+| C, GCHQ ring | x 525–680, y 168–208 | about **23 px** out (Codex) |
+| C, tallest campus roof | y 274 | about 23 px high (Codex) |
+| C, horizon | y 32 | within 9–17 px |
+
+A is the worst registration of any frame so far, and the first pass was worse
+still (horizon near y 140, ring near y 295) before the correction pulled it
+halfway back.
+
+**GCHQ has now been drawn high in five frames running** (Session M 1 and 2,
+002, 003 A and C), 22 to 50 px each time, always upwards. That is this
+generator's bias on this building, and a lock stated in words does not remove
+it. Under a blurred zoom-in it does not matter; for a hard handback to the map
+it does.
+
+### Where the plate is the limiting factor
+
+**The box ends before the horizon.** The map is 2 × 2 km, so an oblique aimed
+across it shows a flat grey band between the last surveyed ground and the true
+horizon: y 235–300 in A, y 32–120 in C, and the whole top-left corner in B.
+The brief locks a horizon that the plate does not actually draw. The generator
+has to invent everything in that band, and a lock on something the plate does
+not contain is only a request. It is not the whole explanation of A's drift (C
+has a wider band and drifted less), but it is the one part of it that is a
+missing input rather than a bad output.
+
+The fix is to change what gets built, not the prompt: **a far-field skirt**.
+Coarse terrain out to 10–15 km (OS Terrain 50 is free and is ample at that
+distance), with land cover as flat colour and no buildings, so every oblique
+plate carries its own horizon and its own distant vale. Then the horizon lock
+is a lock, and the generator stops being asked to paint the Severn Vale from
+nothing.
