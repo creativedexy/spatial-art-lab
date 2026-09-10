@@ -1,5 +1,5 @@
 {
-  "note": "Places you can visit, each one a photograph and the camera it was generated from. The camera is not a framing chosen to suit the picture: it is the camera the plate was rendered from, so the live map arrives at the viewpoint the photograph was made at and the two are the same view of the same ground. `wave` is how far 2045 has arrived at that place \u2014 the photographs are of different years and the map has to agree with each. Local metres, x east, z south, origin at the box centre. Every `pos`, `look` and `wave` here is copied from the plate's own sidecar, named in `plate`, and scripts/test_places.py fails if the two ever drift: the first draft of this file was typed from the camera the plate was ASKED for rather than the one it was rendered from, and two places were 36 m and 9 m out with nothing visibly wrong.",
+  "note": "Places you can visit, each one a photograph and the camera it was generated from. The camera is not a framing chosen to suit the picture: it is the camera the plate was rendered from, so the live map arrives at the viewpoint the photograph was made at and the two are the same view of the same ground. `wave` is how far 2045 has arrived at that place \u2014 the photographs are of different years and the map has to agree with each. Local metres, x east, z south, origin at the box centre. Every `pos`, `look` and `wave` here is copied from the plate's own sidecar, named in `plate`, and scripts/test_places.py fails if the two ever drift: the first draft of this file was typed from the camera the plate was ASKED for rather than the one it was rendered from, and two places were 36 m and 9 m out with nothing visibly wrong.\n\nPhase 7: the map is served the WebP of each photograph, about a fifth of the PNG's size. The PNG stays beside it as the approved original that the generate/ briefs point at.",
   "defaults": {
     "fov": 48,
     "flyMs": 2600,
@@ -11,7 +11,7 @@
       "name": "GCHQ",
       "year": "today",
       "blurb": "The Doughnut, measured here at 14.8 m on ground 52.7 m above sea level, courtyard and all, straight from the LiDAR difference between ground and surface. The reason the cyber campus is next door.",
-      "photo": "../generate/gchq/out/gchq-photo.png",
+      "photo": "../generate/gchq/out/gchq-photo.webp",
       "wave": 0,
       "pos": [
         0,
@@ -30,7 +30,7 @@
       "name": "Cyber Central",
       "year": "2045",
       "blurb": "The innovation campus on the reconstructed field grid, with GCHQ on the skyline beyond it. Twenty campus blocks, three glasshouses and the first of the homes, in the cells the replanted hedges make.",
-      "photo": "../generate/golden-valley-2045/out/a-cyber-central-photo.png",
+      "photo": "../generate/golden-valley-2045/out/a-cyber-central-photo.webp",
       "wave": 1,
       "pos": [
         -760,
@@ -49,7 +49,7 @@
       "name": "The courtyards",
       "year": "2045",
       "blurb": "Straight down onto the campus: perimeter blocks around planted courtyards, the new streets between them, the brook corridor let go into wet meadow, and the orchard beyond.",
-      "photo": "../generate/golden-valley-2045/out/b-the-campus-photo.png",
+      "photo": "../generate/golden-valley-2045/out/b-the-campus-photo.webp",
       "wave": 1,
       "pos": [
         -380,
@@ -68,7 +68,7 @@
       "name": "Panels and glasshouses",
       "year": "2045",
       "blurb": "The whole proposition in one frame: solar canopies in rows over a crop that is still growing, the glasshouses that take the campus's waste heat, and the ring beyond.",
-      "photo": "../generate/golden-valley-2045/out/c-panels-and-glasshouses-photo.png",
+      "photo": "../generate/golden-valley-2045/out/c-panels-and-glasshouses-photo.webp",
       "wave": 1,
       "pos": [
         -720,
@@ -87,7 +87,7 @@
       "name": "The meadow roof",
       "year": "2045",
       "blurb": "The most recognisable building in Gloucestershire, re-roofed. Three and a half hectares of south-facing ring, twenty metres from the new campus, turned over to wildflower.",
-      "photo": "../generate/close-2045/out/gchq-meadow-photo.png",
+      "photo": "../generate/close-2045/out/gchq-meadow-photo.webp",
       "wave": 1,
       "pos": [
         20,

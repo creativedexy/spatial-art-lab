@@ -118,13 +118,28 @@ export function createDescentPlayer({
     video.hidden = false;
     video.style.transition = 'none';
     video.style.opacity = '0';
+    // Phase 7. This used to race a `loadeddata` listener against a timer, and
+    // on a machine whose frames take seconds the timer won a clip that had
+    // already arrived: readyState 4, a decoded 1280 px frame sitting there,
+    // and the descent fell back to flying it live because the message saying
+    // so was still queued behind a long task. Events and timers are different
+    // task queues and neither promises to be dispatched first. readyState is
+    // the ground truth, so ask it — the event only wakes the check early.
     await new Promise((resolve, reject) => {
-      if (video.readyState >= 2) return resolve();
-      const timer = setTimeout(
-        () => reject(new Error(`clip did not load in ${LOAD_BUDGET_MS} ms`)),
-        LOAD_BUDGET_MS);
-      video.addEventListener('loadeddata', () => { clearTimeout(timer); resolve(); },
-                             { once: true });
+      const startedAt = performance.now();
+      let waiting = true;
+      const settle = (fn, arg) => { if (waiting) { waiting = false; fn(arg); } };
+      const look = () => {
+        if (!waiting) return;
+        if (video.readyState >= 2) return settle(resolve);
+        if (performance.now() - startedAt > LOAD_BUDGET_MS) {
+          return settle(reject,
+                        new Error(`clip did not load in ${LOAD_BUDGET_MS} ms`));
+        }
+        setTimeout(look, 100);
+      };
+      video.addEventListener('loadeddata', look, { once: true });
+      look();
     });
     video.currentTime = 0;
 

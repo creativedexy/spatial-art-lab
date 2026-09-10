@@ -1,7 +1,7 @@
 {
   "note": "Land cover and trees for the Golden Valley box. Pixel (0,0) is the north-west corner, one pixel is one metre. Tree records are 8 bytes little-endian: int16 x, int16 z (local decimetres from the box centre, x east, z south), uint8 height (0.25 m steps), uint8 rotation (1/256 turn), uint8 kind, uint8 canopy spread (percent).",
-  "colourFile": "gv-landcover.png",
-  "classFile": "gv-landclass.png",
+  "colourFile": "gv-landcover.webp",
+  "classFile": "gv-landclass.webp",
   "treeFile": "gv-trees.bin",
   "metresPerPixel": 1,
   "pixels": [

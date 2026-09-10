@@ -15,18 +15,20 @@ import { addPaths } from './paths.js';
 import { addFuture } from './future.js';
 import { addModels } from './models.js';
 import { pathMeta } from './paths.js';
+import { mark } from './stage.js';
+import { loadHeights } from './heights.js';
 
 // Re-exported so a page that draws the world imports one module to build it
 // and to move it, and cannot end up driving a different clock than the one
 // buildWorld installed.
 export { updateLife, worldSeconds, pinWorld, releaseWorld } from './life.js';
-import { buildBuildings } from './buildings.js';
+import { buildBuildings, loadFootprints } from './buildings.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 
 export const meta = await (await fetch(url('gv-meta.json'))).json();
-const raw = new Uint16Array(await (await fetch(url(meta.binFile))).arrayBuffer());
-const buildings = await (await fetch(url('gv-buildings.json'))).json();
+const raw = await loadHeights(url(meta.binFile), meta);
+mark('height');
 
 const [W, H] = meta.binPixels;
 const zMin = meta.elevationMinMetres;
@@ -76,7 +78,7 @@ function footprintGeometry(b) {
 // the world looked like before roofs were measured — kept so the lookdev page
 // can render the before of a before-and-after, and skipped by buildWorld so
 // 4,033 buildings are not built twice.
-export function buildScene({ segments = 1000, flatBuildings = true } = {}) {
+export async function buildScene({ segments = 1000, flatBuildings = true } = {}) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xdfe9ec);
   scene.fog = new THREE.Fog(0xdfe9ec, 2500, 7000);
@@ -110,7 +112,7 @@ export function buildScene({ segments = 1000, flatBuildings = true } = {}) {
   if (flatBuildings) {
     const gchq = [];
     const rest = [];
-    for (const b of buildings) {
+    for (const b of await loadFootprints()) {
       (b.name === 'Government Communications Headquarters' ? gchq : rest)
         .push(footprintGeometry(b));
     }
@@ -143,11 +145,26 @@ export function buildScene({ segments = 1000, flatBuildings = true } = {}) {
  * Needs the renderer, because tone mapping and the shadow map are properties
  * of the renderer rather than of the scene, so it must be constructed first.
  */
-export async function buildWorld({ renderer, segments = 1000 } = {}) {
-  const scene = buildScene({ segments, flatBuildings: false });
-  scene.add(buildBuildings());
+export async function buildWorld({ renderer, segments = 1000, onStage = null } = {}) {
+  const scene = await buildScene({ segments, flatBuildings: false });
+  // Phase 7. applyLook is what makes this a place rather than a mesh — the
+  // afternoon sun, the fog, the sky — and it only ever touched the terrain
+  // (its mesh loop walks scene.children, and the buildings arrive as a group),
+  // so running it here instead of after them is the same world and one that
+  // can be shown a second sooner.
   applyLook(scene, renderer, { grade: false });
+  mark('terrain');
+  // Each stage hands back the scene as it stands. A caller that takes it can
+  // start drawing on ground alone; one that ignores it — every capture script
+  // and every test — gets exactly what it always got, because the awaits below
+  // are unchanged and the scene returned at the end is the same scene.
+  if (onStage) await onStage('terrain', scene);
+  scene.add(await buildBuildings());
+  mark('buildings');
+  if (onStage) await onStage('buildings', scene);
   await addLandCover(scene, renderer, heightAtLocal);
+  mark('land cover');
+  if (onStage) await onStage('land cover', scene);
   // Last, because it patches every material it can find and adds the flock —
   // both of which need everything else to already be in the scene.
   bringToLife(scene, {
@@ -160,6 +177,8 @@ export async function buildWorld({ renderer, segments = 1000 } = {}) {
   // world built with paths in it is still pixel-identical to one without,
   // and the seam test measures what it always measured.
   scene.userData.paths = addPaths(scene, { groundAt: heightAtLocal });
+  mark('life and paths');
+  if (onStage) await onStage('life and paths', scene);
   // Last of all, because it patches the terrain material that bringToLife has
   // just patched and adds meshes that need the same clock. The front starts
   // west of the box, so a world built with 2045 in it renders as today until
@@ -169,11 +188,13 @@ export async function buildWorld({ renderer, segments = 1000 } = {}) {
   });
   // After the future, because a placed model hides the extrusion it replaces
   // and the extrusions do not exist until addFuture has made them.
+  mark('2045');
   scene.userData.models = await addModels(scene, {
     future: scene.userData.future,
     buildings: await (await fetch(url('gv-2045-buildings.json'))).json(),
     namedRoutes: pathMeta.routes.filter((r) => r.tier === 'named'),
     groundAt: heightAtLocal,
   });
+  mark('models');
   return scene;
 }

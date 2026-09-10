@@ -20,6 +20,15 @@ Backup/
 *.tmp
 /experiments/**/scratch/
 
+# The publishable site, assembled by scripts/build_site.py from files that
+# are all tracked elsewhere. Derived, and one flag away from containing the
+# internal-only campus models, so it does not belong in the repository.
+/dist/
+
+# Payload measurements and guard plates: reproducible, and several megabytes
+# of PNG per run. The written-up numbers live in the plan, not here.
+/experiments/002-living-map/payload/
+
 # Python
 __pycache__/
 *.pyc

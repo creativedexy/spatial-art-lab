@@ -106,8 +106,19 @@ PROBE = """async () => {
 
   const markers = [...document.querySelectorAll('.place-marker')];
   out.markers = markers.map((el) => {
+    // The part of the marker a thumb can actually hit, which is not the same
+    // as the part of it you can see: the stem and the pin below the label are
+    // pointer-events: none, because left clickable they covered the map — and
+    // the descent hotspot — underneath. Measuring the element's box would
+    // have gone on reporting 68 px for a target that had none of it.
+    const hit = [...el.children].filter(
+      (c) => getComputedStyle(c).pointerEvents !== 'none');
+    const boxes = (hit.length ? hit : [el]).map((c) => c.getBoundingClientRect());
+    const top = Math.min(...boxes.map((r) => r.top));
+    const bottom = Math.max(...boxes.map((r) => r.bottom));
     const r = el.getBoundingClientRect();
-    return { w: Math.round(r.width), h: Math.round(r.height) };
+    return { w: Math.round(Math.max(...boxes.map((b) => b.width))),
+             h: Math.round(bottom - top), drawn: Math.round(r.height) };
   });
 
   out.models = { ...m.models.placed };

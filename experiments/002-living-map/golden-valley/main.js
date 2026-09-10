@@ -12,12 +12,14 @@ import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
 import {
   buildWorld, updateLife, worldSeconds, heightAtLocal, toLocal, sizeX, sizeZ,
+  pinWorld, releaseWorld,
 } from './scene.js';
 import { loadHotspots } from '../descent/path.js';
 import { createDescentPlayer } from '../descent/player.js';
 import { legAt } from './paths.js';
 import { createPathWalk } from './walk.js';
 import { createPlaces } from './places.js';
+import { mark } from './stage.js';
 
 const app = document.getElementById('app');
 
@@ -39,7 +41,34 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 app.appendChild(renderer.domElement);
 
 // After the renderer, because tone mapping and the shadow map live on it.
-const scene = await buildWorld({ renderer });
+//
+// Phase 7. The world used to arrive all at once: nothing was drawn until the
+// terrain, the land cover, four thousand footprints, the 2045 scheme and two
+// GLBs had all landed, which on a phone was twenty-five seconds of the
+// background colour. Now each stage of the build hands back the scene as it
+// stands and this draws it, so the vale is on screen as soon as the heightmap
+// is — and the rest of it grows in while you are already looking at Cheltenham.
+//
+// It is deliberately not the real frame loop. No controls, no markers, no
+// clock: this exists to put ground in front of someone, and `tick` below takes
+// over the moment the world is whole.
+let drawn = false;
+const scene = await buildWorld({
+  renderer,
+  onStage: async (name, partial) => {
+    renderer.render(partial, camera);
+    if (!drawn) {
+      drawn = true;
+      mark('first frame');
+    }
+    // Once per stage, not once per frame. Nothing here is animated and nobody
+    // is steering yet, so a running loop would only take the machine away
+    // from the work that makes the next stage arrive — which is measurable:
+    // spinning at every opportunity pushed the last stage from 68 seconds to
+    // past 110 on this container's software renderer.
+    await new Promise((r) => requestAnimationFrame(r));
+  },
+});
 
 // --- controls ---------------------------------------------------------------
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -71,6 +100,18 @@ const player = createDescentPlayer({
   onState: (state, hotspot) => render(state, hotspot),
 });
 // Start the clips arriving now, quietly, rather than when someone clicks.
+//
+// Phase 7 first deferred this to requestIdleCallback, on the grounds that
+// 2.65 MB of descent video was competing with the terrain for a phone's first
+// seconds. Both halves of that were wrong. The prefetch is not a nicety: the
+// player gives a clip a fixed budget to reach readyState 2 and falls back to
+// flying the descent live if it misses, so on a slow machine an un-warmed
+// cache means the clip route is never taken at all — the flow test caught it
+// immediately. And it was never really competing: this line runs after
+// buildWorld, which now paints the vale at its first stage, so by the time
+// the video starts arriving the map has been on screen for ten seconds.
+// The staging fixed what the deferral was aimed at, and the deferral only
+// broke the descent.
 player.prefetchClips(hotspots);
 
 for (const h of hotspots) {
@@ -412,6 +453,10 @@ if (auto) {
 // for. Nothing in the page reads it.
 window.__map = {
   renderer, scene, camera, controls, paths, walk, player, hotspots, future, places,
+  // A capture that cannot stop the clock is photographing the weather: the
+  // flock, the wind and the cloud shadows all move, so two renders of one
+  // camera differ by however long the page took to get there.
+  pinWorld, releaseWorld,
   models: scene.userData.models,
   groundAt: heightAtLocal,
 };

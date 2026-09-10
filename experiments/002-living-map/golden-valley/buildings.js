@@ -25,7 +25,17 @@ import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 const meta = await (await fetch(url('gv-meta.json'))).json();
-const buildings = await (await fetch(url('gv-buildings.json'))).json();
+
+// Phase 7. Fetched when the buildings are built, not when this module is
+// imported. A top-level await here holds up every module that imports this
+// one — which includes the one that draws the terrain — so 0.94 MB of
+// footprints stood between a phone and its first frame of ground, for meshes
+// that are not wanted until a second later.
+let buildings = null;
+export async function loadFootprints() {
+  buildings ??= await (await fetch(url('gv-buildings.json'))).json();
+  return buildings;
+}
 
 // Walls stay in a narrow off-white range on purpose. The map's proposition is
 // a measured architectural model, and 4,000 brick-red houses would trade that
@@ -140,7 +150,8 @@ function pitchedRoof(b) {
  * The town, in eleven meshes: walls and roofs for each material family, plus
  * GCHQ, which is neither a house nor a shed.
  */
-export function buildBuildings() {
+export async function buildBuildings() {
+  const buildings = await loadFootprints();
   const group = new THREE.Group();
   group.name = 'buildings';
   const parts = {};

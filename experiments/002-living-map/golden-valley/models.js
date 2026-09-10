@@ -26,6 +26,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from '../terrain/vendor/GLTFLoader.js';
+import { MeshoptDecoder } from '../terrain/vendor/meshopt_decoder.module.js';
 import { riseModel } from './future.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
@@ -99,8 +100,15 @@ function footprint(b) {
  * its base sits at y = 0, because a model whose origin is in the middle of it
  * has to be corrected at every single placement instead of once here.
  */
+// Phase 7. The GLBs left Meshy at 5.5 and 5.8 MB, most of it a 2048 baseColour
+// JPEG on a building that is never nearer than eighty metres, and the rest
+// float32 positions with three decimal places of a millimetre. Compressed
+// they are 0.73 and 0.90 MB. Meshopt is the one that needs anything of the
+// page: a 24 KB decoder, shared by every type, against 1.9 MB of geometry.
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+
 async function loadType(spec) {
-  const gltf = await new GLTFLoader().loadAsync(url(spec.file));
+  const gltf = await loader.loadAsync(url(spec.file));
   let found = null;
   gltf.scene.updateMatrixWorld(true);
   gltf.scene.traverse((o) => { if (o.isMesh && !found) found = o; });

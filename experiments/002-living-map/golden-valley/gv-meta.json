@@ -12,7 +12,7 @@
   "heightMetres": 2000,
   "elevationMinMetres": 24.3,
   "elevationMaxMetres": 59.26,
-  "binFile": "gv-height-2000.bin",
+  "binFile": "gv-height-2000.bin.gz",
   "binPixels": [
     2000,
     2000
@@ -54,5 +54,7 @@
         "count": 24
       }
     }
-  }
+  },
+  "binFormat": "delta12",
+  "binQuantisationCentimetres": 0.854
 }

@@ -38,3 +38,22 @@ nothing and removes the one defect both models share.
 
 For the web: 5.7 MB and 6.1 MB each, mostly the texture. Compress the textures
 (KTX2 or WebP) before shipping.
+
+**Done, phase 7 — and the GLBs here are the compressed ones.** 5.50 MB and
+5.82 MB became **0.73 MB and 0.90 MB**, an 86% cut, by four steps in
+`scripts/compress_assets.py`'s note: the 2048² baseColour JPEG down to 1024²
+WebP (it was 77% and 68% of each file, on a building never seen from nearer
+than eighty metres), then weld, then meshopt for the geometry. Nothing was
+simplified — the triangle count is untouched, because the NCIC's meadow roof
+is a silhouette and simplification is where silhouettes go to die.
+
+The uncompressed Meshy originals are not kept beside these: they are in git
+history at `c6cf79b`, which is where to go if a model ever needs re-deriving
+rather than re-loading.
+
+**These two do not go on the open web.** They derive from drawings that derive
+from HBD's and Grimshaw's renders, per the copyright note above, so
+`scripts/build_site.py` leaves them out unless it is asked for a pitch build
+with `--internal`. The map is built to survive that: a family whose model is
+missing keeps its extrusions, so the public build is a working map with a
+blockier campus rather than an empty field.

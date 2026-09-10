@@ -265,7 +265,7 @@ body.in-place #future-toggle, #app.flying #future-toggle { opacity: 0; pointer-e
 }
 .place-marker[hidden] { display: none; }
 .place-marker .label {
-  padding: 8px 14px 7px;
+  padding: 10px 14px 9px;
   font: 500 12px/1 var(--sans); letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--ink); background: var(--paper-veil); white-space: nowrap;
   border: 1px solid rgba(41, 48, 42, 0.14);
@@ -274,11 +274,20 @@ body.in-place #future-toggle, #app.flying #future-toggle { opacity: 0; pointer-e
 /* The year is the whole point of a place, so it is on the marker rather than
    waiting inside it. */
 .place-marker .year {
-  margin-top: -1px; padding: 3px 8px 2px;
+  margin-top: -1px; padding: 4px 8px 4px;
   font: 500 9.5px/1 var(--sans); letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--paper); background: var(--ink);
 }
 .place-marker.future .year { background: var(--amber); }
+/* Phase 7. The stem and the pin are a line drawn down to the ground, not a
+   target — and left clickable they made the marker's box reach 25 px below
+   its label, over the piece of map the label is pointing at. At GCHQ that is
+   exactly where the descent hotspot stands, and the descent became
+   unreachable: an invisible stem was swallowing every click on it. So the
+   plate is the target and the line is decoration, which is also what it looks
+   like. `.label` and `.year` between them carry the 44 px. */
+.place-marker { pointer-events: none; }
+.place-marker .label, .place-marker .year { pointer-events: auto; }
 .place-marker .stem {
   width: 1px; height: 16px; background: rgba(247, 242, 230, 0.85);
 }

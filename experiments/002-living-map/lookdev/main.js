@@ -44,7 +44,7 @@ if (bare || flatRoofs) {
   // The earlier states are assembled by hand from the same parts, so a
   // comparison is never against a differently-built world — only against the
   // same world with one pass left out.
-  scene = buildScene();
+  scene = await buildScene();
   applyLook(scene, renderer, { grade: bare });
   if (flatRoofs) await addLandCover(scene, renderer, heightAtLocal);
 } else {

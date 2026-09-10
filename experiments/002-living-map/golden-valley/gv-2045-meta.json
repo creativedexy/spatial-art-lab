@@ -14,8 +14,8 @@
     ],
     "why": "measured, not chosen: 35% of surviving hedge length in the box lies between 20 and 30 degrees, and the allocation's own boundary agrees"
   },
-  "colourFile": "gv-2045-landcover.png",
-  "classFile": "gv-2045-landclass.png",
+  "colourFile": "gv-2045-landcover.webp",
+  "classFile": "gv-2045-landclass.webp",
   "buildingFile": "gv-2045-buildings.json",
   "treeFile": "gv-2045-trees.bin",
   "classes": {
