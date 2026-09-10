@@ -1,0 +1,289 @@
+{
+  "note": "Undeveloped parcels in the Golden Valley box, found in gv-landclass.png at 4 m cells. Local metres are x east, z south from the box centre; BNG is EPSG:27700. `roadFrontageMetres` is parcel edge touching a road class, which is a proxy for access, not a survey of it.",
+  "cellMetres": 4,
+  "openClasses": [
+    "farmland",
+    "meadow",
+    "grass",
+    "scrub"
+  ],
+  "minHectares": 1.5,
+  "count": 11,
+  "sites": [
+    {
+      "hectares": 78.8,
+      "meanElevation": 39.1,
+      "meanSlopeDegrees": 1.95,
+      "aspect": "W",
+      "aspectDegrees": 256,
+      "centreLocal": [
+        -461,
+        -422
+      ],
+      "centreBNG": [
+        390939,
+        222822
+      ],
+      "extentMetres": [
+        1076,
+        1224
+      ],
+      "roadFrontageMetres": 1592,
+      "streamPixels": 17977,
+      "nearestNamedRoute": "Cheltenham Circular Footpath",
+      "nearestNamedRouteMetres": 129,
+      "toGchqMetres": 760,
+      "toGoldenValleySiteMetres": 245
+    },
+    {
+      "hectares": 10.0,
+      "meanElevation": 29.8,
+      "meanSlopeDegrees": 1.54,
+      "aspect": "W",
+      "aspectDegrees": 285,
+      "centreLocal": [
+        -799,
+        -855
+      ],
+      "centreBNG": [
+        390601,
+        223255
+      ],
+      "extentMetres": [
+        396,
+        336
+      ],
+      "roadFrontageMetres": 412,
+      "streamPixels": 1336,
+      "nearestNamedRoute": "Cheltenham Circular Footpath",
+      "nearestNamedRouteMetres": 418,
+      "toGchqMetres": 1302,
+      "toGoldenValleySiteMetres": 673
+    },
+    {
+      "hectares": 6.8,
+      "meanElevation": 53.1,
+      "meanSlopeDegrees": 1.49,
+      "aspect": "N",
+      "aspectDegrees": 11,
+      "centreLocal": [
+        652,
+        -620
+      ],
+      "centreBNG": [
+        392052,
+        223020
+      ],
+      "extentMetres": [
+        396,
+        432
+      ],
+      "roadFrontageMetres": 524,
+      "streamPixels": 0,
+      "nearestNamedRoute": "Cheltenham Circular Footpath",
+      "nearestNamedRouteMetres": 793,
+      "toGchqMetres": 865,
+      "toGoldenValleySiteMetres": 1309
+    },
+    {
+      "hectares": 6.2,
+      "meanElevation": 36.3,
+      "meanSlopeDegrees": 2.61,
+      "aspect": "NW",
+      "aspectDegrees": 329,
+      "centreLocal": [
+        -921,
+        457
+      ],
+      "centreBNG": [
+        390479,
+        221943
+      ],
+      "extentMetres": [
+        196,
+        468
+      ],
+      "roadFrontageMetres": 256,
+      "streamPixels": 0,
+      "nearestNamedRoute": "Cheltenham Circular Footpath",
+      "nearestNamedRouteMetres": 122,
+      "toGchqMetres": 1115,
+      "toGoldenValleySiteMetres": 748
+    },
+    {
+      "hectares": 3.6,
+      "meanElevation": 51.4,
+      "meanSlopeDegrees": 2.8,
+      "aspect": "S",
+      "aspectDegrees": 201,
+      "centreLocal": [
+        142,
+        57
+      ],
+      "centreBNG": [
+        391542,
+        222343
+      ],
+      "extentMetres": [
+        216,
+        216
+      ],
+      "roadFrontageMetres": 352,
+      "streamPixels": 0,
+      "nearestNamedRoute": "Gloucestershire Cycle Spine",
+      "nearestNamedRouteMetres": 376,
+      "toGchqMetres": 20,
+      "toGoldenValleySiteMetres": 783
+    },
+    {
+      "hectares": 3.4,
+      "meanElevation": 37.8,
+      "meanSlopeDegrees": 4.05,
+      "aspect": "SW",
+      "aspectDegrees": 234,
+      "centreLocal": [
+        -869,
+        753
+      ],
+      "centreBNG": [
+        390531,
+        221647
+      ],
+      "extentMetres": [
+        312,
+        192
+      ],
+      "roadFrontageMetres": 220,
+      "streamPixels": 253,
+      "nearestNamedRoute": "Gloucestershire Cycle Spine",
+      "nearestNamedRouteMetres": 361,
+      "toGchqMetres": 1208,
+      "toGoldenValleySiteMetres": 1007
+    },
+    {
+      "hectares": 3.4,
+      "meanElevation": 35.8,
+      "meanSlopeDegrees": 4.18,
+      "aspect": "SW",
+      "aspectDegrees": 217,
+      "centreLocal": [
+        -780,
+        897
+      ],
+      "centreBNG": [
+        390620,
+        221503
+      ],
+      "extentMetres": [
+        600,
+        284
+      ],
+      "roadFrontageMetres": 448,
+      "streamPixels": 1066,
+      "nearestNamedRoute": "Gloucestershire Cycle Spine",
+      "nearestNamedRouteMetres": 436,
+      "toGchqMetres": 1229,
+      "toGoldenValleySiteMetres": 1128
+    },
+    {
+      "hectares": 2.9,
+      "meanElevation": 37.4,
+      "meanSlopeDegrees": 1.83,
+      "aspect": "NE",
+      "aspectDegrees": 37,
+      "centreLocal": [
+        -698,
+        565
+      ],
+      "centreBNG": [
+        390702,
+        221835
+      ],
+      "extentMetres": [
+        200,
+        260
+      ],
+      "roadFrontageMetres": 64,
+      "streamPixels": 0,
+      "nearestNamedRoute": "Gloucestershire Cycle Spine",
+      "nearestNamedRouteMetres": 111,
+      "toGchqMetres": 961,
+      "toGoldenValleySiteMetres": 787
+    },
+    {
+      "hectares": 2.6,
+      "meanElevation": 55.1,
+      "meanSlopeDegrees": 1.4,
+      "aspect": "SW",
+      "aspectDegrees": 206,
+      "centreLocal": [
+        783,
+        -56
+      ],
+      "centreBNG": [
+        392183,
+        222456
+      ],
+      "extentMetres": [
+        244,
+        196
+      ],
+      "roadFrontageMetres": 316,
+      "streamPixels": 0,
+      "nearestNamedRoute": "Gloucestershire Cycle Spine",
+      "nearestNamedRouteMetres": 376,
+      "toGchqMetres": 671,
+      "toGoldenValleySiteMetres": 1384
+    },
+    {
+      "hectares": 1.9,
+      "meanElevation": 34.6,
+      "meanSlopeDegrees": 0.85,
+      "aspect": "N",
+      "aspectDegrees": 360,
+      "centreLocal": [
+        -593,
+        347
+      ],
+      "centreBNG": [
+        390807,
+        222053
+      ],
+      "extentMetres": [
+        136,
+        276
+      ],
+      "roadFrontageMetres": 36,
+      "streamPixels": 21,
+      "nearestNamedRoute": "Gloucestershire Cycle Spine",
+      "nearestNamedRouteMetres": 130,
+      "toGchqMetres": 769,
+      "toGoldenValleySiteMetres": 562
+    },
+    {
+      "hectares": 1.5,
+      "meanElevation": 32.6,
+      "meanSlopeDegrees": 0.63,
+      "aspect": "N",
+      "aspectDegrees": 4,
+      "centreLocal": [
+        -727,
+        232
+      ],
+      "centreBNG": [
+        390673,
+        222168
+      ],
+      "extentMetres": [
+        184,
+        244
+      ],
+      "roadFrontageMetres": 76,
+      "streamPixels": 276,
+      "nearestNamedRoute": "Cheltenham Circular Footpath",
+      "nearestNamedRouteMetres": 121,
+      "toGchqMetres": 867,
+      "toGoldenValleySiteMetres": 467
+    }
+  ]
+}
