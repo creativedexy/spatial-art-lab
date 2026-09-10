@@ -6,7 +6,8 @@ the existing Golden Valley assets, a video plan, and the interactive web work.
 No far-field terrain. Phase: **Develop → Deliver.**
 
 The rules that still hold: no empty frames (a place of interest, buildings and
-people in every one); "before" frames parked; transitions are a blurry zoom-in;
+people in every one); "before" frames parked; transitions are not a focus
+(no blur zooms; a plain cut is enough);
 every paid run needs Dex's yes with the bill stated.
 
 ## 1. Closer shots: one works now, the campus needs step 2 first
@@ -65,8 +66,8 @@ the best reference there is for what it should look like.
 
 ## 4. Video: life inside approved frames, never travel between them
 
-Transitions are free zoom-blurs in the page, so generated video has one job
-left: **bring an approved still to life**. Locked camera, 5 s, loops.
+Transitions are not a focus and get no generated video, so generated video
+has one job: **bring an approved still to life**. Locked camera, 5 s, loops.
 
 | clip | from | what moves |
 |---|---|---|
@@ -95,45 +96,21 @@ map and the approved photos:
 live map (today) --2045 toggle sweeps the future across the vale-->
   click a place of interest (GCHQ, the campus, the agrivoltaic fields)
   --> camera flies to that photo's own map camera        (the plates ARE map cameras)
-  --> zoom-blur crossfade into the photo, or its loop    (blur hides the 20–50 px drift)
-  --> back out, blur, to the live map
+  --> the approved photo (or its loop) over the map, plain crossfade
+  --> back out to the live map
 ```
 
-Every generated photo came from a map camera, so the handover is always at a
-matched viewpoint. The blur hides the drift that would otherwise show at the
-handover.
+Every generated photo came from a map camera, so the handover always lands on
+a matched viewpoint. No transition effects: Dex ruled blur zooms out on 10 Sep,
+and the play area built to tune one has been deleted.
 
-**Start:** a throwaway play area that does exactly one handover (map plate →
-zoom-blur → photo → back) with sliders for blur strength and duration, to
-decide by eye whether the blur really hides 50 px. Then the real build goes
-through `/dex-web`, in the map, owned by the main session. The local session
-supplies photos, loops and GLBs through the `generate/` queue.
-
-## Play area result (first read, 10 Sep)
-
-`experiments/002-living-map/playground/handover.html`: one handover function,
-four real plate/photo pairs, sliders, a scrub bar and a hard-cut baseline.
-
-Tested on the worst pair (003 A, GCHQ drawn about 50 px high) held still at the
-crossfade:
-
-| setting | at the crossfade |
-|---|---|
-| hard cut (no blur, no zoom) | an obvious double exposure: two horizons, ghosted buildings |
-| blur 14 px, zoom 1.24× | drift gone, but so is everything else; far more than needed |
-| **blur 6 px, zoom 1.24×** | **drift gone; fields, town and distance still read** |
-
-**Starting numbers for the build: peak blur ≈ 0.5 % of frame width (6 px at
-1280), zoom 1.24× at the crossfade, 1.1 s, crossfade width 0.35**, with blur
-and zoom peaking together at the midpoint. These are the page's defaults. Dex
-confirms or changes them by eye; that is what the page is for. In motion the
-drift shows less than it does held still, so these are conservative.
+**Who builds it:** the main session, which owns the map code: see
+`experiments/002-living-map/MAIN-SESSION-TASK-001.md`. The local session
+supplies photos, loops and GLBs.
 
 ## Order
 
 1. GCHQ close-up (free). **Blocked until 17:06 on 10 Sep:** Codex returned "You've hit your usage limit ... try again at 5:06 PM". Plate, anchors and prompt are ready in `generate/close-2045/`; rerun as is.
-2. Transition play area (free), which settles whether the zoom hides the drift.
-3. Meshy a + b (**70 credits, awaiting Dex's yes**) → campus close-ups pass.
-4. Video loops (**$1.68, awaiting Dex's yes**), after the play area shows
-   whether a loop beats a still in the handover.
-5. Web build in the map, via `/dex-web`.
+2. Meshy a + b: **approved by Dex, 70 credits**, then the campus close-ups pass.
+3. Video loops (**$1.68, awaiting Dex's yes**).
+4. Web build in the map: main session, task 001.

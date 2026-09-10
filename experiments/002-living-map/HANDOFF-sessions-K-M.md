@@ -1,5 +1,8 @@
 # Handoff to the main session
 
+> **Open task for you: [`MAIN-SESSION-TASK-001.md`](MAIN-SESSION-TASK-001.md)**, the approved
+> photos as clickable places in the map, then real buildings on the 2045 footprints.
+
 ## Standing rules from Dex, 10 Sep 2026
 
 **Look approved, 10 Sep, after 003.** Dex likes the 2045 set. Next: closer
@@ -8,7 +11,8 @@ interactive web work. **No far-field terrain skirt**, which was 003's
 suggestion; Dex does not think it is needed, so do not build it.
 
 **No empty frames.** Every generated frame must show a place of interest,
-buildings and people; transitions are a blurry zoom-in, not a journey. Full
+buildings and people. Transitions are not a focus: no blur zooms, no
+route-following, a plain cut is enough. Full
 rule and its check in `generate/README.md`.
 
 **"Before" frames are parked.** No site-today or empty-plot frames until Dex

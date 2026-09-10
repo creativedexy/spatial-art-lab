@@ -40,12 +40,10 @@ ground or empty sky; if it is, it fails and is regenerated or dropped.
 empty-plot half of a before/after pair. Brief only frames of the built scheme
 and of real places with life in them until Dex unparks it.
 
-**Transitions are a blurry zoom-in, not a journey.** Get from one interesting
-frame to the next with a push-in and motion blur, done in the page or in ffmpeg
-for nothing. There is no need to travel an empty path between them, and no
-need to generate video for a transition at all. This also retires most of the
-registration problem: a blurred push-in does not need its last frame to match
-the next one to the pixel.
+**Transitions are not a focus** (Dex, 10 Sep: "blur zooms? No way."). Do not
+spend time on transition effects or tooling, do not travel an empty route
+between frames, and do not generate video for a transition. A plain cut or
+crossfade is enough.
 
 ## Rules that do not change
 
