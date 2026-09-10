@@ -1,0 +1,139 @@
+# Golden Valley: from approved look to a working experience
+
+10 Sep 2026. Dex approved the 2045 look after brief 003 and set five
+workstreams: closer shots, Meshy models of the key buildings, combining with
+the existing Golden Valley assets, a video plan, and the interactive web work.
+No far-field terrain. Phase: **Develop → Deliver.**
+
+The rules that still hold: no empty frames (a place of interest, buildings and
+people in every one); "before" frames parked; transitions are a blurry zoom-in;
+every paid run needs Dex's yes with the bill stated.
+
+## 1. Closer shots: one works now, the campus needs step 2 first
+
+Three close plates rendered from the 2045 map at 80–150 m.
+
+| plate | rule | why |
+|---|---|---|
+| GCHQ with its meadow roof | **passes** | the ring fills the frame; queued behind the Codex usage limit |
+| campus centre, campus cluster | **fails** | four blank slabs far apart; grass plus sky is over half the frame |
+| glasshouse quarter | **fails** | the glasshouse is one thin block in an orchard |
+
+That failure is the finding. From 400 m up the rule-based scheme reads as a
+town; from 100 m it is sparse (built area is capped at a third) and its blocks
+are featureless extrusions with plain grass between them. **Closer shots of the
+campus need real buildings and designed ground between them.** Prompting more
+will not help, because the plate does not contain what the rule asks for.
+
+## 2. Meshy: a kit, not a set of one-offs
+
+Model **types** and place them on the scheme's own footprints, rather than
+modelling individual buildings. One model, many placements, and it carries
+over to the next site.
+
+| # | model | placements | why |
+|---|---|---|---|
+| a | **the National Cyber Innovation Centre**, the sloping meadow-roof building | 1 | the signature; the campus's place of interest up close |
+| b | **campus courtyard block**, 4–5 storeys, timber and buff stone, horizontal banding | 20 campus footprints | turns the blank slabs into architecture |
+| c | **glasshouse** | 3 | the glasshouse quarter becomes a subject |
+| d | **terrace home**, brick and timber, gabled | 70 home footprints | optional; homes read fine from the air already |
+
+**GCHQ is not on the list.** The measured ring is better than any generated
+model of it.
+
+**How:** Codex (free) draws each type clean and isolated: a three-quarter view
+plus a second angle, neutral ground, in the approved 2045 materials. Then
+`meshy_multi_image_to_3d` (meshy-6, textured), then `meshy_remesh` down to a
+web budget, then GLB into the map, scaled and turned to each footprint in
+`gv-2045-buildings.json`.
+
+**Cost:** 497 credits available. meshy-6 textured is 30 credits a model and a
+remesh is 5. A and b first as the test: **70 credits**. All four: **140**.
+
+## 3. Using the existing Golden Valley assets
+
+`inspiration/golden-valley/` holds the developer's and Grimshaw's renders.
+The innovation centre in the HBD aerial *is* building (a), so those images are
+the best reference there is for what it should look like.
+
+- **Use them as reference for the Codex drawings that feed Meshy**, so model
+  (a) is recognisably the scheme's own building rather than a lookalike.
+- **Copyright:** they are HBD's and Grimshaw's work. Models derived from them
+  are for internal pitch work; do not publish or ship them without permission.
+  The queue's README says to ask before feeding these to a generator, and Dex
+  has now asked for it, so this is the one sanctioned use.
+
+## 4. Video: life inside approved frames, never travel between them
+
+Transitions are free zoom-blurs in the page, so generated video has one job
+left: **bring an approved still to life**. Locked camera, 5 s, loops.
+
+| clip | from | what moves |
+|---|---|---|
+| agrivoltaics | 003 C | the tractor between the panel rows, workers, the crop in the wind |
+| GCHQ | 002 | traffic on the perimeter road, people walking to the entrance |
+| campus courtyards | 003 B | people crossing the courtyards, cyclists on the streets |
+
+- **Engine:** `fal-ai/kling-video/v3/pro/image-to-video`, the approved photo as
+  both `start_image_url` and `end_image_url` so the clip loops back to where it
+  started, `generate_audio: false`, `duration: 5`.
+- **Prompt:** 40–70 words, camera locked off, name whatever must move as
+  arriving in the frame (the routing skill's rules, each learned from a failed
+  take).
+- **Check by numbers, not by eye:** per-frame mean luminance and the drift
+  against frame 0, as the routing skill does it.
+- **Cost:** $0.112/s × 5 s = **$0.56 a clip, $1.68 for all three (about
+  £1.30).** Not spent until Dex says yes.
+
+## 5. The interactive web experience
+
+The living map already exists (the three.js map in `golden-valley/`, Session
+D's hotspot player, the 2045 toggle). The experience is the join between the
+map and the approved photos:
+
+```
+live map (today) --2045 toggle sweeps the future across the vale-->
+  click a place of interest (GCHQ, the campus, the agrivoltaic fields)
+  --> camera flies to that photo's own map camera        (the plates ARE map cameras)
+  --> zoom-blur crossfade into the photo, or its loop    (blur hides the 20–50 px drift)
+  --> back out, blur, to the live map
+```
+
+Every generated photo came from a map camera, so the handover is always at a
+matched viewpoint. The blur hides the drift that would otherwise show at the
+handover.
+
+**Start:** a throwaway play area that does exactly one handover (map plate →
+zoom-blur → photo → back) with sliders for blur strength and duration, to
+decide by eye whether the blur really hides 50 px. Then the real build goes
+through `/dex-web`, in the map, owned by the main session. The local session
+supplies photos, loops and GLBs through the `generate/` queue.
+
+## Play area result (first read, 10 Sep)
+
+`experiments/002-living-map/playground/handover.html`: one handover function,
+four real plate/photo pairs, sliders, a scrub bar and a hard-cut baseline.
+
+Tested on the worst pair (003 A, GCHQ drawn about 50 px high) held still at the
+crossfade:
+
+| setting | at the crossfade |
+|---|---|
+| hard cut (no blur, no zoom) | an obvious double exposure: two horizons, ghosted buildings |
+| blur 14 px, zoom 1.24× | drift gone, but so is everything else; far more than needed |
+| **blur 6 px, zoom 1.24×** | **drift gone; fields, town and distance still read** |
+
+**Starting numbers for the build: peak blur ≈ 0.5 % of frame width (6 px at
+1280), zoom 1.24× at the crossfade, 1.1 s, crossfade width 0.35**, with blur
+and zoom peaking together at the midpoint. These are the page's defaults. Dex
+confirms or changes them by eye; that is what the page is for. In motion the
+drift shows less than it does held still, so these are conservative.
+
+## Order
+
+1. GCHQ close-up (free). **Blocked until 17:06 on 10 Sep:** Codex returned "You've hit your usage limit ... try again at 5:06 PM". Plate, anchors and prompt are ready in `generate/close-2045/`; rerun as is.
+2. Transition play area (free), which settles whether the zoom hides the drift.
+3. Meshy a + b (**70 credits, awaiting Dex's yes**) → campus close-ups pass.
+4. Video loops (**$1.68, awaiting Dex's yes**), after the play area shows
+   whether a loop beats a still in the handover.
+5. Web build in the map, via `/dex-web`.
