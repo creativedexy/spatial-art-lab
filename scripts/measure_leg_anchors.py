@@ -97,7 +97,10 @@ def describe(leg_file):
     buildings = load("gv-buildings.json")
     ground = height_field(meta)
 
-    route = next(r for r in paths["routes"] if r["id"] == leg["route"]["id"])
+    # A composed plate has no route through it; a leg does. Everything else
+    # here is the same measurement either way.
+    route = next((r for r in paths["routes"]
+                  if r["id"] == leg.get("route", {}).get("id")), None)
     size = leg["camera"]["size"]
 
     out = []
@@ -115,13 +118,17 @@ def describe(leg_file):
 
         # The path itself, at fixed distances ahead. This is the line the
         # picture is about, and the thing a generator most wants to straighten.
-        here = leg["leg"]["from"] + frame["atMetres"]
-        arc = [0.0]
-        pts = [(p[0], ground(p[0], p[1]), p[1]) for p in route["points"]]
-        for a, b in zip(pts, pts[1:]):
-            arc.append(arc[-1] + math.dist(a, b))
         track = []
-        for ahead in (20, 40, 80, 160, 320):
+        if route is not None:
+            here = leg["leg"]["from"] + frame["atMetres"]
+            arc = [0.0]
+            pts = [(p[0], ground(p[0], p[1]), p[1]) for p in route["points"]]
+            for a, b in zip(pts, pts[1:]):
+                arc.append(arc[-1] + math.dist(a, b))
+            aheads = (20, 40, 80, 160, 320)
+        else:
+            here, arc, pts, aheads = 0, [0.0], [], ()
+        for ahead in aheads:
             d = here + ahead
             if d > arc[-1]:
                 break
@@ -192,11 +199,25 @@ def describe(leg_file):
                         vs.append(q[1])
             if not us:
                 continue
-            named_b.append({
+            entry = {
                 "name": b["name"], "metres": base[2],
                 "u": [round(min(us), 3), round(max(us), 3)],
                 "v": [round(min(vs), 3), round(max(vs), 3)],
-            })
+            }
+            # A courtyard is a hole in the footprint, and it is the one part of
+            # GCHQ a generator reliably gets wrong — Session M had to tell it
+            # twice not to enlarge the hole, and once not to fill it with water.
+            hu, hv = [], []
+            for hole in b.get("holes") or []:
+                for x, z in hole:
+                    q = cam.project((x, b["base"] + b["height"], z))
+                    if q:
+                        hu.append(q[0])
+                        hv.append(q[1])
+            if hu:
+                entry["courtyardU"] = [round(min(hu), 3), round(max(hu), 3)]
+                entry["courtyardV"] = [round(min(hv), 3), round(max(hv), 3)]
+            named_b.append(entry)
         # One entry per name: a campus arrives as many footprints and the
         # prompt wants the box round all of them.
         merged = {}
@@ -205,6 +226,9 @@ def describe(leg_file):
             m["u"] = [min(m["u"][0], n["u"][0]), max(m["u"][1], n["u"][1])]
             m["v"] = [min(m["v"][0], n["v"][0]), max(m["v"][1], n["v"][1])]
             m["metres"] = min(m["metres"], n["metres"])
+            for k in ("courtyardU", "courtyardV"):
+                if k in n:
+                    m[k] = n[k]
         # Only the ones that are actually a shape in the picture. OSM names
         # every shop on Coronation Square, and a kebab house 1.5 km away
         # occupying four thousandths of the frame is noise in a prompt, not a
@@ -248,7 +272,7 @@ def main():
                  "as normalised image coordinates: u is 0 at the left edge and "
                  "1 at the right, v is 0 at the top and 1 at the bottom. These "
                  "are what a generated frame must not move."),
-        "route": leg["route"]["name"],
+        "route": leg.get("route", {}).get("name"),
         "frames": frames,
     }, indent=2) + "\n")
 
@@ -265,6 +289,9 @@ def main():
         for n in a.get("namedBuildings", []):
             print(f"  NAMED          {n['metres']:>5.0f} m   u={n['u'][0]}..{n['u'][1]}  "
                   f"v={n['v'][0]}..{n['v'][1]}   {n['name']}")
+            if "courtyardU" in n:
+                print(f"     courtyard             u={n['courtyardU'][0]}..{n['courtyardU'][1]}  "
+                      f"v={n['courtyardV'][0]}..{n['courtyardV'][1]}")
         for n in a.get("nearBuildings", []):
             print(f"  near building  {n['metres']:>5.0f} m   u={n['u']:<7} "
                   f"base v={n['vBase']:<7} roof v={n['vRoof']}"
