@@ -303,6 +303,42 @@ def read_routes(root, nodes, ways):
 
 # --- assembly ---------------------------------------------------------------
 
+# Not routes, and never drawn by paths.js — but the two things Session M
+# reported a generator quietly changing every time: "a somewhat wider stream,
+# a slightly higher foreground hedge". They come out of the same OSM read, and
+# knowing where they land in a frame is what lets a prompt lock them before the
+# first draft rather than after the second.
+LANDMARKS = {
+    "waterway": {"stream": "stream", "river": "river", "ditch": "ditch",
+                 "drain": "drain"},
+}
+
+
+def read_landmarks(root, nodes):
+    out = []
+    for w in root.iter("way"):
+        tags = tags_of(w)
+        kind = None
+        if tags.get("waterway") in LANDMARKS["waterway"]:
+            kind = LANDMARKS["waterway"][tags["waterway"]]
+        elif tags.get("barrier") == "hedge":
+            kind = "hedge"
+        elif tags.get("natural") == "tree_row":
+            kind = "tree_row"
+        if kind is None or tags.get("tunnel") == "yes":
+            continue
+        pts = [nodes[nd.get("ref")] for nd in w if nd.tag == "nd"
+               and nd.get("ref") in nodes]
+        for run in runs_inside(pts):
+            if length_of(run) < 40:
+                continue
+            out.append({"kind": kind, "name": tags.get("name"),
+                        "lengthMetres": round(length_of(run), 1),
+                        "points": [[round(x, 2), round(z, 2)]
+                                   for x, z in resample(run, 8.0)]})
+    return out
+
+
 def slug(text, used):
     s = "".join(c if c.isalnum() else "-" for c in text.lower()).strip("-")
     while "--" in s:
@@ -337,6 +373,13 @@ def dedupe(routes, overlap=0.85):
 
 def build():
     nodes, ways, root = read_paths()
+    # Every node in the extract, not just the walkable ones: a stream is not a
+    # way you can walk down.
+    all_nodes = {}
+    to_bng = Transformer.from_crs(4326, 27700, always_xy=True)
+    for n in root.iter("node"):
+        e, nn = to_bng.transform(float(n.get("lon")), float(n.get("lat")))
+        all_nodes[n.get("id")] = (e - CX, CZ - nn)
     print(f"walkable ways {len(ways)}")
 
     used_ids = set()
@@ -408,7 +451,9 @@ def build():
 
     named.sort(key=lambda r: -r["lengthMetres"])
     strands.sort(key=lambda r: -r["lengthMetres"])
-    return named, strands
+    landmarks = read_landmarks(root, all_nodes)
+    landmarks.sort(key=lambda r: -r["lengthMetres"])
+    return named, strands, landmarks
 
 
 def main():
@@ -418,7 +463,7 @@ def main():
                     help="report what would be written, write nothing")
     args = ap.parse_args()
 
-    named, strands = build()
+    named, strands, landmarks = build()
     routes = named + strands
     total = sum(r["lengthMetres"] for r in routes) / 1000
     pts = sum(len(r["points"]) for r in routes)
@@ -431,6 +476,7 @@ def main():
         print(f"   {r['lengthMetres']:8.1f} m  {r['id']:<34s} {r['kind']}")
     by_kind = Counter(r["kind"] for r in routes)
     print(f"\nkinds {dict(by_kind)}")
+    print(f"landmarks {dict(Counter(l['kind'] for l in landmarks))}")
     print(f"total {total:.2f} km over {pts} points")
 
     doc = {
@@ -450,8 +496,12 @@ def main():
         "stepMetres": STEP_METRES,
         "minStrandMetres": MIN_STRAND,
         "counts": {"named": len(named), "strands": len(strands),
+                   "landmarks": len(landmarks),
                    "kilometres": round(total, 2), "points": pts},
         "routes": routes,
+        # Read by scripts/measure_leg_anchors.py, ignored by paths.js, which
+        # only ever looks at `routes`.
+        "landmarks": landmarks,
     }
     if args.dry_run:
         print("\n--dry-run: nothing written")

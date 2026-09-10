@@ -14,7 +14,7 @@ protocol.
 
 | # | request | for | status |
 |---|---|---|---|
-| 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg | open |
+| 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg, in Codex, at £0 | open |
 
 ## Rules that do not change
 
@@ -26,8 +26,12 @@ protocol.
 - **Plates are rendered with the interface hidden.** The amber path ribbon is
   how a viewer *chooses* a route; a generator conditioned on it will paint a
   glowing strip down the middle of the finished footage.
-- **Cheap first.** Every request names the cheapest rung that could answer it.
-  If the cheap rung answers it, stop.
+- **Codex first, for imagery.** Session M measured it: Codex on the ChatGPT
+  subscription beat the paid models outright at £0, and the paid image rungs
+  put a shed where GCHQ is. A paid call is for the thing Codex cannot do —
+  which today means video, and nothing else.
+- **Cheap first, within that.** Every request names the cheapest step that
+  could answer it. If the cheap step answers it, stop.
 
 ## Reference — what the map looks like today
 

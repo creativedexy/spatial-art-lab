@@ -474,11 +474,24 @@ it still plainly reads as travelling the route rather than looking down at it.
 
 Nothing. Five steps — extract, drape, draw, pick, walk — and no generation.
 The map now offers real routes, lit, named and walkable, before a penny is
-spent. The next thing that costs money is one leg: capture the passes along
-it and buy about five seconds of photoreal video, roughly 45p. If it comes
-back wrong we lose 45p and the map still works, because every leg falls back
-to the live walk exactly as every hotspot already falls back to a live
-descent.
+spent.
+
+**And the next step costs nothing either, which was a correction.** The first
+draft of `generate/001-path-leg.md` opened with a cheap paid image-to-image
+rung, which is a question this repo had already bought the answer to: Session M
+re-ran exactly that for US$0.06 and flux put a shed and a playing field where
+GCHQ is — *"beauty-conditioning was always the weak path"* — while Codex on the
+subscription beat the paid models outright at £0. Imagery goes to Codex. A paid
+call is for what Codex cannot do, which today means video and nothing else.
+
+What we can add that Codex cannot get for itself is **registration**. Its own
+verdict on the vision frames was "closely aligned visually, but not
+survey-exact", and it found that drift by inspecting its first draft and
+writing itself a correction prompt full of normalised coordinates.
+`scripts/measure_leg_anchors.py` projects the surveyed features — the path
+line, the horizon, the stream, the hedges, the settlement roofline — through
+the leg's own camera and writes those coordinates out in advance. The second
+pass becomes the first.
 
 ## Immediate next step
 

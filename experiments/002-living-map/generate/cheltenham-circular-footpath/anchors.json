@@ -1,0 +1,232 @@
+{
+  "note": "Surveyed features projected through this leg's own camera, as normalised image coordinates: u is 0 at the left edge and 1 at the right, v is 0 at the top and 1 at the bottom. These are what a generated frame must not move.",
+  "route": "Cheltenham Circular Footpath",
+  "frames": [
+    {
+      "file": "a-start.png",
+      "anchors": {
+        "horizonV": 0.452,
+        "path": [
+          {
+            "metresAhead": 40,
+            "u": 0.5,
+            "v": 0.825
+          },
+          {
+            "metresAhead": 80,
+            "u": 0.5,
+            "v": 0.634
+          },
+          {
+            "metresAhead": 160,
+            "u": 0.5,
+            "v": 0.543
+          },
+          {
+            "metresAhead": 320,
+            "u": 0.5,
+            "v": 0.482
+          }
+        ],
+        "landmarks": [
+          {
+            "kind": "stream",
+            "nearestMetres": 67,
+            "enters": {
+              "u": 0.528,
+              "v": 0.473
+            },
+            "leaves": {
+              "u": 0.932,
+              "v": 0.704
+            },
+            "spanU": [
+              0.528,
+              0.932
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 157,
+            "enters": {
+              "u": 0.123,
+              "v": 0.475
+            },
+            "leaves": {
+              "u": 0.008,
+              "v": 0.528
+            },
+            "spanU": [
+              0.008,
+              0.123
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 500,
+            "enters": {
+              "u": 0.961,
+              "v": 0.446
+            },
+            "leaves": {
+              "u": 0.947,
+              "v": 0.446
+            },
+            "spanU": [
+              0.947,
+              0.961
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 508,
+            "enters": {
+              "u": 0.973,
+              "v": 0.446
+            },
+            "leaves": {
+              "u": 0.965,
+              "v": 0.446
+            },
+            "spanU": [
+              0.964,
+              0.973
+            ]
+          }
+        ],
+        "nearBuildings": [],
+        "settlementEdge": {
+          "count": 1965,
+          "uFrom": 0.21,
+          "uTo": 1.0,
+          "vRooflineTop": 0.436,
+          "vBaseTypical": 0.451,
+          "nearestMetres": 277
+        }
+      }
+    },
+    {
+      "file": "b-end.png",
+      "anchors": {
+        "horizonV": 0.374,
+        "path": [
+          {
+            "metresAhead": 40,
+            "u": 0.5,
+            "v": 0.734
+          },
+          {
+            "metresAhead": 80,
+            "u": 0.5,
+            "v": 0.556
+          },
+          {
+            "metresAhead": 160,
+            "u": 0.542,
+            "v": 0.458
+          },
+          {
+            "metresAhead": 320,
+            "u": 0.09,
+            "v": 0.448
+          }
+        ],
+        "landmarks": [
+          {
+            "kind": "stream",
+            "nearestMetres": 43,
+            "enters": {
+              "u": 0.622,
+              "v": 0.528
+            },
+            "leaves": {
+              "u": 0.903,
+              "v": 0.757
+            },
+            "spanU": [
+              0.622,
+              0.903
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 401,
+            "enters": {
+              "u": 0.654,
+              "v": 0.384
+            },
+            "leaves": {
+              "u": 0.552,
+              "v": 0.396
+            },
+            "spanU": [
+              0.552,
+              0.681
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 491,
+            "enters": {
+              "u": 0.629,
+              "v": 0.38
+            },
+            "leaves": {
+              "u": 0.474,
+              "v": 0.381
+            },
+            "spanU": [
+              0.474,
+              0.629
+            ]
+          }
+        ],
+        "nearBuildings": [
+          {
+            "name": null,
+            "metres": 167.4,
+            "u": 0.963,
+            "vBase": 0.437,
+            "vRoof": 0.4
+          },
+          {
+            "name": null,
+            "metres": 169.9,
+            "u": 0.986,
+            "vBase": 0.437,
+            "vRoof": 0.417
+          },
+          {
+            "name": null,
+            "metres": 170.8,
+            "u": 0.935,
+            "vBase": 0.437,
+            "vRoof": 0.397
+          },
+          {
+            "name": null,
+            "metres": 171.2,
+            "u": 1.003,
+            "vBase": 0.436,
+            "vRoof": 0.402
+          },
+          {
+            "name": null,
+            "metres": 173.8,
+            "u": 1.007,
+            "vBase": 0.435,
+            "vRoof": 0.41
+          }
+        ],
+        "settlementEdge": {
+          "count": 1779,
+          "uFrom": 0.002,
+          "uTo": 1.0,
+          "vRooflineTop": 0.361,
+          "vBaseTypical": 0.381,
+          "nearestMetres": 201
+        }
+      }
+    }
+  ]
+}

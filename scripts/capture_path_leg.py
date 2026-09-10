@@ -60,7 +60,7 @@ class Server(socketserver.ThreadingTCPServer):
 
 # Runs in the page. Everything about where the camera goes comes from the
 # map's own modules — this only asks, renders and hands back PNGs.
-SHOOT = """async ({ routeId, near, metres }) => {
+SHOOT = """async ({ routeId, near, metres, offset }) => {
   const m = window.__map;
   const paths = await import('./paths.js');
   const walkMod = await import('./walk.js');
@@ -74,6 +74,16 @@ SHOOT = """async ({ routeId, near, metres }) => {
       const d = Math.hypot(p.x - near[0], p.z - near[1]);
       if (d < best) { best = d; index = i; }
     });
+  }
+  // `offset` slides the leg along the route from wherever `near` landed. The
+  // point nearest a place and the point a leg should start from are not the
+  // same thing: the first leg picked here opened beside a featureless barn
+  // 49 m away, which is the ambiguous input the whole approach exists to
+  // avoid — a generator asked to interpret a grey box will invent one.
+  if (offset) {
+    const step = route.arc[route.arc.length - 1] / (route.arc.length - 1);
+    index = Math.max(0, Math.min(route.pts.length - 1,
+                                 index + Math.round(offset / step)));
   }
   const leg = walkMod.measureLeg(paths.legAt(route, index, metres));
 
@@ -124,6 +134,8 @@ def main():
     ap.add_argument("--route", default="cheltenham-circular-footpath")
     ap.add_argument("--near", help="easting,northing to centre the leg on")
     ap.add_argument("--metres", type=float, default=320)
+    ap.add_argument("--offset", type=float, default=0,
+                    help="slide the leg this many metres along the route from --near")
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--port", type=int, default=8181)
     args = ap.parse_args()
@@ -152,7 +164,8 @@ def main():
         page.wait_for_function("window.__terrainReady === true", timeout=300000)
         page.wait_for_timeout(3000)
         result = page.evaluate(SHOOT, {"routeId": args.route, "near": near,
-                                       "metres": args.metres})
+                                       "metres": args.metres,
+                                       "offset": args.offset})
         browser.close()
     srv.shutdown()
 
