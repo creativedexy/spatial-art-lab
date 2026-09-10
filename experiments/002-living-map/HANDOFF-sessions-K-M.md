@@ -1,7 +1,8 @@
 # Handoff to the main session
 
 > **Open task for you: [`MAIN-SESSION-TASK-001.md`](MAIN-SESSION-TASK-001.md)**, the approved
-> photos as clickable places in the map, then real buildings on the 2045 footprints.
+> photos as clickable places in the map, then procedural facades on the 2045 buildings
+> (Part 2 rewritten 10 Sep: Meshy was the wrong tool for straight-lined architecture).
 
 ## Standing rules from Dex, 10 Sep 2026
 

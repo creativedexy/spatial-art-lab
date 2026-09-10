@@ -1,0 +1,79 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Google 3D tiles test</title>
+<style>
+  body{margin:0;background:#cfd8df;font:13px/1.4 system-ui,-apple-system,sans-serif}
+  #c{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+  #ui{position:fixed;left:10px;top:10px;background:#fff;padding:8px 10px;border-radius:6px;max-width:460px}
+  #ui button{font:inherit;margin:2px 4px 2px 0;padding:5px 9px;border:1px solid #111;background:#fff;border-radius:5px;cursor:pointer}
+  #attr{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.85);padding:3px 8px;font-size:11px}
+  #msg{color:#b3341f}
+</style>
+<script src="key.js" onerror="window.GOOGLE_TILES_KEY=null"></script>
+<script type="importmap">{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+  "three/":"https://cdn.jsdelivr.net/npm/three@0.170.0/",
+  "3d-tiles-renderer/three":"https://esm.sh/3d-tiles-renderer@0.5.2/three?external=three",
+  "3d-tiles-renderer/three/plugins":"https://esm.sh/3d-tiles-renderer@0.5.2/three/plugins?external=three",
+  "3d-tiles-renderer/core/plugins":"https://esm.sh/3d-tiles-renderer@0.5.2/core/plugins?external=three"
+}}</script>
+</head><body>
+<canvas id="c"></canvas>
+<div id="ui"><b>Google Photorealistic 3D Tiles over the living map</b><br>
+Same cameras as our plates. Local metres: x east, z south, y above sea level.<br>
+<span id="cams"></span><br><span id="msg"></span></div>
+<div id="attr"></div>
+<script type="module">
+import * as THREE from 'three';
+import { TilesRenderer } from '3d-tiles-renderer/three';
+import { ReorientationPlugin } from '3d-tiles-renderer/three/plugins';
+import { GoogleCloudAuthPlugin } from '3d-tiles-renderer/core/plugins';
+
+// Box centre, BNG 391400 222400 -> WGS84. The geoid sits ~48.6 m above the
+// ellipsoid here, so putting the origin at that height makes local y = AOD,
+// the same heights our plates use.
+const ORIGIN = { lat: 51.900076, lon: -2.126397, geoid: 48.6 };
+const CAMS = {
+  'GCHQ close (002 / close-2045)': { pos: [20, 125, 170],  look: [123, 72, 64] },
+  '003 A wide (campus, GCHQ beyond)': { pos: [-760, 210, 430], look: [123, 63, 64] },
+  '002 GCHQ filling the frame': { pos: [0, 110, 230], look: [123, 62.6, 64] },
+};
+const msg = t => document.getElementById('msg').textContent = t;
+if (!window.GOOGLE_TILES_KEY) { msg('No key.js: run the launch command in README.md first.'); throw new Error('no key'); }
+
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeight);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xa9c3dc);
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 1, 40000);
+
+const tiles = new TilesRenderer();
+tiles.registerPlugin(new GoogleCloudAuthPlugin({ apiToken: window.GOOGLE_TILES_KEY, autoRefreshToken: true }));
+tiles.registerPlugin(new ReorientationPlugin({ lat: ORIGIN.lat * THREE.MathUtils.DEG2RAD, lon: ORIGIN.lon * THREE.MathUtils.DEG2RAD, height: ORIGIN.geoid, recenter: true }));
+tiles.setCamera(camera); tiles.setResolutionFromRenderer(camera, renderer);
+tiles.errorTarget = 6;
+scene.add(tiles.group);
+tiles.addEventListener('load-error', e => msg('Tile load error: ' + (e.error?.message || e.error)));
+
+function go(name) {
+  const c = CAMS[name]; camera.position.set(...c.pos); camera.lookAt(...c.look); camera.updateMatrixWorld();
+  window.__cam = name;
+}
+const box = document.getElementById('cams');
+for (const n of Object.keys(CAMS)) { const b = document.createElement('button'); b.textContent = n; b.onclick = () => go(n); box.appendChild(b); }
+go(Object.keys(CAMS)[0]);
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); tiles.setResolutionFromRenderer(camera, renderer); });
+
+const attr = document.getElementById('attr');
+function frame() {
+  tiles.update(); renderer.render(scene, camera);
+  const a = (tiles.getAttributions?.() || []).map(x => x.value).filter(Boolean);
+  attr.textContent = a.length ? [...new Set(a)].join(' · ') : 'Google';
+}
+// Driven by a timer as well as rAF, so it still loads when the pane is hidden.
+window.__tick = frame;
+setInterval(frame, 100);
+(function loop() { frame(); requestAnimationFrame(loop); })();
+window.__stats = () => ({ cam: window.__cam, downloading: tiles.stats.downloading, parsing: tiles.stats.parsing, visible: tiles.visibleTiles.size });
+window.__go = go;
+</script></body></html>
