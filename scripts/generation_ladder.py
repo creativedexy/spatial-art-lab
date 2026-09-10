@@ -76,7 +76,15 @@ LOOK = (
     "asphalt roads with painted markings, mature deciduous trees in full "
     "summer leaf, mown playing fields and pasture divided by hedgerows. "
     "Photographic, shot on a full-frame camera from a light aircraft, "
-    "natural colour, gentle atmospheric haze. No text, no watermark, no people."
+    # "gentle atmospheric haze" cost the best rung its best feature. Session M
+    # re-ran rung 2 on the corrected depth pass and got the estate curves, the
+    # field working lines and the A40 all matching the survey — then fog over
+    # the upper half of the frame swallowed GCHQ's ring, which is the one
+    # building anybody looking at this would check. The word invited it. Asking
+    # for clear air costs nothing and is worth an explicit negative, because
+    # these models weight what you rule out.
+    "natural colour, clear air all the way to the horizon. No haze, no fog, "
+    "no bloom, no text, no watermark, no people."
 )
 KEEP = (
     " Keep the layout, the building positions, the road network and the "
