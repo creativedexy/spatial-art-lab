@@ -1,0 +1,4 @@
+{
+  "note": "Which type models this copy of the map has. Phase 7: the public build ships without campus-block.glb and ncic.glb, because they derive from HBD's renders and meshy/README.md says pitch work only — and a map that finds that out by requesting them fires a 404 per type on every load, in front of anyone who opens the console. So it is written down instead. scripts/build_site.py rewrites this file for a public build; the copy in the repository lists everything that is here.",
+  "available": ["campus", "ncic"]
+}

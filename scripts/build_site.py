@@ -80,6 +80,15 @@ def main():
         for m in MODELS:
             copy(Path(m), out, log)
     else:
+        # Say so in the folder, rather than letting the map find out by
+        # asking for a file that is not there.
+        f = out / "golden-valley" / "models.json"
+        d = json.loads(f.read_text())
+        d["available"] = []
+        d["note"] = ("Public build: no type models. They derive from HBD's "
+                     "renders and are pitch-only, so the campus stands as the "
+                     "scheme's own extrusions. Written by build_site.py.")
+        f.write_text(json.dumps(d, indent=2) + "\n")
         print("models left out — they derive from HBD's renders and "
               "meshy/README.md says pitch work only.\n"
               "The campus falls back to its extrusions. Use --internal for a "

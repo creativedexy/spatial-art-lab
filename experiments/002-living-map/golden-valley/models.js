@@ -210,7 +210,19 @@ export async function addModels(scene, { future, buildings, namedRoutes, groundA
 
   const site = chooseNcicSite(buildings, namedRoutes);
 
+  // Which types this copy of the map actually has. Asking the server for a
+  // GLB that was deliberately left out is a 404 in everyone's console and two
+  // wasted round trips, so the build says what it shipped and this believes
+  // it. Fetched here rather than at module scope: a top-level await holds up
+  // every module that imports this one.
+  const { available } = await (await fetch(url('models.json'))).json();
+
   for (const [name, spec] of Object.entries(TYPES)) {
+    if (!available.includes(name)) {
+      // Not an error. The extrusions below it stay standing, which is the
+      // whole reason a missing model is survivable.
+      continue;
+    }
     let type;
     try {
       type = await loadType(spec);

@@ -204,8 +204,14 @@ def main():
     ap.add_argument("--compare", help="an earlier label to show alongside")
     ap.add_argument("--params", default="", help="query string for the page")
     ap.add_argument("--port", type=int, default=8214)
+    ap.add_argument("--site", help="serve this folder instead of the experiment "
+                                   "— point it at dist/ to measure what is "
+                                   "actually published")
     args = ap.parse_args()
 
+    if args.site:
+        global SITE
+        SITE = Path(args.site).resolve()
     srv = Server(("127.0.0.1", args.port), Handler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     run = measure(args.port, args.params)

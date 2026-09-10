@@ -273,13 +273,31 @@ their absence — a family whose model is missing keeps its extrusions, so the
 public build is a working map with a blockier campus rather than an empty
 field.
 
-That makes hosting a decision rather than a chore, and it is Dex's:
+That made hosting a decision rather than a chore, and **Dex chose public**:
+the extrusions, linkable anywhere. So the deployment is
+`.github/workflows/pages.yml` — it runs `build_site.py` **without**
+`--internal` on every push to `main`, refuses the run outright if a `.glb` or
+anything from `inspiration/` or `meshy/` reaches the folder, and hands the
+result to GitHub Pages. The public first load is **6.69 MB**.
 
-- **an unlisted or password-protected URL** carries the models and is a pitch
-  piece; or
-- **a public URL** carries the extrusions and can be linked anywhere.
+`scripts/test_public_build.py` (9/9) opens that folder and nothing else, the
+way a stranger would: nothing 404s, nothing errors, no model is placed, the
+campus keeps its extrusions, all five places are there and 2045 still arrives.
+It caught the one thing the design had not thought about — the map used to
+discover the models were missing **by asking for them**, which is two 404s in
+everyone's console on every load. Availability is written in
+`golden-valley/models.json` now and the build rewrites it, so a public map
+knows what it has instead of probing for what it hasn't.
 
-Nothing has been uploaded. `dist/` is built and ignored by git.
+**Two things still need Dex, and only Dex.** Merging PR #1 to `main`, and
+setting Pages' source to GitHub Actions in the repository settings — a
+workflow cannot turn Pages on for a repository that has never had it. And one
+caveat worth knowing before clicking: **this repository is private, and
+GitHub Pages on a private repository needs a paid plan.** If the run fails on
+that, the fallback that keeps `inspiration/` private is a second, public
+repository holding only the built site, which the same workflow can push to.
+
+Nothing has been uploaded from here. `dist/` is built and ignored by git.
 
 ### One number that is not a number
 
@@ -294,6 +312,7 @@ should put this in front of a real handset once, and write down what it says.
 `test_heightmap.py` **6/6** (new — the codec decoded by node and by python must
 agree byte for byte, and re-encoding must reproduce the shipped file exactly),
 `test_places.py` **16/16**, `test_path_network.py` **12/12**,
-`test_hotspot_flow.py` **all passing**, `test_world_clock.py` passing.
+`test_hotspot_flow.py` **all passing**, `test_world_clock.py` passing,
+`test_public_build.py` **9/9** (new — the published folder, served on its own).
 `guard_plates.py` is new and is the thing to run either side of any future
 change to an asset.
