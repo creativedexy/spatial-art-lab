@@ -1,0 +1,55 @@
+{
+  "view": "approach",
+  "note": "Camera B of the same descent \u2014 low, sparse, a few big masses.",
+  "camera": {
+    "positionLocalMetres": [
+      -60.0,
+      92.0,
+      300.0
+    ],
+    "lookAtLocalMetres": [
+      123.0,
+      64.0
+    ],
+    "lookLiftMetres": 8.0,
+    "fovDegrees": 48
+  },
+  "sizePixels": [
+    1280,
+    720
+  ],
+  "frame": "local metres from the box centre, x east, z south (the same frame as gv-buildings.json)",
+  "files": {
+    "beauty": "approach-beauty.png",
+    "depth": "approach-depth.png",
+    "metric": "approach-metric.png",
+    "normal": "approach-normal.png",
+    "mask": "approach-mask.png"
+  },
+  "depth": {
+    "nearMetres": 71.2,
+    "farMetres": 822.2,
+    "encoding": "near=white, far=black, linear in view space, range fitted to the frame. metres = far - value/255 * (far - near).",
+    "reliefMetres": null
+  },
+  "reliefGreyLevels": {
+    "depth": 5.26,
+    "metric": 1.12
+  },
+  "maskColours": {
+    "sky": "#000000",
+    "wall": "#d94f3d",
+    "tree": "#7ad14f",
+    "field": "#3f8f3a",
+    "wood": "#1f5f2a",
+    "hard": "#9a9a9a",
+    "road": "#4a4a4a",
+    "water": "#2d6fb5",
+    "roof:house": "#e8a33d",
+    "roof:terrace": "#b46bd1",
+    "roof:retail": "#7fc4ff",
+    "roof:shed": "#ffe066",
+    "roof:civic": "#ff7bb0",
+    "roof:gchq": "#6d5bd0"
+  }
+}

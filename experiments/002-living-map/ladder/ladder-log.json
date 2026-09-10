@@ -1,0 +1,138 @@
+{
+  "runs": [
+    {
+      "rung": 1,
+      "kind": "image",
+      "why": "our own render, straight to photoreal \u2014 the cheapest signal",
+      "model": "fal-ai/flux/dev/image-to-image",
+      "startedUtc": "2026-09-09T15:04:56.861277+00:00",
+      "inputs": [
+        "aerial-beauty.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people. Keep the layout, the building positions, the road network and the terrain exactly as given; change only materials, texture and light.",
+      "file": "rung1-aerial-beauty.jpg",
+      "bytes": 824901,
+      "seconds": 10.4
+    },
+    {
+      "rung": 2,
+      "kind": "image",
+      "why": "the same view conditioned on depth instead of on our picture",
+      "model": "fal-ai/flux-control-lora-depth",
+      "startedUtc": "2026-09-09T15:05:29.189222+00:00",
+      "inputs": [
+        "aerial-depth.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people.",
+      "file": "rung2-aerial-depth.jpg",
+      "bytes": 614889,
+      "seconds": 166.9
+    },
+    {
+      "rung": 5,
+      "kind": "image",
+      "why": "rung 2 again, on a depth pass whose range is not spent on the ground ramp \u2014 the control test for whether rung 2 failed because our geometry is thin or because our encoding was",
+      "model": "fal-ai/flux-control-lora-depth",
+      "startedUtc": "2026-09-09T15:09:54.941279+00:00",
+      "inputs": [
+        "aerial-depth-refit.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people.",
+      "file": "rung5-aerial-depth-refit.jpg",
+      "bytes": 726966,
+      "seconds": 173.2
+    },
+    {
+      "rung": 6,
+      "kind": "image",
+      "why": "rung 2 a third time, on depth re-encoded as disparity (1/z) \u2014 the convention control nets are trained on \u2014 so the ramp still carries camera pitch while the buildings become legible",
+      "model": "fal-ai/flux-control-lora-depth",
+      "startedUtc": "2026-09-09T15:13:44.411871+00:00",
+      "inputs": [
+        "aerial-depth-disparity.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people.",
+      "file": "rung6-aerial-depth-disparity.jpg",
+      "bytes": 656862,
+      "seconds": 7.6
+    },
+    {
+      "rung": 3,
+      "kind": "video",
+      "why": "a departure from the low approach \u2014 few large masses, the case Session B measured as easy",
+      "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
+      "startedUtc": "2026-09-09T15:14:12.761976+00:00",
+      "inputs": [
+        "approach-beauty.png"
+      ],
+      "prompt": "Slow continuous aerial descent, camera moving forward and down. Buildings and terrain stay rigid; correct parallax; one unbroken shot, no cuts, no new structures appearing. No text, no people, no vehicles. Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people.",
+      "file": "rung3-approach-beauty.mp4",
+      "bytes": 12831072,
+      "seconds": 199.0
+    },
+    {
+      "rung": 4,
+      "kind": "video",
+      "why": "the same from the wide aerial \u2014 thousands of tiny buildings, the case Session B measured at twice the error",
+      "model": "fal-ai/kling-video/v1.6/pro/image-to-video",
+      "startedUtc": "2026-09-09T15:17:38.180466+00:00",
+      "inputs": [
+        "aerial-beauty.png"
+      ],
+      "prompt": "Slow continuous aerial descent, camera moving forward and down. Buildings and terrain stay rigid; correct parallax; one unbroken shot, no cuts, no new structures appearing. No text, no people, no vehicles. Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people.",
+      "file": "rung4-aerial-beauty.mp4",
+      "bytes": 22860852,
+      "seconds": 251.9
+    },
+    {
+      "rung": 1,
+      "kind": "image",
+      "why": "our own render, straight to photoreal \u2014 the cheapest signal",
+      "model": "fal-ai/flux/dev/image-to-image",
+      "startedUtc": "2026-09-09T16:15:23.614403+00:00",
+      "inputs": [
+        "aerial-beauty.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people. Keep the layout, the building positions, the road network and the terrain exactly as given; change only materials, texture and light.",
+      "file": "rung1-aerial-beauty.jpg",
+      "bytes": 819747,
+      "seconds": 10.7
+    },
+    {
+      "rung": 2,
+      "kind": "image",
+      "why": "the same view conditioned on structure instead of on our picture \u2014 now on the corrected depth encoding, which carries 10.3 grey levels of building relief where the linear one carried 1.07 and the control net saw a bare ground ramp",
+      "model": "fal-ai/flux-control-lora-depth",
+      "startedUtc": "2026-09-09T16:16:09.046894+00:00",
+      "inputs": [
+        "aerial-depth.png"
+      ],
+      "prompt": "Aerial photograph of the western edge of Cheltenham, Gloucestershire, England. Late afternoon sun, low and warm, long shadows. Red brick and pale render semi-detached houses with grey slate and clay tile roofs, asphalt roads with painted markings, mature deciduous trees in full summer leaf, mown playing fields and pasture divided by hedgerows. Photographic, shot on a full-frame camera from a light aircraft, natural colour, gentle atmospheric haze. No text, no watermark, no people.",
+      "file": "rung2-aerial-depth.jpg",
+      "bytes": 583432,
+      "seconds": 165.6
+    }
+  ],
+  "cost": {
+    "source": "COMPUTED from the published per-megapixel and per-second rates on each model's fal.ai page, verified at run time. NOT read off the fal dashboard \u2014 fal exposes no billing API, and the dashboard needs an interactive login. Treat as an estimate to within the rounding rule until someone eyeballs the dashboard.",
+    "perRungUsd": {
+      "1": 0.06,
+      "2": 0.08,
+      "5": 0.08,
+      "6": 0.08,
+      "3": 0.475,
+      "4": 0.475
+    },
+    "basis": {
+      "1": "fal-ai/flux/dev/image-to-image \u2014 $0.03/MP, billed rounded up, 2 image(s) billed at 1 MP each",
+      "2": "fal-ai/flux-control-lora-depth \u2014 $0.04/MP, billed rounded up, 2 image(s) billed at 1 MP each",
+      "5": "fal-ai/flux-control-lora-depth \u2014 $0.04/MP, billed rounded up, 2 image(s) billed at 1 MP each",
+      "6": "fal-ai/flux-control-lora-depth \u2014 $0.04/MP, billed rounded up, 2 image(s) billed at 1 MP each",
+      "3": "fal-ai/kling-video/v1.6/pro/image-to-video \u2014 $0.095/video-second x 5 s, 1 image(s) billed at n/a MP each",
+      "4": "fal-ai/kling-video/v1.6/pro/image-to-video \u2014 $0.095/video-second x 5 s, 1 image(s) billed at n/a MP each"
+    },
+    "totalUsd": 1.25,
+    "note": "Image rungs asked for num_images=2 and are billed for 2; the script's find_url only saves the first, so half of what rungs 1/2/5/6 paid for was never downloaded. Worth fixing before the next paid session."
+  },
+  "wallSecondsTotal": 809.0
+}

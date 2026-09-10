@@ -1,0 +1,55 @@
+{
+  "note": "The two ends of one walkable leg, rendered from the map with the path network hidden. Camera positions come from cameraOnLeg in golden-valley/walk.js, which is also what the live walk uses \u2014 so a clip generated between these frames hands back to a camera that is already where the clip left it. Local metres, x east, z south, origin at the box centre.",
+  "route": {
+    "id": "cheltenham-circular-footpath",
+    "name": "Cheltenham Circular Footpath",
+    "tier": "named",
+    "lengthMetres": 1644.8
+  },
+  "leg": {
+    "index": 46,
+    "from": 23.21,
+    "to": 343.21,
+    "lengthMetres": 320,
+    "durationSeconds": 18.82
+  },
+  "camera": {
+    "fov": 48,
+    "size": [
+      1280,
+      720
+    ],
+    "eyeMetres": 14,
+    "lookAheadMetres": 70
+  },
+  "frames": [
+    {
+      "file": "a-start.png",
+      "atMetres": 0,
+      "pos": [
+        -637.625,
+        46.639,
+        -8.081
+      ],
+      "look": [
+        -574.597,
+        44.39,
+        -32.764
+      ]
+    },
+    {
+      "file": "b-end.png",
+      "atMetres": 320,
+      "pos": [
+        -369.445,
+        51.689,
+        -175.55
+      ],
+      "look": [
+        -340.72,
+        47.769,
+        -195.542
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "crs": "EPSG:27700",
+  "easting": [
+    390400,
+    392400
+  ],
+  "northing": [
+    221400,
+    223400
+  ],
+  "widthMetres": 2000,
+  "heightMetres": 2000,
+  "elevationMinMetres": 24.3,
+  "elevationMaxMetres": 59.26,
+  "binFile": "gv-height-2000.bin.gz",
+  "binPixels": [
+    2000,
+    2000
+  ],
+  "buildings": 4033,
+  "sources": [
+    "EA LIDAR Composite DTM/DSM 1m (OGL v3)",
+    "OpenStreetMap contributors (ODbL)"
+  ],
+  "roofs": {
+    "note": "eaves and ridge are heights above `base`, in the same units as `height`; `axis` is the ridge bearing in degrees within the local frame (x east, z south), or null for a flat roof. `height` is unchanged and is still what the map page renders. `roof` is \"gable\", \"hip\" or null.",
+    "gable": 2977,
+    "hip": 571,
+    "flat": 485,
+    "families": {
+      "house": {
+        "wall": "#efe8dc",
+        "roof": "#646a72",
+        "count": 2534
+      },
+      "terrace": {
+        "wall": "#e9e1d3",
+        "roof": "#545a63",
+        "count": 909
+      },
+      "retail": {
+        "wall": "#e6e6e2",
+        "roof": "#8f9398",
+        "count": 70
+      },
+      "shed": {
+        "wall": "#dedcd5",
+        "roof": "#7d848c",
+        "count": 496
+      },
+      "civic": {
+        "wall": "#f2ece0",
+        "roof": "#61666b",
+        "count": 24
+      }
+    }
+  },
+  "binFormat": "delta12",
+  "binQuantisationCentimetres": 0.854
+}

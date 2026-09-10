@@ -20,6 +20,15 @@ Backup/
 *.tmp
 /experiments/**/scratch/
 
+# The publishable site, assembled by scripts/build_site.py from files that
+# are all tracked elsewhere. Derived, and one flag away from containing the
+# internal-only campus models, so it does not belong in the repository.
+/dist/
+
+# Payload measurements and guard plates: reproducible, and several megabytes
+# of PNG per run. The written-up numbers live in the plan, not here.
+/experiments/002-living-map/payload/
+
 # Python
 __pycache__/
 *.pyc
@@ -33,3 +42,15 @@ venv/
 *.mp4
 *.exr
 *.ply
+
+# Descent capture intermediates — all reproducible with
+# scripts/capture_descent_path.py. The delivery WebM the seam test plays IS
+# tracked (it is the artefact under test); the 96 source PNGs, the near-
+# lossless reference encode and the MP4 viewing copy are not.
+experiments/002-living-map/descent/path-frames/
+experiments/002-living-map/descent/clips/*-hq.webm
+
+# Golden Valley reference — full-res third-party originals stay local.
+# The 2000px working copies in hbd-2000/ are tracked; re-fetch originals with
+# the URLs in inspiration/golden-valley/README.md if they are ever needed.
+inspiration/golden-valley/hbd/

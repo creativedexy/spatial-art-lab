@@ -1,0 +1,182 @@
+{
+  "note": "Surveyed features projected through this leg's own camera, as normalised image coordinates: u is 0 at the left edge and 1 at the right, v is 0 at the top and 1 at the bottom. These are what a generated frame must not move.",
+  "route": null,
+  "frames": [
+    {
+      "file": "c-panels-and-glasshouses.png",
+      "anchors": {
+        "horizonV": 0.045,
+        "path": [],
+        "landmarks": [
+          {
+            "kind": "stream",
+            "nearestMetres": 263,
+            "enters": {
+              "u": 0.635,
+              "v": 0.983
+            },
+            "leaves": {
+              "u": 0.994,
+              "v": 0.752
+            },
+            "spanU": [
+              0.635,
+              0.994
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 378,
+            "enters": {
+              "u": 0.147,
+              "v": 0.682
+            },
+            "leaves": {
+              "u": 0.724,
+              "v": 0.627
+            },
+            "spanU": [
+              0.147,
+              0.724
+            ]
+          },
+          {
+            "kind": "stream",
+            "nearestMetres": 491,
+            "enters": {
+              "u": 0.352,
+              "v": 0.44
+            },
+            "leaves": {
+              "u": 0.99,
+              "v": 0.56
+            },
+            "spanU": [
+              0.352,
+              0.99
+            ]
+          },
+          {
+            "kind": "stream",
+            "nearestMetres": 513,
+            "enters": {
+              "u": 0.96,
+              "v": 0.536
+            },
+            "leaves": {
+              "u": 0.991,
+              "v": 0.508
+            },
+            "spanU": [
+              0.93,
+              0.991
+            ]
+          }
+        ],
+        "development": {
+          "blocksInFrame": 36,
+          "byFamily": {
+            "homes": 13,
+            "campus": 20,
+            "glasshouse": 3
+          },
+          "uFrom": -0.02,
+          "uTo": 0.809,
+          "vFrom": 0.355,
+          "vTo": 0.659,
+          "nearestMetres": 388,
+          "tallest": [
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.543,
+              "vBase": 0.408,
+              "vRoof": 0.38
+            },
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.635,
+              "vBase": 0.387,
+              "vRoof": 0.361
+            },
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.633,
+              "vBase": 0.407,
+              "vRoof": 0.379
+            }
+          ]
+        },
+        "namedBuildings": [
+          {
+            "name": "Government Communications Headquarters",
+            "metres": 1029.2,
+            "u": [
+              0.41,
+              0.531
+            ],
+            "v": [
+              0.234,
+              0.289
+            ],
+            "courtyardU": [
+              0.444,
+              0.495
+            ],
+            "courtyardV": [
+              0.243,
+              0.258
+            ]
+          },
+          {
+            "name": "Leonardo Hotels",
+            "metres": 905.6,
+            "u": [
+              0.862,
+              0.948
+            ],
+            "v": [
+              0.295,
+              0.325
+            ]
+          },
+          {
+            "name": "Royal Court",
+            "metres": 879.6,
+            "u": [
+              0.083,
+              0.132
+            ],
+            "v": [
+              0.289,
+              0.313
+            ]
+          },
+          {
+            "name": "Travelodge",
+            "metres": 1159.0,
+            "u": [
+              0.81,
+              0.858
+            ],
+            "v": [
+              0.242,
+              0.258
+            ]
+          }
+        ],
+        "nearBuildings": [],
+        "settlementEdge": {
+          "count": 2196,
+          "uFrom": -0.02,
+          "uTo": 1.0,
+          "vRooflineTop": 0.187,
+          "vBaseTypical": 0.251,
+          "nearestMetres": 430
+        }
+      }
+    }
+  ]
+}

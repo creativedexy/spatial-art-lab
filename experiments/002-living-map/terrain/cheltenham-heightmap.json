@@ -1,0 +1,27 @@
+{
+  "crs": "EPSG:27700",
+  "easting": [
+    388000.0,
+    400000.0
+  ],
+  "northing": [
+    216000.0,
+    228000.0
+  ],
+  "widthMetres": 12000.0,
+  "heightMetres": 12000.0,
+  "elevationMinMetres": 8.25,
+  "elevationMaxMetres": 330.04,
+  "pixels": [
+    2048,
+    2048
+  ],
+  "nodataFraction": 0.0,
+  "source": "Environment Agency LIDAR Composite DTM 1m via WCS, Open Government Licence v3",
+  "binFile": "cheltenham-height-1024.bin",
+  "binPixels": [
+    1024,
+    1024
+  ],
+  "binFormat": "uint16 little-endian, row 0 = north edge, 0..65535 maps elevationMin..elevationMax"
+}

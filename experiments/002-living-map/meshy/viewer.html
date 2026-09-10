@@ -1,0 +1,33 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><title>Meshy check</title>
+<style>body{margin:0;background:#dfe3e6;font:13px system-ui}#c{width:100vw;height:100vh;display:block}#l{position:fixed;left:10px;top:10px;background:#fff;padding:6px 9px;border-radius:5px}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body><canvas id="c"></canvas><div id="l">left: campus-block.glb · right: ncic.glb · both scaled to real metres (campus 38 m long, NCIC 60 m long)</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, preserveDrawingBuffer: true });
+r.setSize(innerWidth, innerHeight); r.setPixelRatio(devicePixelRatio);
+const s = new THREE.Scene(); s.background = new THREE.Color(0xdfe3e6);
+s.add(new THREE.HemisphereLight(0xffffff, 0x8a8f80, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-60, 90, 50); s.add(sun);
+const g = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x9aa58a })); g.rotation.x = -Math.PI / 2; s.add(g);
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1, 2000);
+cam.position.set(20, 70, 125); cam.lookAt(10, 6, 0);
+const L = new GLTFLoader();
+function place(file, longSide, x, rotY) {
+  return new Promise(res => L.load(file, gl => {
+    const o = gl.scene, b = new THREE.Box3().setFromObject(o), sz = b.getSize(new THREE.Vector3());
+    const k = longSide / Math.max(sz.x, sz.z); o.scale.setScalar(k);
+    const b2 = new THREE.Box3().setFromObject(o), c = b2.getCenter(new THREE.Vector3());
+    o.position.set(x - c.x, -b2.min.y, -c.z); o.rotation.y = rotY; s.add(o);
+    const f = new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3());
+    res(`${file}: ${f.x.toFixed(1)} x ${f.z.toFixed(1)} m, ${f.y.toFixed(1)} m tall`);
+  }));
+}
+const out = await Promise.all([place('campus-block.glb', 38, -35, 0), place('ncic.glb', 60, 40, 0)]);
+document.getElementById('l').textContent += ' — ' + out.join(' | ');
+r.render(s, cam);
+window.__render = (x, y, z, lx, ly, lz) => { cam.position.set(x, y, z); cam.lookAt(lx, ly, lz); r.render(s, cam); };
+window.__done = true;
+(function loop() { r.render(s, cam); requestAnimationFrame(loop); })();
+</script></body></html>

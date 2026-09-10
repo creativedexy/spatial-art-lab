@@ -1,0 +1,147 @@
+{
+  "note": "West Cheltenham in 2045. Only the allocation changes; everything outside it is today's survey untouched, which is what lets the wave blend the two honestly. Buildings here are the NEW ones only \u2014 today's 4,033 are still standing in 2045 and are not repeated.",
+  "generatedBy": "scripts/golden_valley_2045.py",
+  "seed": 2045,
+  "grid": {
+    "bearingDegrees": 22.0,
+    "phaseMetres": [
+      60.0,
+      150.0
+    ],
+    "spacingMetres": [
+      175.0,
+      210.0
+    ],
+    "why": "measured, not chosen: 35% of surviving hedge length in the box lies between 20 and 30 degrees, and the allocation's own boundary agrees"
+  },
+  "colourFile": "gv-2045-landcover.webp",
+  "classFile": "gv-2045-landclass.webp",
+  "buildingFile": "gv-2045-buildings.json",
+  "treeFile": "gv-2045-trees.bin",
+  "classes": {
+    "farmland": {
+      "index": 0,
+      "colour": "#7d9460"
+    },
+    "meadow": {
+      "index": 1,
+      "colour": "#93a566"
+    },
+    "grass": {
+      "index": 2,
+      "colour": "#8ca767"
+    },
+    "pitch": {
+      "index": 3,
+      "colour": "#7fa457"
+    },
+    "park": {
+      "index": 4,
+      "colour": "#86a05c"
+    },
+    "scrub": {
+      "index": 5,
+      "colour": "#74855a"
+    },
+    "wood": {
+      "index": 6,
+      "colour": "#4a6440"
+    },
+    "residential": {
+      "index": 7,
+      "colour": "#8d947a"
+    },
+    "hardstanding": {
+      "index": 8,
+      "colour": "#9c9c94"
+    },
+    "parking": {
+      "index": 9,
+      "colour": "#7d7d78"
+    },
+    "water": {
+      "index": 10,
+      "colour": "#5c7f8c"
+    },
+    "path": {
+      "index": 11,
+      "colour": "#9a9083"
+    },
+    "road_minor": {
+      "index": 12,
+      "colour": "#6f6f6a"
+    },
+    "road": {
+      "index": 13,
+      "colour": "#64645f"
+    },
+    "rail": {
+      "index": 14,
+      "colour": "#5f5b54"
+    },
+    "concrete": {
+      "index": 15,
+      "colour": "#a9a59b"
+    },
+    "unpaved": {
+      "index": 16,
+      "colour": "#8d8676"
+    },
+    "orchard": {
+      "index": 17,
+      "colour": "#6d8a4e"
+    },
+    "agrivoltaic": {
+      "index": 18,
+      "colour": "#7a8f63"
+    },
+    "wetland": {
+      "index": 19,
+      "colour": "#86a06e"
+    }
+  },
+  "families": {
+    "campus": {
+      "wall": "#e8dfcb",
+      "roof": "#93a469"
+    },
+    "homes": {
+      "wall": "#ece5d8",
+      "roof": "#8a9b60"
+    },
+    "glasshouse": {
+      "wall": "#cfd8d4",
+      "roof": "#dfe8e4"
+    }
+  },
+  "roofChanges": [
+    {
+      "name": "Government Communications Headquarters",
+      "roof": "#93a469",
+      "why": "the ring re-roofed as a wildflower meadow \u2014 3.6 ha of south-facing ground at 20 m is parcel 5 in the open-land survey, and this is the one image that says what the place has become"
+    }
+  ],
+  "areasHectares": {
+    "orchard": 22.5,
+    "arable": 5.3,
+    "wetland": 15.8,
+    "homes": 15.0,
+    "agrivoltaic": 9.7,
+    "campus": 9.1
+  },
+  "fields": 29,
+  "newBuildings": 93,
+  "floorHectares": 10.7,
+  "newTrees": 6234,
+  "treeCounts": {
+    "hedge": 3157,
+    "standard": 166,
+    "orchard": 2595,
+    "street": 316
+  },
+  "sources": [
+    "Environment Agency LiDAR (OGL v3)",
+    "OpenStreetMap contributors (ODbL)",
+    "everything else invented by this script"
+  ]
+}

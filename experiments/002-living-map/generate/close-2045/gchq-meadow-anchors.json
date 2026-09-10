@@ -1,0 +1,156 @@
+{
+  "note": "Surveyed features projected through this leg's own camera, as normalised image coordinates: u is 0 at the left edge and 1 at the right, v is 0 at the top and 1 at the bottom. These are what a generated frame must not move.",
+  "route": null,
+  "frames": [
+    {
+      "file": "gchq-meadow.png",
+      "anchors": {
+        "horizonV": 0.026,
+        "path": [],
+        "landmarks": [
+          {
+            "kind": "hedge",
+            "nearestMetres": 225,
+            "enters": {
+              "u": 0.213,
+              "v": 0.417
+            },
+            "leaves": {
+              "u": 0.322,
+              "v": 0.361
+            },
+            "spanU": [
+              0.213,
+              0.322
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 229,
+            "enters": {
+              "u": 0.264,
+              "v": 0.41
+            },
+            "leaves": {
+              "u": 0.365,
+              "v": 0.362
+            },
+            "spanU": [
+              0.264,
+              0.365
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 267,
+            "enters": {
+              "u": 0.552,
+              "v": 0.341
+            },
+            "leaves": {
+              "u": 0.649,
+              "v": 0.357
+            },
+            "spanU": [
+              0.552,
+              0.649
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 490,
+            "enters": {
+              "u": 0.22,
+              "v": 0.178
+            },
+            "leaves": {
+              "u": 0.011,
+              "v": 0.218
+            },
+            "spanU": [
+              0.011,
+              0.22
+            ]
+          }
+        ],
+        "namedBuildings": [
+          {
+            "name": "Government Communications Headquarters",
+            "metres": 181.1,
+            "u": [
+              0.142,
+              0.945
+            ],
+            "v": [
+              0.293,
+              1.012
+            ],
+            "courtyardU": [
+              0.378,
+              0.689
+            ],
+            "courtyardV": [
+              0.356,
+              0.544
+            ]
+          },
+          {
+            "name": "Royal Court",
+            "metres": 617.5,
+            "u": [
+              0.242,
+              0.312
+            ],
+            "v": [
+              0.155,
+              0.181
+            ]
+          },
+          {
+            "name": "Shaftesbury Place",
+            "metres": 663.1,
+            "u": [
+              0.251,
+              0.299
+            ],
+            "v": [
+              0.145,
+              0.164
+            ]
+          }
+        ],
+        "nearBuildings": [
+          {
+            "name": null,
+            "metres": 154.7,
+            "u": 0.55,
+            "vBase": 0.592,
+            "vRoof": 0.573
+          },
+          {
+            "name": null,
+            "metres": 168.0,
+            "u": 0.427,
+            "vBase": 0.548,
+            "vRoof": 0.534
+          },
+          {
+            "name": "Government Communications Headquarters",
+            "metres": 181.1,
+            "u": 0.524,
+            "vBase": 0.513,
+            "vRoof": 0.426
+          }
+        ],
+        "settlementEdge": {
+          "count": 1807,
+          "uFrom": -0.02,
+          "uTo": 1.0,
+          "vRooflineTop": 0.095,
+          "vBaseTypical": 0.136,
+          "nearestMetres": 238
+        }
+      }
+    }
+  ]
+}

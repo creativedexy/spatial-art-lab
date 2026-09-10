@@ -1,0 +1,140 @@
+{
+  "note": "Surveyed features projected through this leg's own camera, as normalised image coordinates: u is 0 at the left edge and 1 at the right, v is 0 at the top and 1 at the bottom. These are what a generated frame must not move.",
+  "route": null,
+  "frames": [
+    {
+      "file": "campus-cluster.png",
+      "anchors": {
+        "horizonV": 0.139,
+        "path": [],
+        "landmarks": [
+          {
+            "kind": "stream",
+            "nearestMetres": 238,
+            "enters": {
+              "u": 0.985,
+              "v": 0.367
+            },
+            "leaves": {
+              "u": 0.004,
+              "v": 0.383
+            },
+            "spanU": [
+              0.004,
+              0.985
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 399,
+            "enters": {
+              "u": 0.825,
+              "v": 0.256
+            },
+            "leaves": {
+              "u": 0.363,
+              "v": 0.297
+            },
+            "spanU": [
+              0.363,
+              0.825
+            ]
+          },
+          {
+            "kind": "stream",
+            "nearestMetres": 400,
+            "enters": {
+              "u": 0.47,
+              "v": 0.251
+            },
+            "leaves": {
+              "u": 0.002,
+              "v": 0.317
+            },
+            "spanU": [
+              0.002,
+              0.47
+            ]
+          },
+          {
+            "kind": "stream",
+            "nearestMetres": 496,
+            "enters": {
+              "u": 0.0,
+              "v": 0.289
+            },
+            "leaves": {
+              "u": 0.003,
+              "v": 0.269
+            },
+            "spanU": [
+              0.0,
+              0.01
+            ]
+          }
+        ],
+        "development": {
+          "blocksInFrame": 40,
+          "byFamily": {
+            "homes": 30,
+            "campus": 7,
+            "glasshouse": 3
+          },
+          "uFrom": 0.043,
+          "uTo": 1.0,
+          "vFrom": 0.202,
+          "vTo": 0.719,
+          "nearestMetres": 106,
+          "tallest": [
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.751,
+              "vBase": 0.504,
+              "vRoof": 0.391
+            },
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.32,
+              "vBase": 0.719,
+              "vRoof": 0.549
+            },
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.378,
+              "vBase": 0.567,
+              "vRoof": 0.439
+            }
+          ]
+        },
+        "namedBuildings": [],
+        "nearBuildings": [
+          {
+            "name": null,
+            "metres": 69.3,
+            "u": 0.885,
+            "vBase": 1.02,
+            "vRoof": 0.931
+          },
+          {
+            "name": null,
+            "metres": 74.2,
+            "u": 0.973,
+            "vBase": 0.959,
+            "vRoof": 0.87
+          }
+        ],
+        "settlementEdge": {
+          "count": 30,
+          "uFrom": -0.011,
+          "uTo": 0.698,
+          "vRooflineTop": 0.199,
+          "vBaseTypical": 0.222,
+          "nearestMetres": 365
+        }
+      }
+    }
+  ]
+}

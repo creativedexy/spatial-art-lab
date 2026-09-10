@@ -1,0 +1,170 @@
+{
+  "utc": "2026-09-09T15:34:51.162446+00:00",
+  "path": {
+    "id": "gv-doughnut-descent",
+    "note": "Aerial over west Cheltenham down to a low approach on GCHQ. Camera A is the frame already saved as frames/gv-doughnut-aerial-frameA.png. Positions are local metres (x east, z south, origin at the box centre); look targets take their height from the terrain plus lift.",
+    "fov": 48,
+    "near": 2,
+    "far": 20000,
+    "size": [
+      1280,
+      720
+    ],
+    "fps": 24,
+    "durationSeconds": 4,
+    "a": {
+      "pos": [
+        -420,
+        300,
+        650
+      ],
+      "look": [
+        123,
+        64
+      ],
+      "lift": 0
+    },
+    "b": {
+      "pos": [
+        -60,
+        92,
+        300
+      ],
+      "look": [
+        123,
+        64
+      ],
+      "lift": 8
+    }
+  },
+  "capture": {
+    "frames": 102
+  },
+  "clipBytes": {
+    "descent-control.webm": 2774574,
+    "descent-control-hq.webm": 39162208,
+    "descent-control.mp4": 4258143
+  },
+  "seams": [
+    {
+      "clip": "descent-control.webm",
+      "inSeam": {
+        "meanPercent": 0.828,
+        "peakPercent": 18.8,
+        "visiblePixelsPercent": 8.64
+      },
+      "outSeam": {
+        "0": {
+          "meanPercent": 0.945,
+          "peakPercent": 23.5,
+          "visiblePixelsPercent": 10.05
+        },
+        "5": {
+          "meanPercent": 7.697,
+          "peakPercent": 89.0,
+          "visiblePixelsPercent": 46.62
+        },
+        "10": {
+          "meanPercent": 8.94,
+          "peakPercent": 90.2,
+          "visiblePixelsPercent": 51.66
+        },
+        "20": {
+          "meanPercent": 10.215,
+          "peakPercent": 89.4,
+          "visiblePixelsPercent": 54.3
+        },
+        "40": {
+          "meanPercent": 10.956,
+          "peakPercent": 89.0,
+          "visiblePixelsPercent": 55.65
+        },
+        "60": {
+          "meanPercent": 11.305,
+          "peakPercent": 89.0,
+          "visiblePixelsPercent": 56.68
+        }
+      }
+    },
+    {
+      "clip": "descent-control-hq.webm",
+      "inSeam": {
+        "meanPercent": 0.664,
+        "peakPercent": 16.5,
+        "visiblePixelsPercent": 6.26
+      },
+      "outSeam": {
+        "0": {
+          "meanPercent": 0.572,
+          "peakPercent": 17.3,
+          "visiblePixelsPercent": 2.93
+        },
+        "5": {
+          "meanPercent": 7.692,
+          "peakPercent": 88.6,
+          "visiblePixelsPercent": 46.19
+        },
+        "10": {
+          "meanPercent": 8.945,
+          "peakPercent": 89.8,
+          "visiblePixelsPercent": 51.4
+        },
+        "20": {
+          "meanPercent": 10.225,
+          "peakPercent": 88.2,
+          "visiblePixelsPercent": 54.12
+        },
+        "40": {
+          "meanPercent": 10.973,
+          "peakPercent": 88.6,
+          "visiblePixelsPercent": 55.5
+        },
+        "60": {
+          "meanPercent": 11.32,
+          "peakPercent": 89.0,
+          "visiblePixelsPercent": 56.53
+        }
+      }
+    },
+    {
+      "clip": "descent-control.mp4",
+      "inSeam": {
+        "meanPercent": 0.83,
+        "peakPercent": 18.8,
+        "visiblePixelsPercent": 8.78
+      },
+      "outSeam": {
+        "0": {
+          "meanPercent": 0.834,
+          "peakPercent": 23.5,
+          "visiblePixelsPercent": 7.97
+        },
+        "5": {
+          "meanPercent": 7.699,
+          "peakPercent": 88.2,
+          "visiblePixelsPercent": 46.49
+        },
+        "10": {
+          "meanPercent": 8.942,
+          "peakPercent": 90.2,
+          "visiblePixelsPercent": 51.6
+        },
+        "20": {
+          "meanPercent": 10.216,
+          "peakPercent": 90.2,
+          "visiblePixelsPercent": 54.26
+        },
+        "40": {
+          "meanPercent": 10.954,
+          "peakPercent": 89.0,
+          "visiblePixelsPercent": 55.59
+        },
+        "60": {
+          "meanPercent": 11.298,
+          "peakPercent": 89.0,
+          "visiblePixelsPercent": 56.66
+        }
+      }
+    }
+  ]
+}

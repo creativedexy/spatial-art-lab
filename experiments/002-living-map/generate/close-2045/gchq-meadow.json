@@ -1,0 +1,27 @@
+{
+  "note": "One composed plate from the map, rendered with the path network hidden. Local metres, x east, z south, origin at the box centre. Same shape as a leg's sidecar so measure_leg_anchors.py can read either.",
+  "camera": {
+    "fov": 48,
+    "size": [
+      1280,
+      720
+    ]
+  },
+  "wave": 1,
+  "frames": [
+    {
+      "file": "gchq-meadow.png",
+      "atMetres": 0,
+      "pos": [
+        20,
+        125,
+        170
+      ],
+      "look": [
+        123,
+        62.597,
+        64
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golden Valley vertical slice — living map Sprint 1</title>
+<link rel="stylesheet" href="./direction.css">
+<style>
+  /* Mechanics only — everything with a colour or a typeface in it is in
+     direction.css, so the look can be changed without reading this file. */
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #dfe9ec; }
+  #app { position: fixed; inset: 0; }
+  #app.flying { cursor: progress; }
+
+  /* The clip overlays the canvas exactly. `cover` keeps its scale and crops
+     the overflow; the live camera narrows its field of view to match, so both
+     images frame the same ground. See matchFovToClip in ../descent/path.js. */
+  .descent-clip {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block; pointer-events: none;
+  }
+  /* An author rule beats the user agent's [hidden] { display: none }, so
+     without this the clip stays on screen after the descent — showing its
+     own first frame over a live canvas that has correctly moved on. */
+  .descent-clip[hidden] { display: none; }
+  /* Same trap: .hotspot and #panel both set `display` in direction.css. */
+  #panel[hidden] { display: none; }
+</style>
+<script type="importmap">{ "imports": { "three": "../terrain/vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="intro" hidden>
+  <div class="overline">West of Cheltenham</div>
+  <h1>The Golden <em>Valley</em></h1>
+  <p>Two square kilometres of real ground, surveyed to the metre.</p>
+  <button id="intro-go">Explore the map</button>
+  <div class="aside">Environment Agency LiDAR &middot; OpenStreetMap</div>
+</div>
+<div id="panel" hidden>
+  <h2 id="panel-title"></h2>
+  <p id="panel-body"></p>
+  <div id="panel-note"></div>
+  <button id="panel-back">Return to the map</button>
+</div>
+<div id="credit">Terrain, building heights and roof shapes: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints, land cover, roads and trees &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</div>
+<div id="hint">click a place to descend &middot; drag: pan &middot; right-drag: orbit &middot; scroll: zoom</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

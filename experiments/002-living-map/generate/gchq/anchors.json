@@ -1,0 +1,170 @@
+{
+  "note": "Surveyed features projected through this leg's own camera, as normalised image coordinates: u is 0 at the left edge and 1 at the right, v is 0 at the top and 1 at the bottom. These are what a generated frame must not move.",
+  "route": null,
+  "frames": [
+    {
+      "file": "plate.png",
+      "anchors": {
+        "horizonV": 0.242,
+        "path": [],
+        "landmarks": [
+          {
+            "kind": "hedge",
+            "nearestMetres": 126,
+            "enters": {
+              "u": 0.417,
+              "v": 0.801
+            },
+            "leaves": {
+              "u": 0.689,
+              "v": 0.796
+            },
+            "spanU": [
+              0.417,
+              0.689
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 291,
+            "enters": {
+              "u": 0.299,
+              "v": 0.469
+            },
+            "leaves": {
+              "u": 0.386,
+              "v": 0.444
+            },
+            "spanU": [
+              0.299,
+              0.386
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 294,
+            "enters": {
+              "u": 0.337,
+              "v": 0.467
+            },
+            "leaves": {
+              "u": 0.42,
+              "v": 0.446
+            },
+            "spanU": [
+              0.337,
+              0.42
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 313,
+            "enters": {
+              "u": 0.575,
+              "v": 0.441
+            },
+            "leaves": {
+              "u": 0.656,
+              "v": 0.453
+            },
+            "spanU": [
+              0.575,
+              0.656
+            ]
+          }
+        ],
+        "namedBuildings": [
+          {
+            "name": "Government Communications Headquarters",
+            "metres": 230.9,
+            "u": [
+              0.244,
+              0.831
+            ],
+            "v": [
+              0.396,
+              0.749
+            ],
+            "courtyardU": [
+              0.413,
+              0.65
+            ],
+            "courtyardV": [
+              0.426,
+              0.507
+            ]
+          },
+          {
+            "name": "Royal Court",
+            "metres": 717.5,
+            "u": [
+              0.338,
+              0.397
+            ],
+            "v": [
+              0.324,
+              0.342
+            ]
+          },
+          {
+            "name": "Shaftesbury Place",
+            "metres": 767.6,
+            "u": [
+              0.347,
+              0.387
+            ],
+            "v": [
+              0.318,
+              0.331
+            ]
+          }
+        ],
+        "nearBuildings": [
+          {
+            "name": null,
+            "metres": 100.3,
+            "u": 1.018,
+            "vBase": 0.965,
+            "vRoof": 0.935
+          },
+          {
+            "name": null,
+            "metres": 104.7,
+            "u": 0.722,
+            "vBase": 0.929,
+            "vRoof": 0.825
+          },
+          {
+            "name": null,
+            "metres": 105.3,
+            "u": 0.977,
+            "vBase": 0.93,
+            "vRoof": 0.901
+          },
+          {
+            "name": null,
+            "metres": 108.8,
+            "u": 0.279,
+            "vBase": 0.908,
+            "vRoof": 0.808
+          },
+          {
+            "name": null,
+            "metres": 161.3,
+            "u": 0.097,
+            "vBase": 0.69,
+            "vRoof": 0.617
+          }
+        ],
+        "settlementEdge": {
+          "count": 2025,
+          "uFrom": -0.02,
+          "uTo": 1.0,
+          "vRooflineTop": 0.29,
+          "vBaseTypical": 0.317,
+          "nearestMetres": 203
+        }
+      }
+    }
+  ]
+}

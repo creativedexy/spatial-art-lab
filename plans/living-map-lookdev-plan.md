@@ -1,0 +1,517 @@
+# The living map: from massing model to the thing we actually want
+
+Written because the honest answer to "I can't see the vision" is that the
+vision isn't there yet — and the reason is specific and fixable.
+
+## What we have built, and what we have not
+
+Every session so far has gone into **structure**, and none into **surface**.
+
+| | state |
+|---|---|
+| Terrain, real and surveyed | done — EA LiDAR at native 1 m, true scale |
+| Buildings at measured heights | done — 4,033 of them, DSM minus DTM |
+| Georeferencing you can trust | done — real businesses at real coordinates |
+| The descent mechanism | done and measured — seams, fades, fallbacks |
+| **Light, shadow, grade** | Phase 1 — proved |
+| **Land cover: woods, fields, water, roads** | **Phase 2 — done** |
+| **Trees: woods, hedges, street trees** | **done — 9,181 instances** |
+| **Buildings that read as buildings** | **Phase 3 — done** |
+| **Weather, birds, movement** | **Phase 4a — done** |
+| **Art direction, typography, sound** | **Phase 4b — done, bar sound** |
+| **The Golden Valley proposal itself** | not started — the site is an empty field |
+
+Structure was the right order. It is the part that cannot be faked, it is
+what makes this defensible against a studio hand-modelling a pretty hill, and
+everything below is *dressing* that only works because the bones are real.
+But it means that until today every render looked like a planning document,
+because that is exactly what an unlit massing model is.
+
+## Reframing what we are aiming at
+
+Primland is a hand-crafted world: a studio, months, an artist placing things.
+We will not out-craft that, and we should not try.
+
+What we have that they do not is that **ours is measured, real and
+repeatable**. Point the pipeline at a different postcode and a different
+client and you get the same fidelity a week later. The goal is therefore not
+"look like Primland" — it is *Primland's feeling, on a real surveyed place,
+reproducible for any site*. That is the thing worth selling to a developer,
+a council or an architecture practice.
+
+## The phases
+
+```mermaid
+flowchart TD
+  P1["Phase 1 — Light<br/>sun, shadow, sky, grade"] --> P2["Phase 2 — Land cover<br/>woods, fields, water, roads"]
+  P2 --> P3["Phase 3 — Read as buildings<br/>roof pitch, materials, trees"]
+  P3 --> P4["Phase 4 — Life and direction<br/>birds, cloud, wind, type, sound"]
+  P4 --> P5["Phase 5 — The proposal<br/>Golden Valley in place, before/after"]
+  P5 --> P6["Phase 6 — Signature moves<br/>season wave, descents regenerated"]
+  style P1 fill:#4a6f8a,color:#fff
+  style P2 fill:#4a6f8a,color:#fff
+  style P3 fill:#4a6f8a,color:#fff
+  style P4 fill:#4a6f8a,color:#fff
+```
+
+### Phase 1 — Light *(proved, needs adopting)*
+
+A low afternoon sun casting real shadows, filmic tone mapping, a graded sky
+the fog agrees with, and ground colour driven by height and slope rather than
+a flat blend. No new data at all. Live in `experiments/002-living-map/lookdev/`.
+
+**Buys:** massing model → architectural render. The single biggest jump per
+unit effort in the whole list.
+**Cost:** done. Adopting it means re-rendering the descent anchors and the
+control clip, because the seam measurements compare pixels — one command,
+about five minutes, free.
+
+### Phase 2 — Land cover and roads *(done)*
+
+The ground was one green blanket. Real ground is woodland, playing fields,
+farmland with hedge boundaries, water, car parks, and a road network, and
+OpenStreetMap had all of it in the box we had already fetched — 327 polygons
+and 1,484 lines, no new download.
+
+`scripts/golden_valley_landcover.py` rasterises them into a 1 m/texel colour
+image of the ground with the roads drawn in at their real widths, which is
+the decision worth keeping: a 4 m service road is *narrower than the terrain
+mesh's own 2 m triangles*, so as geometry it would z-fight and crawl, while
+as texels it is exact, anti-aliased and free.
+
+```
+      OSM ways/relations            gv-landcover.png             the map
+ ┌──────────────────────────┐   ┌──────────────────────┐   ┌───────────────┐
+ │ 327 area polygons        │   │ 2000 x 2000, 1 m per │   │ terrain mesh  │
+ │ 1484 lines (roads,       ├──▶│ texel, drawn at 2x   ├──▶│ .map =        │
+ │ streams, hedges)         │   │ and box-downsampled  │   │  land cover   │
+ │ 540 surveyed trees       │   │ 605 KB PNG           │   │ vertex colour │
+ └──────────────────────────┘   └──────────────────────┘   │  = slope only │
+                                └── gv-trees.bin, 72 KB ──▶│ InstancedMesh │
+                                                           └───────────────┘
+```
+
+The vale now covers 31.7 % residential, 22.9 % farmland, 10.5 % amenity
+grass, 7.1 % meadow, 9.4 % carriageway, 4.5 % woodland, 3.0 % park and
+0.66 % water — which is west Cheltenham, and it is measured rather than
+art-directed.
+
+**Bought:** the vale stopped being a lawn. Second biggest jump, as predicted.
+**Cost:** one pass. Free — OSM data, ODbL, already attributed.
+
+### Phase 3 — Buildings that read as buildings *(done)*
+
+**Trees are in.** 9,181 instances in three families — 6,211 broadleaf
+scattered on the woodland and park polygons and through residential gardens,
+2,618 hedge blobs along OSM's hedge lines, 352 scrub — plus OSM's 540
+individually surveyed trees, all in one 72 KB file of 8-byte records. The
+records carry no Y: the map reads each trunk's ground height from the same
+height field the terrain is built from, so a tree cannot float or sink if
+either ever changes. Three draw calls for the lot.
+
+**And the buildings now have roofs.** We were keeping the *median* height
+inside each footprint and throwing the distribution away; the DSM held the
+eaves and the ridge all along. `scripts/golden_valley_roofs.py` recovers
+both — 2,658 gables, 735 hips, 640 flat — along with the ridge *direction*,
+which is measured rather than assumed, and that turned out to matter:
+
+> The obvious prior is that a ridge runs along a building's long axis. In
+> this box it does not, 62 % of the time. A British semi or terraced house is
+> narrow-fronted and deep, and its ridge runs with the **street** — across
+> its own footprint's long axis. Assuming the long axis would have laid every
+> terrace in Hesters Way at right angles to the road it faces.
+
+The same two numbers tell a gable from a hip: if the surface falls away in
+one direction and stays level in the other, the ends are vertical and the
+ridge runs the full length; if it falls away in both, the ends are hipped.
+
+Materials come from the OSM `building` tag, with the 1,781 footprints tagged
+only `yes` inferred from the land cover Phase 2 put underneath them, the
+footprint area and whether the roof measured pitched. Walls stay in a narrow
+off-white range on purpose — the proposition is a measured architectural
+model, and 4,000 brick-red houses would trade that for a video game — so the
+five families carry their difference in the roofs, which is what you see from
+the air anyway.
+
+**Bought:** the last of the "architectural competition entry" look.
+**Cost:** one pass. Free.
+
+### Phase 4a — Life *(done)*
+
+Cloud shadows drifting across the vale, wind in the trees with amplitude by
+height, water that catches the sun and ripples, and ninety birds actually
+flocking. The land class image Phase 2 wrote and nothing read is what tells
+the water where it is — no second material, no mask painted by hand.
+
+The interesting part was not the effects, it was the clock. Everything before
+this was still, and the descent's whole premise is that a pre-rendered clip
+and the live canvas show the same place at the same instant. Anything driven
+by `performance.now()` would put them at different moments of the same
+afternoon, and no fade hides a cloud shadow in the wrong place. So the world
+has exactly one clock:
+
+```
+   the map          updateLife(worldSeconds())      wall time, rebaseable
+   the capture      updateLife(i / fps)             frame by frame
+   a descent        pinWorld(floor(t·fps) / fps)    the clip's own frame
+                    releaseWorld(clipSeconds)       carries on, never snaps
+```
+
+The flock is the awkward case, because a simulation remembers: it steps at a
+fixed 1/60 s and rewinds to a seeded start whenever time runs backwards, so
+asking for t = 3.958 s twice gives the same ninety birds in the same places.
+`scripts/test_world_clock.py` is the check that has to keep passing if
+anything else moving is ever added.
+
+**It cost nothing at the seam.** Re-running the capture against a world with
+weather, wind, water and a flock in it:
+
+| | before Phase 4 | after |
+|---|---|---|
+| in-seam | 0.704 % | 0.700 % |
+| out-seam | 0.940 % | 0.938 % |
+
+**Bought:** the map stops being a render of an afternoon and becomes one.
+**Cost:** one pass. Free.
+
+### Phase 4b — Art direction *(done)*
+
+The direction was settled by the brief itself: **keep it close to the
+inspiration**. So rather than inventing one, I went and looked at what
+explore.ownprimland.com actually does — its stylesheet, not a description of
+it — and took the register.
+
+| | the reference | ours |
+|---|---|---|
+| display | Inferi *(Blaze Type, licensed)* | Cormorant Garamond *(OFL)* |
+| interface | Centra *(Sharp Type, licensed)* | Jost\* *(OFL)* |
+| ground | warm paper `#fffbe7` `#fffdf3` | `#f7f2e6` |
+| greens | sage `#798d73` `#4a6b4a` | `#7c8c6f` `#445041` |
+| accent | burnt amber `#a8611a` | `#a4611f` |
+
+What is borrowed is the register — a high-contrast display serif against a
+geometric sans, warm paper, sage and burnt amber, an interface restrained
+enough that the landscape carries the work. What is not borrowed is anything
+proprietary: their faces are commercial, ours are open licence and vendored
+so the map renders identically offline, and our palette is sampled from the
+world itself — the farmland green the terrain is painted with, the warmth of
+the `0xffe0b5` sun, the slate the Doughnut is picked out in.
+
+Four things changed:
+
+- **The opening.** A title over a landscape that is already moving — the
+  camera eases in for fifteen seconds behind the words, so by the time they
+  have gone the map is somewhere you have watched rather than a thing you
+  have been handed. Their device exactly: a tracked-out overline, a big
+  serif name with one word in italic, one line of invitation, and an
+  *Explore the map* pill.
+- **Markers that are planted, not floating.** A pin on the ground, a hairline
+  stem, and the label above it — the stem is the whole difference between a
+  label that belongs to a point on the map and browser chrome sitting on top
+  of a picture. They fade with distance, because three labels shouting
+  equally from a 2 km box is a legend, not a place.
+- **The place panel** in cream, with the name in the display serif and the
+  attribution stepping aside rather than disappearing when it opens — OGL and
+  ODbL both require it to stay visible.
+- **A shallow bottom vignette**, doing two jobs: seating the credit line
+  against sunlit farmland, which is the one place on this map where cream
+  type has nothing to sit on, and giving a still the bottom weight it needs.
+
+**Still missing: sound.** The reference opens with ambient nature audio and a
+*start without audio* link, and that is clearly right — but it needs an
+actual recording, and shipping the control without the file would be a dead
+switch. It is the one part of this phase waiting on an asset rather than a
+decision.
+
+**Bought:** it stops looking like a tool.
+**Cost:** one pass. Free — two open-licence typefaces, 168 KB vendored.
+
+### Phase 5 — The proposal itself
+
+Right now the Golden Valley hotspot descends onto **an empty field**, which is
+honest but useless as an exemplar. HBD and the council want to see what is
+being *proposed* there. This phase places the masterplan in the map — massing
+at minimum, their renders and video where they exist — with a before/after
+toggle between the surveyed present and the proposed future.
+
+**Buys:** the actual pitch. Everything before this is a beautiful map of what
+already exists; this is the first phase that shows a client their own scheme.
+**Cost:** one session once we have material. **Blocked on you** — this needs
+their masterplan drawings, massing or renders.
+
+### Phase 6 — The signature moves, at quality
+
+The season wave and the generated descents, done last on purpose.
+
+**Generated video is capped by the frame you hand it.** Session B's clip is a
+convincing descent *of a white model*, because frame A was a white model. Buy
+clips now and we buy expensive footage of an unfinished world, then pay again
+after every look change. Once Phases 1–5 land, the same pipeline — unchanged —
+produces descents of a place worth descending into.
+
+**Buys:** the two things that make this not-a-map.
+**Cost:** the season wave is a shader session, free. Descents are a few pounds
+per hotspot at the rates Session B measured, and want re-running after any
+look change.
+
+## The one thing that changes the order
+
+If a pitch date lands, Phase 5 jumps the queue: a client will forgive a
+plain-looking map that shows *their scheme*, and will not forgive a beautiful
+map that does not.
+
+## The adoption debt — paid
+
+Phases 1–3 all live in `experiments/002-living-map/lookdev/`, and the map page
+still runs the old flat look. That was deliberate, not neglect: the descent
+seam is measured *in pixels*, so the moment the world's appearance changes,
+`descent/frames/*.png`, the control clip and `seam-report.json` are all stale.
+Holding the changes in one place meant paying that cost once instead of three
+times.
+
+`golden-valley/gv-buildings.json` is the one shared file the three phases
+touched, and the roof pass only *added* fields to it: `ring`, `holes`, `base`
+and `height` are recomputed and asserted identical, and the script refuses to
+write if any of the 4,033 disagree. So the map page renders exactly what it
+rendered yesterday, and the seam numbers still stand.
+
+Done. `golden-valley/scene.js` now exports `buildWorld({ renderer })`, and the
+map page, the seam test and the lookdev harness all call it — one world, so
+the live canvas and a pre-rendered descent can never disagree about what the
+place looks like. `look.js` moved into `golden-valley/` with it; lookdev/ is
+now purely the comparison harness that makes the before-and-after sheets.
+
+Re-measuring the seam was the interesting part:
+
+| | white model | with land cover, trees and roofs |
+|---|---|---|
+| perfect landing | 0.464 % | 0.940 % |
+| 5 m of drift | 2.496 % | 7.736 % |
+| 10 m of drift | 3.559 % | 8.997 % |
+| delivery clip at crf 24 | 1.84 MB | 5.09 MB |
+
+Session B's finding — that the seam is driven by **detail density** — was
+made on a generated clip and is now confirmed on our own control clip, which
+is perfect by construction. Landing accuracy matters about three times as
+much as it did.
+
+Codec quality was the other thing that changed, and it changed less than it
+looks. The delivery encode now sits 0.37 points above the near-lossless one
+where it used to sit 0.08 above, so codec error more than quadrupled — but
+against a landing penalty that tripled, so the ratio holds. Measuring the
+whole curve settled it: crf 32 halves the download to 2.87 MB for 0.16 of a
+point at the seam, where five metres of drift costs seven. **Bitrate is still
+not what breaks a hand-off**, and the delivery encode moved to crf 32.
+
+## Material hints, and what OSM actually carries
+
+The nearest thing to "less Blender" that is free, and it starts with a
+disappointment: **`building:material` appears zero times in this box** and
+`roof:material` only 41 times. OSM here does not say what anything is made
+of. What it does carry is a great deal that *implies* material, and one thing
+that is better than an implication:
+
+| tag | count | what it buys |
+|---|---|---|
+| `roof:shape` | 874 | the gable-or-hip call, surveyed by a human |
+| `building:levels` | 687 | an independent check on the measured eaves |
+| `surface` | 577 | asphalt, concrete, paving, gravel, unpaved, grass |
+| `lanes` | 134 | a real carriageway width, and where to paint a line |
+
+**`roof:shape` turned out to be a test as much as a hint.** Scored against
+those 874 labels, the Phase 3 DSM inference agreed 70 % of the time — and the
+way it was wrong mattered more than the number. Plain accuracy is a trap when
+84 % of labelled pitched roofs are gabled: a rule that always says "gable"
+scores 84 % and builds a town without a single hipped roof. On balanced
+accuracy the tent test peaks at 65 %, because telling a gable from a hip
+means reading the last two or three metres at each end of a roof, which on a
+1 m raster is two or three pixels.
+
+So the threshold is not set to the accuracy peak. At the peak the call is
+65 % right per building but puts 48 % hipped roofs in a town that is 16 %
+hipped. At the shipped value the call is 59 % right and the *share* comes out
+at 16 %, matching the survey. **When the per-item call is barely better than
+a coin toss, get the population right.** And on the 874 where OSM states the
+shape, none of it applies — the survey wins, overruling us 179 times and
+rescuing 34 roofs the DSM had read as flat.
+
+`building:levels` was the happier check: 2 storeys → 4.8 m of measured eaves,
+3 → 7.8 m, 4 → 10.4 m. About 2.5 m a storey, which is what a British house
+is, on 594 buildings nobody told us about.
+
+The rest went into the ground raster. Roads get their width from `lanes`
+where it is tagged and their colour from `surface`; carriageways with lanes
+get a centre line, drawn at 2× and left to the downsample to make it as faint
+as it actually looks from three hundred metres up. And every field is worked
+in lines, because that is most of what a field looks like from the air — the
+*direction* is not in OSM, so it comes from the field's own shape, on the
+grounds that a farmer drives the long way.
+
+## The Blender question
+
+> "My idea is that we feed this 3D structure into image and video generators
+> to make hyper realistic zoom sections — less time in Blender and more of a
+> fake-it-til-you-make-it approach. Do we need to spend a session in Blender
+> adding detail?"
+
+Probably not, and the answer is worth three pounds rather than an argument.
+
+The reasoning: a generator does not need our render to be *realistic*, it
+needs it to be *unambiguous*. It can invent brick, slate, tarmac wear and
+undergrowth. It cannot invent that GCHQ is 14.8 m on a 52.7 m base, that the
+ridge runs with the street, or the shape of the ground under all of it — and
+those we have, measured. Detail added in Blender lands in the column the
+model overwrites anyway, and it does not transfer to the next postcode, which
+is the whole proposition.
+
+There is also a measurement against it. Session B found the generator's error
+tracks **detail density** — 2.79 % at the wide departure against 1.43 % at
+the low landing — and Session G confirmed it on our own control clip, where
+5 m of drift went from costing 2.5 % to 7.7 % once the world had foliage and
+roofs. More detail in the input makes a *return* descent harder, not easier.
+Departures are the species where detail density stops mattering, and
+"hyper-realistic zoom sections" are departures.
+
+So: `scripts/capture_passes.py` renders what a generator should actually be
+conditioned on — beauty, depth, world normals, and a class mask that
+separates carriageway from pasture from roof, because Phase 2 wrote a class
+per square metre and this is the second thing to read it. Then
+`scripts/generation_ladder.py` climbs four rungs, cheapest first, and
+`descent/LADDER-SESSION.md` is the brief for running it somewhere with keys.
+
+**What to look at is the failure mode, not the score.** Wrong buildings is a
+conditioning problem; plastic is a prompt problem; brick-versus-render is a
+material-hint problem, and material hints are cheap raster work in the
+pipeline we own. Only a failure that *geometry* would fix earns a Blender
+session.
+
+## Phase 5 — the path network
+
+> "frame 3 & 4 are pointlessly looking at a field. I'm also thinking we need
+> an aerial shot that gives us some interactive options — we need pathways."
+
+Right on both counts, and the second fixes the first. A field dissolving into
+houses is the most-made image in the industry, and it puts the viewer above a
+plot looking down like a surveyor. Paths put them on the ground with somewhere
+to go.
+
+The structural gap was small and specific. The footpaths were already in the
+map — `golden_valley_landcover.py` paints them into `gv-landcover.png` at a
+metre a texel, which is the right way to make them *look* correct. What a
+texel cannot do is have a name, a pair of ends, or a state. So the same routes
+come out a second time as polylines, and the two forms do different jobs:
+
+| | what it is | what it does |
+|---|---|---|
+| `gv-landcover.png` | pixels | how a path **looks** |
+| `gv-paths.json` | polylines | what a path **is** |
+
+**What OSM actually carries here.** 443 walkable ways in the box, chained
+through their shared nodes into 66 routes over 14.26 km. Three of them are
+named route relations, and one matters: the **Cheltenham Circular Footpath**
+runs north-south through the box and passes within **160 m** of the Golden
+Valley phase 1 site. We are not inventing a route to sell the scheme — we are
+revealing one that walks past it today. The **Gloucestershire Cycle Spine**
+crosses the whole box east-west, 378 m from GCHQ. NCN 41 is the same tarmac
+as the Spine and is deduplicated away: two lines over each other is a brighter
+line, not a second route.
+
+Everything else — 63 strands above 80 m — is drawn as a fainter web, so the
+vale reads as somewhere with a grain rather than somewhere with two lines on
+it.
+
+**Two tiers, one file.** `named` routes are labelled and offered; `strand`
+routes are context. Neither carries a Y: height comes from the same field the
+terrain is built from, exactly as the tree instances do, so a route cannot
+float over a hill or sink into one if either ever changes.
+
+**A leg is the unit of travel.** Clicking two kilometres of cycle route cannot
+mean "fly all of it" — at a speed that fits in a shot it is a blur, and at a
+speed you could walk it is twenty minutes. So a click takes the ~320 m around
+the point you pointed at. That is a watchable arrival, and — not by accident —
+exactly the span a generated clip would later stand in for. **The leg is also
+the unit of generation.**
+
+### Four bugs worth writing down
+
+1. **`smoothstep` is undefined when `edge0 >= edge1`.** The lit-behind-the-head
+   term was written as `smoothstep(uProgress, uProgress - 0.05, vU)`, which is
+   the descending form and is not in the specification. The driver returned
+   zero and the whole network drew nothing. `1.0 - smoothstep(a, b, x)` is the
+   defined way to say it.
+2. **`pow()` is undefined for a negative base.** The travelling flare squared
+   its ramp with `pow(d, 2.0)`, and half of that ramp is negative. `d * d`.
+3. **A flat ribbon has no consistent winding.** The quad for a stretch heading
+   north comes out the opposite way round from one heading south, so under the
+   default `FrontSide` most of every route was back-face culled and what
+   survived read as scattered chevrons. There is no back of a path to cull.
+4. **Half a metre of lift is below the depth buffer's resolution** two
+   kilometres out with the near plane at 2 m. The bias belongs in depth-buffer
+   units — `polygonOffset` — where it is the same bias at every distance.
+
+Only the first three were visible as "nothing is drawn", and the first two
+were found by shouting: pure red, glow 8, width 40 m. A diagnostic that makes
+the failure *loud* separates "not drawn" from "drawn and invisible" in one
+frame, and those have completely different causes.
+
+### The camera does not ride at eye height, and that is a finding
+
+The walker was written at 2.4 m — a tall walker — because "on the ground" was
+the point. The first plate captured for a generator settled it: the land cover
+is a 1 m image seen at a grazing angle with no grass, kerb or verge geometry
+under it, so the bottom half of the frame is a smear and a building four
+metres away is a featureless slab. The map is surveyed to the metre **from the
+air**. It is not a walk simulator, and pretending otherwise makes both the
+picture and the conditioning worse.
+
+`RIDE` in `walk.js` is now 14 m, with a 70 m look-ahead. At that height the
+texture resolves, the worn line of the path reads, the field working lines and
+the stream give parallax, and the settlement edge anchors the horizon — while
+it still plainly reads as travelling the route rather than looking down at it.
+8 m works too and feels more like walking; it is one constant either way.
+
+### What it cost, and what is next
+
+Nothing. Five steps — extract, drape, draw, pick, walk — and no generation.
+The map now offers real routes, lit, named and walkable, before a penny is
+spent.
+
+**And the next step costs nothing either, which was a correction.** The first
+draft of `generate/001-path-leg.md` opened with a cheap paid image-to-image
+rung, which is a question this repo had already bought the answer to: Session M
+re-ran exactly that for US$0.06 and flux put a shed and a playing field where
+GCHQ is — *"beauty-conditioning was always the weak path"* — while Codex on the
+subscription beat the paid models outright at £0. Imagery goes to Codex. A paid
+call is for what Codex cannot do, which today means video and nothing else.
+
+What we can add that Codex cannot get for itself is **registration**. Its own
+verdict on the vision frames was "closely aligned visually, but not
+survey-exact", and it found that drift by inspecting its first draft and
+writing itself a correction prompt full of normalised coordinates.
+`scripts/measure_leg_anchors.py` projects the surveyed features — the path
+line, the horizon, the stream, the hedges, the settlement roofline — through
+the leg's own camera and writes those coordinates out in advance. The second
+pass becomes the first.
+
+## Immediate next step
+
+**The season wave**, which the reference makes the case for better than this
+plan did. Its own signature move is a toggle that shifts the landscape from
+summer to autumn, and we are unusually well placed to do it: `gv-landclass.png`
+already says which texels are woodland, which are farmland and which are mown
+grass, the tree instances already carry a kind, and Phase 4a built the clock
+it would run on. A palette per class per season, and the wave crosses the
+vale rather than cutting.
+
+Then, in any order:
+
+- **Phase 5, the proposal** — still blocked on HBD or council material, and
+  still the one that jumps the queue the moment a pitch date lands.
+- **Ambient sound** — the last piece of Phase 4b, waiting on a recording
+  rather than a decision.
+- **Phase 6, generated descents** — newly worth buying. Both anchor frames
+  were re-rendered on 9 Sep, so a generator now starts from a real-looking
+  place rather than a clay model, and `--style clay` is probably the wrong
+  default. The Kling clip in `descent/fal/` is a record of the old world, not
+  a comparison against this one.
+

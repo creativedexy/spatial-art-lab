@@ -1,0 +1,74 @@
+# Publish the living map to GitHub Pages.
+#
+# The site is assembled by scripts/build_site.py rather than served from the
+# repository, because the repository also holds LiDAR intermediates, session
+# notes, generation briefs and other people's copyrighted renders. The build
+# copies out the files the page loads and nothing else.
+#
+# It runs WITHOUT --internal, so the campus type models stay behind: they
+# derive from HBD's and Grimshaw's published renders and meshy/README.md says
+# pitch work only. The map is built to survive that — the campus stands as the
+# scheme's own extrusions — and scripts/test_public_build.py checks that it
+# does. The step after the build fails the run if a pitch-only file reaches
+# the folder anyway, because "we meant not to" is not a control.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. A queued run supersedes a waiting one but never
+# interrupts a live deploy half way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Assemble the public site
+        run: python3 scripts/build_site.py --out dist
+
+      - name: Nothing pitch-only may leave
+        run: |
+          set -euo pipefail
+          found=$(find dist \( -name '*.glb' -o -name '*.mp4' -o -name '*-hq.webm' \) -o -path '*inspiration*' -o -path '*meshy*')
+          if [ -n "$found" ]; then
+            echo "these must not be published:"; echo "$found"; exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          import pathlib
+          d = json.loads(pathlib.Path('dist/golden-valley/models.json').read_text())
+          assert d['available'] == [], f"public build still claims models: {d['available']}"
+          n = sum(1 for p in pathlib.Path('dist').rglob('*') if p.is_file())
+          mb = sum(p.stat().st_size for p in pathlib.Path('dist').rglob('*') if p.is_file())
+          print(f"clean: {n} files, {mb / 1048576:.2f} MB")
+          PY
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

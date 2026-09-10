@@ -1,0 +1,45 @@
+{
+  "startedUtc": "2026-09-08T13:34:00+00:00",
+  "purpose": "Session B key test (retry): verify the reconfigured Gemini credential (x-goog-api-key header, injected by the network proxy, no env var) works for Veo video generation",
+  "model": "veo-3.1-fast-generate-preview (not attempted - stopped at free validation step)",
+  "frameA": "experiments/002-living-map/descent/frames/gv-doughnut-aerial-frameA.png",
+  "frameB": null,
+  "candidatesRequested": 1,
+  "result": "FAILED - free validation call returned 401 before any paid call was attempted",
+  "evidence": {
+    "envVarPresent": false,
+    "envVarCheck": "GEMINI_API_KEY is not set in the session environment - expected under the new mechanism, since the proxy is meant to inject the credential directly into outbound HTTPS requests rather than exposing it as an env var or file",
+    "freeModelsListValidation": {
+      "endpoint": "GET https://generativelanguage.googleapis.com/v1beta/models",
+      "requestHeaders": "none added by this test - no api-key header or query param was set, to let the proxy attach the credential as designed",
+      "httpStatus": 401,
+      "errorBody": {
+        "error": {
+          "code": 401,
+          "message": "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.",
+          "status": "UNAUTHENTICATED",
+          "details": [
+            {
+              "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+              "reason": "ACCESS_TOKEN_TYPE_UNSUPPORTED",
+              "metadata": {
+                "method": "google.ai.generativelanguage.v1beta.ModelService.ListModels",
+                "service": "generativelanguage.googleapis.com"
+              }
+            }
+          ]
+        }
+      },
+      "veoModelsListed": "unknown - listing never succeeded"
+    },
+    "generationScript": {
+      "command": "python3 scripts/generate_descent.py experiments/002-living-map/descent/frames/gv-doughnut-aerial-frameA.png experiments/002-living-map/descent/keytest --candidates 1 --model veo-3.1-fast-generate-preview",
+      "attempted": false,
+      "reason": "instructions require stopping before the paid call on a 401/403 from the free validation step",
+      "paidCallsMade": 0
+    }
+  },
+  "wallTimeSeconds": 0,
+  "costIncurred": "none - stopped before any billable request",
+  "nextStep": "The ACCESS_TOKEN_TYPE_UNSUPPORTED reason suggests Google is still seeing something other than a plain x-goog-api-key credential (e.g. no header attached at all, or an OAuth-shaped value) rather than a garden-variety invalid-key rejection. Confirm with the proxy operator that the x-goog-api-key header is actually being attached to requests to generativelanguage.googleapis.com in this session/container, then retry in a fresh session."
+}

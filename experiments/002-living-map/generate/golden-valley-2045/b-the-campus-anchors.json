@@ -1,0 +1,138 @@
+{
+  "note": "Surveyed features projected through this leg's own camera, as normalised image coordinates: u is 0 at the left edge and 1 at the right, v is 0 at the top and 1 at the bottom. These are what a generated frame must not move.",
+  "route": null,
+  "frames": [
+    {
+      "file": "b-the-campus.png",
+      "anchors": {
+        "horizonV": -0.122,
+        "path": [],
+        "landmarks": [
+          {
+            "kind": "stream",
+            "nearestMetres": 219,
+            "enters": {
+              "u": 0.445,
+              "v": 0.408
+            },
+            "leaves": {
+              "u": 0.16,
+              "v": 0.987
+            },
+            "spanU": [
+              0.16,
+              0.445
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 340,
+            "enters": {
+              "u": 0.141,
+              "v": 0.344
+            },
+            "leaves": {
+              "u": 0.007,
+              "v": 0.578
+            },
+            "spanU": [
+              0.007,
+              0.141
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 410,
+            "enters": {
+              "u": 0.987,
+              "v": 0.419
+            },
+            "leaves": {
+              "u": 0.995,
+              "v": 0.386
+            },
+            "spanU": [
+              0.987,
+              0.995
+            ]
+          },
+          {
+            "kind": "hedge",
+            "nearestMetres": 691,
+            "enters": {
+              "u": 0.674,
+              "v": 0.167
+            },
+            "leaves": {
+              "u": 0.568,
+              "v": 0.209
+            },
+            "spanU": [
+              0.568,
+              0.684
+            ]
+          }
+        ],
+        "development": {
+          "blocksInFrame": 76,
+          "byFamily": {
+            "homes": 60,
+            "campus": 14,
+            "glasshouse": 2
+          },
+          "uFrom": 0.01,
+          "uTo": 0.554,
+          "vFrom": 0.099,
+          "vTo": 0.892,
+          "nearestMetres": 235,
+          "tallest": [
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.554,
+              "vBase": 0.729,
+              "vRoof": 0.675
+            },
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.476,
+              "vBase": 0.364,
+              "vRoof": 0.327
+            },
+            {
+              "family": "campus",
+              "heightMetres": 17.0,
+              "u": 0.426,
+              "vBase": 0.354,
+              "vRoof": 0.317
+            }
+          ]
+        },
+        "namedBuildings": [
+          {
+            "name": "Royal Court",
+            "metres": 793.6,
+            "u": [
+              0.688,
+              0.74
+            ],
+            "v": [
+              0.144,
+              0.172
+            ]
+          }
+        ],
+        "nearBuildings": [],
+        "settlementEdge": {
+          "count": 1864,
+          "uFrom": 0.294,
+          "uTo": 1.0,
+          "vRooflineTop": 0.037,
+          "vBaseTypical": 0.115,
+          "nearestMetres": 215
+        }
+      }
+    }
+  ]
+}

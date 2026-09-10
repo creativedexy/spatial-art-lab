@@ -1,0 +1,55 @@
+{
+  "view": "aerial",
+  "note": "Camera A of the doughnut descent \u2014 the wide, dense one.",
+  "camera": {
+    "positionLocalMetres": [
+      -420.0,
+      300.0,
+      650.0
+    ],
+    "lookAtLocalMetres": [
+      123.0,
+      64.0
+    ],
+    "lookLiftMetres": 0.0,
+    "fovDegrees": 48
+  },
+  "sizePixels": [
+    1280,
+    720
+  ],
+  "frame": "local metres from the box centre, x east, z south (the same frame as gv-buildings.json)",
+  "files": {
+    "beauty": "aerial-beauty.png",
+    "depth": "aerial-depth.png",
+    "metric": "aerial-metric.png",
+    "normal": "aerial-normal.png",
+    "mask": "aerial-mask.png"
+  },
+  "depth": {
+    "nearMetres": 357,
+    "farMetres": 1577.6,
+    "encoding": "near=white, far=black, linear in view space, range fitted to the frame. metres = far - value/255 * (far - near).",
+    "reliefMetres": null
+  },
+  "reliefGreyLevels": {
+    "depth": 10.3,
+    "metric": 0.62
+  },
+  "maskColours": {
+    "sky": "#000000",
+    "wall": "#d94f3d",
+    "tree": "#7ad14f",
+    "field": "#3f8f3a",
+    "wood": "#1f5f2a",
+    "hard": "#9a9a9a",
+    "road": "#4a4a4a",
+    "water": "#2d6fb5",
+    "roof:house": "#e8a33d",
+    "roof:terrace": "#b46bd1",
+    "roof:retail": "#7fc4ff",
+    "roof:shed": "#ffe066",
+    "roof:civic": "#ff7bb0",
+    "roof:gchq": "#6d5bd0"
+  }
+}

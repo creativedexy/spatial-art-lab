@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descent seam test — living map Sprint 1</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; overflow: hidden;
+    background: #11161a; color: #e6eef1;
+    font: 13px/1.45 system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  #stage { flex: 1 1 auto; position: relative; display: grid; place-items: center; }
+  #frame { position: relative; background: #000; box-shadow: 0 0 0 1px #2b343a; }
+  #frame > canvas, #frame > video { position: absolute; inset: 0;
+    width: 100%; height: 100%; display: block; }
+  #clip { opacity: 0; pointer-events: none; }
+  #panel { flex: 0 0 auto; padding: 10px 14px; background: #171d22;
+    border-top: 1px solid #2b343a; display: flex; gap: 18px;
+    align-items: center; flex-wrap: wrap; }
+  button { font: inherit; padding: 6px 14px; border-radius: 5px;
+    border: 1px solid #3a464e; background: #222b31; color: inherit; cursor: pointer; }
+  button:hover { background: #2b363d; }
+  button:disabled { opacity: .45; cursor: default; }
+  label { display: flex; gap: 7px; align-items: center; white-space: nowrap; }
+  input[type=range] { width: 120px; }
+  #readout { font-variant-numeric: tabular-nums; color: #9fb3bc; }
+  #readout b { color: #e6eef1; font-weight: 600; }
+  .diffs { display: flex; gap: 8px; align-items: center; }
+  .diffs canvas { width: 96px; height: 54px; background: #000;
+    border: 1px solid #2b343a; image-rendering: pixelated; }
+  #credit { position: fixed; left: 10px; bottom: 4px; font-size: 10px;
+    color: #5d6d76; pointer-events: none; }
+</style>
+<script type="importmap">{ "imports": { "three": "../../terrain/vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="stage"><div id="frame">
+  <video id="clip" muted playsinline preload="auto">
+    <source src="../clips/descent-control.webm" type="video/webm">
+    <source src="../clips/descent-control.mp4" type="video/mp4">
+  </video>
+</div></div>
+<div id="panel">
+  <button id="run">Run descent</button>
+  <button id="flip">Flip: clip &harr; live</button>
+  <label>fade <input id="fade" type="range" min="0" max="600" step="20" value="200"><span id="fadeval">200 ms</span></label>
+  <label>landing error <input id="err" type="range" min="0" max="60" step="2" value="0"><span id="errval">0 m</span></label>
+  <button id="measure">Measure seams</button>
+  <span id="readout">seam error: not measured</span>
+  <span class="diffs"><canvas id="dIn" width="160" height="90"></canvas><canvas id="dOut" width="160" height="90"></canvas></span>
+</div>
+<div id="credit">EA LiDAR composite DTM/DSM (OGL v3) &middot; footprints &copy; OpenStreetMap contributors (ODbL)</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
