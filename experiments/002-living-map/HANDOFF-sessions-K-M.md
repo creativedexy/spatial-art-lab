@@ -6,6 +6,9 @@
 buildings and people; transitions are a blurry zoom-in, not a journey. Full
 rule and its check in `generate/README.md`.
 
+**"Before" frames are parked.** No site-today or empty-plot frames until Dex
+says otherwise.
+
 ### Images first, spend nothing
 
 - **No video generation of any kind** until Dex says he is happy with the image

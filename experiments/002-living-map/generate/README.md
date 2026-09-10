@@ -35,6 +35,10 @@ buildings and the people in each frame. If any of the three cannot be named,
 do not generate it. And no more than half of any finished frame may be empty
 ground or empty sky; if it is, it fails and is regenerated or dropped.
 
+**"Before" frames are parked** (Dex, 10 Sep). No site-as-it-is-today, no
+empty-plot half of a before/after pair. Brief only frames of the built scheme
+and of real places with life in them until Dex unparks it.
+
 **Transitions are a blurry zoom-in, not a journey.** Get from one interesting
 frame to the next with a push-in and motion blur, done in the page or in ffmpeg
 for nothing. There is no need to travel an empty path between them, and no
