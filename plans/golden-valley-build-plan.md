@@ -16,7 +16,7 @@ Three close plates rendered from the 2045 map at 80–150 m.
 
 | plate | rule | why |
 |---|---|---|
-| GCHQ with its meadow roof | **passes** | the ring fills the frame; queued behind the Codex usage limit |
+| GCHQ with its meadow roof | **passes, done** | the ring fills the frame; no measurable drift |
 | campus centre, campus cluster | **fails** | four blank slabs far apart; grass plus sky is over half the frame |
 | glasshouse quarter | **fails** | the glasshouse is one thin block in an orchard |
 
@@ -110,7 +110,7 @@ supplies photos, loops and GLBs.
 
 ## Order
 
-1. GCHQ close-up (free). **Blocked until 17:06 on 10 Sep:** Codex returned "You've hit your usage limit ... try again at 5:06 PM". Plate, anchors and prompt are ready in `generate/close-2045/`; rerun as is.
+1. GCHQ close-up: **done**, `generate/close-2045/out/gchq-meadow-photo.png`. One pass, no correction; the ring and courtyard held within about 4 px (Codex) and the ring's top edge sits on its lock by eye. The first frame with no measurable drift: up close, the ring fills the frame and there is nowhere to drift to.
 2. Meshy a + b: **approved by Dex, 70 credits**, then the campus close-ups pass.
 3. Video loops (**$1.68, awaiting Dex's yes**).
 4. Web build in the map: main session, task 001.
