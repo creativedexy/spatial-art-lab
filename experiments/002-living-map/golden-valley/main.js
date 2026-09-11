@@ -246,55 +246,67 @@ function updateIgnition(dtMs) {
 }
 
 // --- 2045 -------------------------------------------------------------------
-// The wave used to be a button that fired once, west to east, and that was
-// that. But the idea of the whole piece is dragging the future across the vale
-// and *stopping half way* — one field already an orchard while the next is
-// still stubble, and the seam between them somewhere you can put your thumb.
-// The shader has always taken a continuous front; only the interface was
-// missing. So: a dial from 2026 to 2045 you can push either way, and a play
-// button for the reveal, because the sweep is worth watching once before you
-// start steering it.
+// Today, or 2045. Not a year in between.
 //
-// ?future=1 renders it already arrived and ?wave=0.45 holds the front
-// part-way across, which is what a capture wants since it has no thumb.
+// Phase 8 gave the wave a dial, on the reasoning that the idea of the piece is
+// dragging the future across the vale and stopping half way. That was wrong,
+// and looking at it says so: a field caught half way through becoming an
+// orchard is neither the ground as it is nor the scheme as proposed, and those
+// are the only two things a room ever argues about. Nineteen resting states,
+// seventeen of them mush.
+//
+// So the interface offers the two ends, and the sweep between them is a
+// transition rather than a place. The shader is untouched — it still takes a
+// continuous front, `setWave` still accepts any number, and `?wave=0.45` still
+// holds it half way for a capture, which is the one caller that wants it.
+//
+// ?future=1 renders it already arrived.
 const future = scene.userData.future;
-const YEAR_FROM = 2026;
-const YEAR_TO = 2045;
-// Nine seconds for the whole vale, and pro rata for part of it, so playing
-// the last tenth is not the same nine seconds as playing all of it.
-const WAVE_MS = 9000;
-const yearAt = (w) => Math.round(YEAR_FROM + (YEAR_TO - YEAR_FROM) * w);
+// Long enough to read as the front crossing the vale, short enough that nobody
+// waits for it. Eased at both ends, so it gathers and settles.
+const SWEEP_MS = 1400;
 
 future.setWave(params.has('wave') ? Number(params.get('wave'))
                                   : (params.has('future') ? 1 : 0));
 
 const dial = document.getElementById('year-dial');
-const range = document.getElementById('year-range');
-const readout = document.getElementById('year-read');
-const play = document.getElementById('year-play');
+const toggle = document.getElementById('year-toggle');
+const ends = [...toggle.querySelectorAll('.end')];
 dial.hidden = clean || params.has('future') || params.has('wave');
 
-let sweep = null;                  // { from, to, startedAt, ms } while playing
-let dragging = false;
+let sweep = null;                  // { from, to, startedAt, ms } while crossing
 
-range.addEventListener('pointerdown', () => { dragging = true; });
-addEventListener('pointerup', () => { dragging = false; });
-range.addEventListener('input', () => {
-  // A hand on the dial outranks a sweep in progress. Anything else means the
-  // control fights the person using it, which is the one thing a control may
-  // never do.
-  sweep = null;
-  future.setWave(range.valueAsNumber / 1000);
+function sweepTo(to) {
+  // Compared against where it is HEADING rather than where it is. Pressed
+  // twice in quick succession the second press has to turn it round, and at
+  // that moment the vale has barely moved — so comparing against the current
+  // wave would read "you are already going to 2026" and commit you to 2045.
+  const bound = sweep ? sweep.to : future.wave;
+  if (Math.abs(to - bound) < 0.001) return;
+  const from = future.wave;
+  if (Math.abs(to - from) < 0.001) { sweep = null; future.setWave(to); return; }
+  // Pro rata, so turning round after half a crossing is not the same
+  // 1.4 seconds as crossing the whole vale.
+  sweep = { from, to, startedAt: performance.now(),
+            ms: Math.max(500, SWEEP_MS * Math.abs(to - from)) };
+}
+
+// Mid-sweep, the switch answers to where it is going rather than where it is:
+// a control that ignores the second press because the first has not landed is
+// a control that feels broken.
+const heading = () => (sweep ? sweep.to : future.wave) >= 0.5;
+
+toggle.addEventListener('click', () => sweepTo(heading() ? 0 : 1));
+// A two-state control that only answers to space is one you have to discover
+// twice. Left is today and right is 2045, which is also how it is drawn.
+toggle.addEventListener('keydown', (e) => {
+  const to = { ArrowLeft: 0, ArrowDown: 0, ArrowRight: 1, ArrowUp: 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  sweepTo(to);
 });
 
-play.onclick = () => {
-  const from = future.wave;
-  const to = from >= 0.999 ? 0 : 1;
-  sweep = { from, to, startedAt: performance.now(),
-            ms: Math.max(900, WAVE_MS * Math.abs(to - from)) };
-};
-
-// What the scheme is, filling as it arrives. It lives inside the dial rather
+// What the scheme is, filling as it arrives. It lives inside the switch rather
 // than beside it because they are one object to a viewer: the control, and
 // what the control is doing to the vale.
 const scheme = clean ? null : await addScheme({ future, root: app });
@@ -310,17 +322,18 @@ function updateWave(now) {
     if (k >= 1) sweep = null;
   }
   // Read from the world rather than from whatever last set it. Flying to a
-  // place moves the wave too, and a dial that only knew about its own input
-  // would sit there reading 2026 over a photograph of 2045.
+  // place moves the wave too, and a switch that only knew about its own input
+  // would sit there saying TODAY over a photograph of 2045.
   if (dial.hidden) return;
   const w = future.wave;
-  readout.textContent = yearAt(w);
+  // The knob's travel IS the front's travel — one number, read every frame,
+  // so the control cannot disagree with the vale it describes.
+  toggle.style.setProperty('--k', w.toFixed(4));
+  toggle.setAttribute('aria-checked', String(w >= 0.5));
+  ends[0].classList.toggle('on', w < 0.5);
+  ends[1].classList.toggle('on', w >= 0.5);
   dial.classList.toggle('arrived', w >= 0.999);
   dial.classList.toggle('today', w <= 0.001);
-  if (!dragging) {
-    const v = Math.round(w * 1000);
-    if (range.valueAsNumber !== v) range.value = String(v);
-  }
   scheme?.update();
 }
 

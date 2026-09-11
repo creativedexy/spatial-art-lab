@@ -291,11 +291,10 @@ body.in-place #credit { left: 440px; max-width: 38vw; }
 /* It stays up even inside a photograph: what it credits is still on screen
    underneath, and the terms do not have a "but the picture is nicer" clause. */
 
-/* --- the year dial ---------------------------------------------------------
+/* --- the year switch -------------------------------------------------------
    Mobile first, because the wave is the piece and a phone is where it will be
-   shown. The thumb is 30 px on a 44 px row, the whole bar sits above the
-   thumb-reach line at the bottom of the screen, and the year is large enough
-   to read while you are dragging it — which is the only moment it matters. */
+   shown. The switch is a 44 px row, full width, and the whole panel sits above
+   the thumb-reach line at the bottom of the screen. */
 #year-dial {
   position: absolute; z-index: 5; left: 16px; right: 16px; bottom: 26px;
   display: flex; flex-direction: column; align-items: stretch; gap: 0;
@@ -307,8 +306,8 @@ body.in-place #credit { left: 440px; max-width: 38vw; }
 }
 #year-dial[hidden] { display: none; }
 #year-dial .row {
-  display: flex; align-items: center; gap: 14px;
-  padding: 10px 16px 10px 10px;
+  display: flex; align-items: stretch;
+  padding: 10px;
 }
 
 /* --- the scheme band ---------------------------------------------------------
@@ -380,76 +379,37 @@ body.in-place #scheme-sheet, body.in-photo #scheme-sheet { display: none; }
 body.scheme-open #credit, body.scheme-open .place-marker,
 body.scheme-open .hotspot { opacity: 0; pointer-events: none; }
 
-#year-play {
-  flex: none; width: 44px; height: 44px;
-  display: grid; place-items: center;
+/* --- today, or 2045 ----------------------------------------------------------
+   A switch, not a dial. Two resting states, and the sweep between them is a
+   transition rather than a place you can stop: see index.html for why.
+
+   The knob is positioned from `--k`, which main.js writes every frame from
+   `future.wave` — so the control is not animated alongside the vale, it is
+   driven BY the vale. Fly to a 2045 place and the knob walks across on its
+   own, because there is one number and the interface is reading it. */
+#year-toggle {
+  position: relative; flex: 1 1 auto; min-width: 0;
+  display: grid; grid-template-columns: 1fr 1fr;
+  height: 44px; padding: 0;
   background: none; border: 1px solid rgba(247, 242, 230, 0.45);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background var(--quick) var(--ease),
-              border-color var(--quick) var(--ease);
 }
-#year-play:hover, #year-play:focus-visible {
-  background: var(--paper); border-color: var(--paper);
-}
-/* A triangle, and a square once the front has arrived — the button plays the
-   change back to today from there, so it must stop looking like "go on". */
-#year-play .glyph {
-  width: 0; height: 0;
-  border-left: 11px solid var(--paper);
-  border-top: 7px solid transparent; border-bottom: 7px solid transparent;
-  margin-left: 3px;
-  transition: border-color var(--quick) var(--ease);
-}
-#year-play:hover .glyph, #year-play:focus-visible .glyph {
-  border-left-color: var(--ink);
-}
-#year-dial.arrived #year-play .glyph {
-  width: 12px; height: 12px; margin-left: 0;
-  border: 0; background: var(--paper);
-}
-#year-dial.arrived #year-play:hover .glyph,
-#year-dial.arrived #year-play:focus-visible .glyph { background: var(--ink); }
-
-#year-dial .track { flex: 1 1 auto; min-width: 0; }
-#year-dial .ends {
-  display: flex; justify-content: space-between;
-  margin-top: 2px;
-  font: 500 9.5px/1 var(--sans); letter-spacing: 0.2em;
-  color: rgba(247, 242, 230, 0.62);
-}
-
-#year-range {
-  -webkit-appearance: none; appearance: none;
-  display: block; width: 100%; height: 24px;
-  margin: 0; background: none; cursor: grab;
-}
-#year-range:active { cursor: grabbing; }
-#year-range::-webkit-slider-runnable-track {
-  height: 2px; background: rgba(247, 242, 230, 0.4);
-}
-#year-range::-moz-range-track { height: 2px; background: rgba(247, 242, 230, 0.4); }
-/* 30 px of thumb on a 24 px track: the target is deliberately larger than the
-   line it rides, because a 2 px line is a drawing and a thumb is a thumb. */
-#year-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 30px; height: 30px; margin-top: -14px;
-  border-radius: 50%; border: 1px solid rgba(41, 48, 42, 0.25);
+#year-toggle:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
+#year-toggle .knob {
+  position: absolute; top: 3px; bottom: 3px; left: 3px;
+  width: calc(50% - 3px);
   background: var(--paper);
-  box-shadow: 0 0 0 6px rgba(247, 242, 230, 0.14);
+  transform: translateX(calc(var(--k, 0) * 100%));
 }
-#year-range::-moz-range-thumb {
-  width: 30px; height: 30px;
-  border-radius: 50%; border: 1px solid rgba(41, 48, 42, 0.25);
-  background: var(--paper);
-  box-shadow: 0 0 0 6px rgba(247, 242, 230, 0.14);
+#year-toggle .end {
+  position: relative; display: grid; place-items: center;
+  font: 500 11px/1 var(--sans); letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--paper);
+  transition: color var(--quick) var(--ease);
 }
-#year-range:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
-
-#year-read {
-  flex: none; min-width: 4.4ch; text-align: right;
-  font: 300 26px/1 var(--display); color: var(--paper);
-  font-variant-numeric: tabular-nums;
-}
+/* Ink on the paper the knob has reached. `.on` is set from the same frame
+   that moves the knob, so the word darkens as the knob arrives under it. */
+#year-toggle .end.on { color: var(--ink); }
 
 body.in-place #year-dial, #app.flying #year-dial,
 #app.place-flying #year-dial { opacity: 0; pointer-events: none; }

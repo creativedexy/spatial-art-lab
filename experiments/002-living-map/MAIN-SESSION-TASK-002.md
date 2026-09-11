@@ -175,7 +175,7 @@ is −z.
 
 ### Tests
 
-`test_places.py` 19/19, `test_public_build.py` 11/11, `test_year_dial.py`
+`test_places.py` 19/19, `test_public_build.py` 11/11, `test_year_switch.py`
 14/14, `test_path_network.py` 12/12, `test_heightmap.py` 6/6,
 `test_tiles_frame.py` 3/3 (new).
 

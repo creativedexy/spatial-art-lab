@@ -50,23 +50,21 @@
   <button id="intro-go">Explore the map</button>
   <div class="aside">Environment Agency LiDAR &middot; OpenStreetMap</div>
 </div>
-<!-- The year dial. The wave was a button that fired once; the idea of the
-     piece is dragging the future across the vale and stopping half way, with
-     one field an orchard while the next is still stubble. The shader always
-     took a continuous front — only the interface was missing. -->
+<!-- Today, or 2045. Two states, because those are the only two a room ever
+     argues about: this is the ground now, and this is what the scheme makes
+     of it. The shader still takes a continuous front and a capture can still
+     hold it half way with ?wave= — but a year parked at 2034 is a field that
+     is neither a place nor a proposal, so the interface does not offer one. -->
 <div id="year-dial" hidden>
   <!-- The scheme band is inserted above this row by scheme.js: the control and
        what the control is doing to the vale are one object to a viewer. -->
   <div class="row">
-    <button id="year-play" type="button" aria-label="Play the change to 2045">
-      <span class="glyph" aria-hidden="true"></span>
+    <button id="year-toggle" type="button" role="switch" aria-checked="false"
+            aria-label="Show the Golden Valley in 2045">
+      <span class="knob" aria-hidden="true"></span>
+      <span class="end on">Today</span>
+      <span class="end">2045</span>
     </button>
-    <div class="track">
-      <input id="year-range" type="range" min="0" max="1000" value="0" step="1"
-             aria-label="How far the scheme has arrived, 2026 to 2045">
-      <div class="ends"><span>2026</span><span>2045</span></div>
-    </div>
-    <output id="year-read" for="year-range">2026</output>
   </div>
 </div>
 <div id="panel" hidden>
@@ -77,7 +75,7 @@
 </div>
 <!-- Attribution is not optional: OGL v3 and ODbL both require it. On a
      phone it collapses behind a labelled control rather than shrinking,
-     because four lines of licence text under the year dial is how a
+     because four lines of licence text under the year switch is how a
      careful credit turns into noise and stops being read at all. -->
 <!-- Required, always visible, and gathered from the renderer rather than
      typed: what is being credited changes with what is on screen. -->

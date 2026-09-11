@@ -8,7 +8,7 @@
 // found GCHQ's ring landing within a few pixels of our own surveyed lock —
 // two independent sources agreeing about where a building is.
 //
-// So: today becomes the real place, and the future stays ours. The year dial
+// So: today becomes the real place, and the future stays ours. The switch
 // then sweeps a scheme we can defend across a town nobody has to take on
 // trust.
 //
