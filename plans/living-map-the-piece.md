@@ -149,11 +149,11 @@ handed on arrival is the entire difference between a viewer and a piece.
 **Done when:** the toggle at the aerial viewpoint reads as the same photograph
 twice — once as flown, once as proposed.
 
-**A decision for Dex, and it is a real one.** Tiles need a key, and a key on a
-public URL is a public bill. Recommendation: the **public URL stays ours**
-(measured map, no key, no billing, no terms to honour), and a **keyed build**
-behind a referrer-restricted key is what goes in front of a client. Two builds,
-one codebase — `build_site.py` already does exactly this split for the models.
+**Settled, 11 Sep.** Tiles need a key and a key on a public URL is a public
+bill, so: the **public URL stays ours** — measured map, no key, no billing, no
+terms to honour — and a **keyed build** behind a referrer-restricted key is
+what goes in front of a client. Two builds, one codebase; `build_site.py`
+already does exactly this split for the Meshy models.
 
 ### Phase 13 — Arrival
 
@@ -220,3 +220,81 @@ Naming these so they stop costing thought:
   the tiles bring the far field with them.
 - **Blur zooms.** Ruled out 10 Sep, still out.
 - **Any frame the visitor composed.** That is the whole of phase 11.
+
+
+---
+
+## Phase 11 — result, 11 Sep 2026
+
+Done: the switch, the shots, the fence, the chrome.
+
+**Five shots, chosen by looking.** Sixteen candidates over two rounds, every
+one rendered at both ends of the switch and tiled into a contact sheet, because
+the pair is the product and a shot that is beautiful at 2045 and empty at 2026
+has failed. Two rules did the cutting:
+
+- **The edge of the box must never appear.** It killed every shot that looked
+  north-west, because the terrain runs out 270 m behind the new homes. Turning
+  that one round to look *back* at the town fixed the frame and improved the
+  argument — new quarter in the near field, the Cheltenham it joins on the
+  skyline.
+- **There must be horizon in it.** It killed the overlay camera, the one
+  matched against the developer's own hero in September: at 16:9 it is a plan
+  view with no sky, however well the ground lines up.
+
+**The brook is not a shot.** It was tried four ways — across, along, close,
+high — and the wetland corridor never reads from the air at any distance. It is
+a thing you stand next to, so it belongs to an arrival. Fifteen point eight
+hectares of the scheme's best argument, deferred to phase 13 rather than shown
+badly now.
+
+| shot | what it is for |
+|---|---|
+| The vale | where this is: whole town, the ring in the middle, escarpment behind |
+| Cyber Central | nine hectares of campus, the brook, and the hundred metres to the Doughnut |
+| The meadow roof | the one frame where what is *already here* becomes the argument |
+| The homes | a new quarter against an edge that already exists |
+| Panels and glasshouses | the half of the scheme that is landscape rather than architecture |
+
+**The fence.** Measured on the running page: distance locked to the shot's own
+(561 m at the panels, unchanged after eight scroll-wheel events), pan and zoom
+off, 34° of swing and 16° of tilt. You can look round the frame; you cannot
+leave it, and every move resets the lean so a shot cannot be permanently
+spoiled.
+
+**What the frames caught that no test would have.** The first pass shipped four
+faults that only looking finds: the dots were hidden *behind* the switch panel,
+the copy washed out over pale sky, the chevrons were invisible over sunlit
+grass at half opacity, and the licence line ran under the panel and lost a line
+and a half. All four are chrome-against-photograph problems, and all four are
+fixed — a bottom deck so nothing has to guess how tall anything else is, and
+the credit stopping where the deck starts. The card took three goes: a local
+pool of shade behind the words kept having to deepen until it read as a smudge
+on a photograph, and the answer in the end was the device the design already
+had at the bottom edge — a shallow scrim across the top of the whole frame,
+which seats the card on every shot and gives the still the top weight it was
+missing.
+
+**And one the shots exposed that had been hiding for weeks.** Four of the
+eight markers in this map stand on the *same ground*: `gchq`, `gchq-meadow`
+and `cyber-central` are three photographs of the Doughnut, and the `doughnut`
+descent is a fourth way into it, all anchored at (123, 64). Declutter has been
+silently discarding three of them since the markers landed — it keeps the
+nearest and drops the rest, which looked like tidiness and was actually loss.
+Naming two of them on one shot does not offer a choice, it offers a coin toss:
+the meadow roof listed the descent, declutter kept the photograph, and the
+descent could not be reached at all. So the rule is now **one route per ground
+point, per shot**, `test_viewpoints.py` fails if any shot offers two markers
+within 60 m of each other, and `gchq` and `cyber-central` are deliberately
+unattached — a today photograph of ground the switch already shows you, and a
+wide 2045 view of the ring the vale already frames.
+
+**And one the tests did catch.** `syncCameraOwner` asked whether anything was
+`busy`, which is false while you are *standing* in a photograph — so the shots
+took the camera back the instant a descent landed and pulled the view 721 m off
+the plate it had just arrived at. Ownership means having it, not moving.
+
+Suites: `test_viewpoints.py` 14/14 (new), `test_year_switch.py` 20/20,
+`test_places.py` 19/19, `test_hotspot_flow.py` rewritten — the three descents
+are no longer all on screen at once, so it now chooses the view and then the
+place in it, which is the flow.

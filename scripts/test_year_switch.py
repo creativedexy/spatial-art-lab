@@ -318,9 +318,24 @@ def main():
               and hit.get("tall", 0) >= MIN_TAP,
               f"{hit.get('over')} is on top" if not hit.get("mine")
               else f"{hit.get('tall')} px tall")
-        check("no mouse instructions on a phone",
-              page.evaluate("() => getComputedStyle("
-                            "document.getElementById('hint')).display === 'none'"))
+        # Phase 11 removed the line that used to be checked here — "drag: pan ·
+        # right-drag: orbit · scroll: zoom" describes a camera nobody has any
+        # more, and test_viewpoints.py checks it is gone. What replaced it has
+        # to survive the same 390 px: the title card is the only long text on
+        # the screen and it is over sunlit farmland.
+        card = page.evaluate("""() => {
+          const c = document.getElementById('shot-card');
+          const r = c.getBoundingClientRect();
+          return { name: c.querySelector('#shot-name').textContent.trim(),
+                   says: c.querySelector('#shot-says').textContent.trim().length,
+                   right: Math.round(innerWidth - r.right),
+                   left: Math.round(r.left) };
+        }""")
+        check("the title card fits the screen it is written on",
+              card["name"] and card["says"] > 40
+              and card["left"] >= 8 and card["right"] >= 8,
+              f"{card['name']!r}, {card['says']} characters, "
+              f"{card['left']}/{card['right']} px clear")
 
         # And it must be out of the way of a capture, or every plate since
         # phase 5 would suddenly have a slider across it.

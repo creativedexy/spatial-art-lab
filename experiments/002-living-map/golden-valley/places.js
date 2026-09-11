@@ -32,6 +32,8 @@ const smoother = (t) => t * t * t * (t * (t * 6 - 15) + 10);
  * imported so this module has no opinion about whether 2045 exists.
  */
 export function createPlaces({ camera, controls, container, future, onState = () => {} }) {
+  // null means every place; a Set means only these. See setShowing.
+  let offered = null;
   const d = placeMeta.defaults;
   const places = placeMeta.places.map((p) => ({
     ...p,
@@ -186,14 +188,29 @@ export function createPlaces({ camera, controls, container, future, onState = ()
       return places.map((p) => ({ el: p.button, anchor: p.anchor }));
     },
 
+    /**
+     * Which places this shot can descend to. Phase 11: a marker floating over
+     * ground the camera is not looking at is a legend, not a place — so the
+     * viewpoint names its own, and everything else stands down.
+     */
+    setShowing(ids) {
+      offered = ids === null ? null : new Set(ids);
+    },
+
     updateMarkers() {
       const hide = api.busy || state === 'there';
       for (const p of places) {
         ndc.copy(p.anchor).project(camera);
-        p.button.hidden = hide || ndc.z > 1;
+        p.button.hidden = hide || ndc.z > 1
+          || (offered !== null && !offered.has(p.id));
         if (p.button.hidden) continue;
+        // Clamped by the LABEL's own half-width, not by a guessed 92 px. The
+        // marker is centred on its plate, so a wide name on a narrow phone ran
+        // off the left edge while its anchor sat obediently inside the margin:
+        // the thing being kept on screen has to be the thing you can see.
+        const half = p.button.offsetWidth / 2 + 8;
         p.button.style.left =
-          `${THREE.MathUtils.clamp((ndc.x * 0.5 + 0.5) * innerWidth, 92, innerWidth - 92)}px`;
+          `${THREE.MathUtils.clamp((ndc.x * 0.5 + 0.5) * innerWidth, half, innerWidth - half)}px`;
         p.button.style.top =
           `${THREE.MathUtils.clamp((-ndc.y * 0.5 + 0.5) * innerHeight, 56, innerHeight - 96)}px`;
         // Fade with distance: five markers shouting equally from a 2 km box is

@@ -10,6 +10,30 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
+import { addViewpoints } from './viewpoints.js';
+
+/**
+ * Exactly one thing moves the camera at a time: a descent, the path walker, a
+ * photograph, or the shot it rests at. The shots own it whenever nothing else
+ * has claimed it, and taking it back re-frames — so a descent returns you to
+ * the shot you left from rather than to wherever the clip happened to finish.
+ *
+ * Declared up here rather than beside the shots, because the descent player
+ * and the walker are built long before the shots are and both report in
+ * through this. Reading a `const` before its declaration throws, and `?.` does
+ * not save you from that — only being above every caller does.
+ */
+let viewpoints = null;
+function syncCameraOwner() {
+  if (!viewpoints) return;
+  // `busy` means moving, and `inside` means standing there. Both are having
+  // the camera. Asking only about `busy` took it back the instant a descent
+  // landed — the flight finished, nothing was busy, and the shots pulled the
+  // view 721 m off the photograph it had just arrived at.
+  viewpoints.hold(Boolean(
+    places.busy || places.inside || player.busy || player.inside
+    || walk.busy || walk.inside));
+}
 import {
   buildWorld, updateLife, worldSeconds, heightAtLocal, toLocal, sizeX, sizeZ,
   pinWorld, releaseWorld,
@@ -43,7 +67,7 @@ const params = new URLSearchParams(location.search);
 const clean = params.has('clean');
 const camPos = (params.get('cam') ?? '-750,520,1050').split(',').map(Number);
 if (clean) {
-  for (const id of ['credit', 'hint', 'panel']) document.getElementById(id).hidden = true;
+  for (const id of ['credit', 'shot-card', 'panel']) document.getElementById(id).hidden = true;
 }
 
 const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 2, 20000);
@@ -394,6 +418,7 @@ const places = createPlaces({
     const there = state === 'there';
     placeBack.hidden = clean || !there;
     document.body.classList.toggle('in-photo', there && !clean);
+    syncCameraOwner();
   },
 });
 placeBack.onclick = () => places.leave();
@@ -415,6 +440,7 @@ function render(state, hotspot) {
   panel.hidden = clean || !inPlace;
   document.body.classList.toggle('in-place', inPlace && !clean);
   app.classList.toggle('flying', state === 'descending' || state === 'returning');
+  syncCameraOwner();
   if (inPlace) {
     panelTitle.textContent = hotspot.name;
     panelBody.textContent = hotspot.blurb;
@@ -429,6 +455,7 @@ function renderWalk(state, leg) {
   panel.hidden = clean || !arrived;
   document.body.classList.toggle('in-place', arrived && !clean);
   app.classList.toggle('flying', state === 'diving' || state === 'returning');
+  syncCameraOwner();
   routeLabel.hidden = routeLabel.hidden || walk.busy;
   if (!arrived) return;
   const r = leg.route;
@@ -440,6 +467,34 @@ function renderWalk(state, leg) {
     + `anything is built.`;
   panelNote.textContent = 'Walked live — no clip generated for this leg yet.';
 }
+
+// --- the shots --------------------------------------------------------------
+// Phase 11. Until now this was a map: orbit, pan, dolly, free — so every frame
+// a visitor saw was one they had composed themselves, by accident, on the way
+// to something else, and one of them was a green diamond floating in a void
+// with the edge of the survey showing on all four sides.
+//
+// The reference does not work like that. Primland is *directed*: you are moved
+// between frames somebody made, and the interaction budget for the whole thing
+// is look, choose, arrive. So the camera lives at one of five named shots and
+// moving means moving between them. What survives of the freedom is a lean —
+// see viewpoints.js for the fence.
+//
+// A capture is exempt: `?clean=1` with `?cam=` is how every plate in
+// generate/ was made, and a shot that flew the camera on load would have
+// quietly re-framed all of them.
+viewpoints = await addViewpoints({
+  camera,
+  controls,
+  groundAt: heightAtLocal,
+  root: app,
+  clean,
+  onArrive: (shot) => {
+    // Only what this frame is actually looking at can be descended to.
+    places.setShowing(shot.places);
+  },
+});
+if (!clean && !params.has('cam')) viewpoints.fly(0, { instant: true });
 
 // --- the opening ------------------------------------------------------------
 // The reference opens on a title over a moving landscape rather than on a
@@ -482,10 +537,11 @@ if (!introSkipped) {
     intro.classList.add('leaving');
     document.body.classList.remove('intro-open');
     setTimeout(() => { intro.hidden = true; }, 900);
-    // Hand over from wherever the drift has reached, rather than cutting to
-    // the resting camera and undoing the move.
-    controls.enabled = true;
-    controls.update();
+    // Settle into shot one from wherever the drift has reached, rather than
+    // cutting to it and undoing the move. If the drift has already arrived —
+    // which it has, if the words were read rather than skipped — this costs
+    // nothing and hands the controls straight over.
+    viewpoints.fly(0);
   };
 }
 
@@ -501,7 +557,10 @@ function tick() {
   // fight it for the same three numbers.
   const visiting = places.update(now);
   const walking = !visiting && walk.update(now);
-  if (controls.enabled && !visiting && !walking) controls.update();
+  // The shot flight owns the camera the way the walker and the descent do:
+  // three things that move it and exactly one of them at a time.
+  const moving = !visiting && !walking && viewpoints.update(now);
+  if (controls.enabled && !visiting && !walking && !moving) controls.update();
   updateIgnition(dtMs);
   updateTiles();
   updateWave(now);
@@ -517,16 +576,28 @@ function tick() {
   // canvas end up under the same cloud.
   updateLife(worldSeconds());
   renderer.render(scene, camera);
+  // The descents and the photographs are two systems to us and one thing to a
+  // viewer, so the shot's `places` list names both and both stand down when it
+  // does not name them. A marker over ground this frame is not looking at is a
+  // legend, not a place.
+  const offered = viewpoints?.current?.places ?? null;
   for (const h of hotspots) {
-    // A hotspot you are standing in should not offer to take you there.
-    const hide = player.busy || player.inside === h || walk.busy || !!walk.inside
-      || places.busy || !!places.inside;
+    // Standing somewhere offers nothing else. It used to hide only the place
+    // you were in and leave its neighbours up, which is a map's answer — hop
+    // sideways, keep browsing. Phase 11's answer is that you descended FROM a
+    // frame and you go back to it: the title card, the dots and the arrows are
+    // already gone here, and the markers were the last thing still behaving
+    // like a menu.
+    const hide = player.busy || !!player.inside || walk.busy || !!walk.inside
+      || places.busy || !!places.inside
+      || (offered !== null && !offered.includes(h.id));
     v.copy(h.anchor).project(camera);
     h.button.hidden = hide || v.z > 1;
-    // Clamp, so a place near the edge of the box still reads as a label
-    // rather than half a word running off the screen.
+    // Clamped by the label's own half-width rather than a guessed margin: the
+    // thing being kept on screen has to be the thing you can see.
+    const half = h.button.offsetWidth / 2 + 8;
     h.button.style.left =
-      `${THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * innerWidth, 140, innerWidth - 140)}px`;
+      `${THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * innerWidth, half, innerWidth - half)}px`;
     h.button.style.top =
       `${THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * innerHeight, 60, innerHeight - 20)}px`;
     // Fade with distance rather than showing every marker at the same weight:
@@ -578,7 +649,7 @@ if (auto) {
 // for. Nothing in the page reads it.
 window.__map = {
   renderer, scene, camera, controls, paths, walk, player, hotspots, future, places,
-  tiles, scheme,
+  tiles, scheme, viewpoints,
   // A capture that cannot stop the clock is photographing the weather: the
   // flock, the wind and the cloud shadows all move, so two renders of one
   // camera differ by however long the page took to get there.

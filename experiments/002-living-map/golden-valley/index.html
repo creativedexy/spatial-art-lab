@@ -55,6 +55,10 @@
      of it. The shader still takes a continuous front and a capture can still
      hold it half way with ?wave= — but a year parked at 2034 is a field that
      is neither a place nor a proposal, so the interface does not offer one. -->
+<!-- The deck: everything that lives at the bottom of the screen, stacked, so
+     nothing in it has to guess how tall anything else is. The scheme band grows
+     a second line at 2045 and the dots used to disappear behind it. -->
+<div id="deck">
 <div id="year-dial" hidden>
   <!-- The scheme band is inserted above this row by scheme.js: the control and
        what the control is doing to the vale are one object to a viewer. -->
@@ -66,6 +70,7 @@
       <span class="end">2045</span>
     </button>
   </div>
+</div>
 </div>
 <div id="panel" hidden>
   <h2 id="panel-title"></h2>
@@ -85,7 +90,14 @@
           aria-controls="credit-text">Data sources</button>
   <span id="credit-text">Terrain, building heights and roof shapes: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints, land cover, roads and trees &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</span>
 </div>
-<div id="hint">click a place to descend &middot; drag: pan &middot; right-drag: orbit &middot; scroll: zoom</div>
+<!-- Where you are, and what this frame is an argument for. The five shots
+     and their copy live in viewpoints.json; this is the card they are written
+     into. There is no "drag to pan" line any more because there is no panning:
+     phase 11 took the camera back. -->
+<div id="shot-card">
+  <p id="shot-name"></p>
+  <p id="shot-says"></p>
+</div>
 <script type="module" src="./main.js"></script>
 </body>
 </html>
