@@ -14,6 +14,7 @@ repository's — the repository has the models in it.
 
   python3 scripts/test_public_build.py
 """
+import re
 import argparse
 import http.server
 import socketserver
@@ -151,6 +152,23 @@ def main():
           f"{state['built'].get('ncic')}")
     check("no key, so no tiles and no library fetched",
           not state["tiles"], "the measured map, as the public sees it")
+
+    # And nothing in the folder carries one. The runtime check above says the
+    # page did not USE a key; this says the folder does not CONTAIN one, which
+    # is the thing that would matter after it is uploaded. `golden-valley/*.js`
+    # matched the gitignored key.js and copied it, and only the null stub
+    # written afterwards put it right — an ordering, not a guarantee.
+    keyish = re.compile(rb"AIza[0-9A-Za-z_\-]{20,}")
+    carrying = [f.relative_to(dist) for f in sorted(dist.rglob("*"))
+                if f.is_file() and f.stat().st_size < 4_000_000
+                and keyish.search(f.read_bytes())]
+    check("no file in the built folder carries an API key",
+          not carrying, "nothing key-shaped" if not carrying
+          else "FOUND IN: " + ", ".join(str(c) for c in carrying))
+    stub = (dist / "golden-valley" / "key.js").read_text()
+    check("the key stub says null and nothing else",
+          "null" in stub and not keyish.search(stub.encode()),
+          f"{len(stub)} bytes")
     check("the campus keeps its extrusions instead",
           state["blocks"].get("campus") is True,
           ", ".join(f"{k}={v}" for k, v in state["blocks"].items()))

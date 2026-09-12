@@ -61,7 +61,7 @@ MODELS = ["meshy/campus-block.glb", "meshy/ncic.glb"]
 
 # Never, whatever a glob above may match.
 FORBIDDEN = ("inspiration/", "meshy/src/", "-hq.webm", ".mp4", "LOCAL-SESSION",
-             "LADDER-SESSION", "seam-report")
+             "LADDER-SESSION", "seam-report", "key.js")
 
 
 def copy(rel, dest_root, log):
@@ -89,6 +89,14 @@ def main():
     for folder, globs in KEEP.items():
         for g in globs:
             for f in sorted((SITE / folder).glob(g)):
+                # The tiles key is gitignored, but gitignored is not the same
+                # as unpublishable: it sits in golden-valley/ and `*.js` swept
+                # it straight into the folder this script exists to make safe.
+                # Skipped here so a build still works on the machine that has
+                # a key, and in FORBIDDEN as well, so that if it ever reaches
+                # `copy` by some other route the build stops instead.
+                if f.name == "key.js":
+                    continue
                 copy(f.relative_to(SITE), out, log)
     for f in sorted(photos(SITE)):
         copy(f.relative_to(SITE), out, log)
