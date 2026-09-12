@@ -522,3 +522,69 @@ distance, 2–6 km, which is close enough to want woods and fields and too far
 to have them. OpenStreetMap covers that ground and would give real woodland
 and water without inventing anything — the honest next step if the horizon
 ever needs more than a silhouette.
+
+---
+
+## Phase 12, step 1b — height was the wrong question, 12 Sep 2026
+
+Dex, on the map with the measured numbers in it: *"it still regresses to the
+old map at points... it's when you click into locations."* He was right, and it
+was the change above that did it.
+
+**What happened.** The gate asked `camera.y - ground beneath the camera`. That
+is not what screen-space error depends on. A steep oblique sits low over one
+field while framing a building two hundred metres away, and those tiles are
+perfectly good. Measured at the five place cameras:
+
+| place | height | to subject | median error |
+|---|---:|---:|---:|
+| gchq | 67 m | 212 m | **6.02** |
+| gchq-meadow | 79 m | 160 m | **6.32** |
+| campus-courtyards | 190 m | 368 m | 4.44 |
+| panels-and-glasshouses | 210 m | 524 m | 4.92 |
+| cyber-central | 175 m | 967 m | 4.13 |
+
+The two lowest cameras are **at** the target of 6, not past it — their tiles
+are fine. But at 67 m and 79 m they fell under a 105 m height gate, so clicking
+into either dropped the photograph and put our model back. The old placeholder
+of 60 m had been quietly holding them up; raising it to a correctly-measured
+105 m is what exposed the wrong question underneath.
+
+Worth naming: the number was right and the thing it was applied to was wrong.
+A more accurate measurement made the piece worse, which is the failure mode
+that does not announce itself.
+
+**The fix.** The gate is now asked two things:
+
+- **`MELT_FOCUS_METRES`** — the distance to the ground at the centre of the
+  frame, marched against our own heightfield. Kept on down to **140 m**;
+  needs **165 m**, the ladder's measured crossing, to switch on from cold. So
+  it takes the measured melt distance to commit to a photograph and something
+  clearly worse to abandon one, and the closest camera the piece uses
+  (gchq-meadow, 184 m) clears the cold line by 19 m.
+- **`MELT_FLOOR_METRES` = 50 m** — a height floor, because distance alone
+  fails in one direction. The walk rides at 14 m and an arrival stands at
+  1.6 m, both looking level down a path, so the centre of the frame is far
+  away and passes the focus test comfortably — while everything nearer, which
+  is most of what you can see, is the melted part.
+
+**Verified on the running map.** All five places and all five shots keep the
+real town, from a cold start as well as warm; the walk at 14 m, arrivals at
+1.6 m and a 55 m steep hover all fall back to our model; all twenty
+shot-to-shot transitions hold without a single flip; 120 fps with the march in
+the frame loop.
+
+**And a test that would have caught it.** `wantsTiles` is now exported as a
+pure function, so `test_tiles_frame.py` checks the gate without a key: fifteen
+real cameras with their measured height and focus distance, each asserted from
+both states, plus a chatter check that nothing switches on from cold that
+switches off when warm. It went 5/7 on the first run — it caught that
+gchq-meadow at 184 m could not reach the tiles from cold against a 190 m
+switch-on line, which is a bug that would only have shown up as "sometimes the
+meadow roof is on the old map". The thresholds above are what it settled at.
+
+Suite after the change: `test_tiles_frame.py` 7/7, `test_viewpoints.py` 16/16,
+`test_year_switch.py` 20/20, `test_hotspot_flow.py` and `test_world_clock.py`
+all green, `test_path_network.py` 12/12, `test_public_build.py` 11/11. The two
+pre-existing failures noted above are unchanged.
+
