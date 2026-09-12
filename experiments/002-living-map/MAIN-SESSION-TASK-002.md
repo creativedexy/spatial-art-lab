@@ -184,3 +184,18 @@ is −z.
 Run `python3 scripts/probe_tiles.py` with the key in place, paste both numbers
 into `golden-valley/tiles.js`, and say what the spread was — a single vertical
 shift is an approximation and the residual is worth stating rather than hiding.
+
+
+---
+
+## Step 1 is done, and the rest of the context moved — 12 Sep 2026
+
+The local session measured both numbers (`MELT_METRES = 105`,
+`GROUND_OFFSET_METRES = -0.14`, spread 0.46 m) and they are in `tiles.js`.
+
+Meanwhile phase 11 landed and the map grew a horizon, and both touch this task:
+the interface, the camera and the atmosphere are not what this brief was
+written against. See
+[the handover](HANDOFF-to-local-session.md) — in particular that our far field
+now hides wherever the tiles show, which is a swap nobody has watched happen
+with a key in place.
