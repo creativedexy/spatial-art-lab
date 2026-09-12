@@ -124,7 +124,31 @@ PREPARE = """async () => {
   m.tiles.wantsShowing = () => true;
   m.tiles.setShowing(true);
   m.future.setWave(0);
-  return true;
+
+  // Take our own interface out of the photograph before measuring it. The
+  // first run measured the title card and the bottom deck along with the town:
+  // the scrim behind the words is a gradient over the top of the frame, so it
+  // darkens the sky end of every luminance sample and lands hardest on exactly
+  // the roofs the sun search is looking for.
+  //
+  // `?clean=1` is the normal way to hide chrome and it CANNOT be used here: it
+  // also passes null instead of a tiles layer, deliberately, so that no plate
+  // ever contains Google's imagery. So hide the overlays directly — and never
+  // the canvas or anything containing it, because a zero-sized canvas makes
+  // every screen-space error zero and the tiles quietly stop loading.
+  const canvas = m.renderer.domElement;
+  const keep = new Set();
+  for (let e = canvas; e; e = e.parentElement) keep.add(e);
+  let hidden = 0;
+  for (const el of document.querySelectorAll('body *')) {
+    if (keep.has(el) || el.contains(canvas)) continue;
+    const pos = getComputedStyle(el).position;
+    if (pos === 'static') continue;
+    el.style.setProperty('visibility', 'hidden', 'important');
+    hidden++;
+  }
+  await new Promise((r) => requestAnimationFrame(r));
+  return { hidden, canvas: [canvas.width, canvas.height] };
 }"""
 
 FRAME_PATCH = """({ x, z, span }) => {
@@ -180,6 +204,7 @@ SAMPLE_TILE_GEOMETRY = """({ n }) => {
         normal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld);
         normalY[i] = Math.abs(normal.y);
       }
+    }
   }
   return { heights, normalY, east, south };
 }"""
