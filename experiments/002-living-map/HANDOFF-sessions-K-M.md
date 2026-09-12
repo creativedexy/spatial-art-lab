@@ -1,7 +1,8 @@
 # Handoff to the main session
 
-> **Open task for you: [`MAIN-SESSION-TASK-001.md`](MAIN-SESSION-TASK-001.md)**, the approved
-> photos as clickable places in the map, then real buildings on the 2045 footprints.
+> **Open task for you: [`MAIN-SESSION-TASK-002.md`](MAIN-SESSION-TASK-002.md)**: Google's
+> photogrammetry becomes "today" in the live map, with our 2045 scheme on top.
+> Task 001 is done.
 
 ## Standing rules from Dex, 10 Sep 2026
 

@@ -26,6 +26,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from '../terrain/vendor/GLTFLoader.js';
+import { addNcic, NCIC } from './ncic.js';
 import { MeshoptDecoder } from '../terrain/vendor/meshopt_decoder.module.js';
 import { riseModel } from './future.js';
 
@@ -207,6 +208,10 @@ export async function addModels(scene, { future, buildings, namedRoutes, groundA
   const group = new THREE.Group();
   group.name = 'models';
   const placed = {};
+  // How each thing got here: a loaded GLB, or geometry written from rules.
+  // Worth keeping apart, because "the campus has buildings" and "the campus
+  // has the buildings we meant" are different claims.
+  const built = {};
 
   const site = chooseNcicSite(buildings, namedRoutes);
 
@@ -250,6 +255,7 @@ export async function addModels(scene, { future, buildings, namedRoutes, groundA
         : [];
     if (!rows.length) continue;
 
+    built[name] = 'model';
     const { material, depth } = riseModel(type.material);
     const mesh = new THREE.InstancedMesh(type.geometry, material, rows.length);
     mesh.name = `model:${name}`;
@@ -298,6 +304,20 @@ export async function addModels(scene, { future, buildings, namedRoutes, groundA
     if (blocks) blocks.visible = false;
   }
 
+  // The NCIC is built rather than modelled — a wedge is four planes — so it
+  // stands whether or not a GLB was ever made, and it stands on the site the
+  // rule above picked rather than on a footprint. Only when no type model has
+  // claimed it: if a real model of it is ever loaded, that wins.
+  if (!placed.ncic) {
+    const wedge = addNcic(site, groundAt);
+    if (wedge) {
+      group.add(wedge);
+      placed.ncic = 1;
+      built.ncic = 'written';
+    }
+  }
+
   scene.add(group);
-  return { group, placed, ncicSite: site, rule: NCIC_RULE };
+  return { group, placed, built, ncicSite: site, rule: NCIC_RULE,
+           ncicSize: NCIC };
 }

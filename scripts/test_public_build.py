@@ -100,6 +100,8 @@ def main():
         page.wait_for_timeout(2000)
         state = page.evaluate("""() => ({
           placed: window.__map.models?.placed ?? {},
+          built: window.__map.models?.built ?? {},
+          tiles: !!window.__map.tiles,
           blocks: Object.fromEntries([...window.__map.future.blocks]
             .map(([k, m]) => [k, m.visible])),
           markers: document.querySelectorAll('.place-marker').length,
@@ -118,7 +120,17 @@ def main():
           not any(".glb" in m for m in missing),
           "models.json says " + str(json_models(dist)))
     check("no page errors", not errors, "; ".join(errors[:2]))
-    check("no campus model is placed", not state["placed"], str(state["placed"]))
+    # `placed` says something stands there; `built` says what put it there.
+    # The NCIC wedge is written from rules, so it stands in a public build —
+    # the thing that must not is a GLB derived from HBD's renders.
+    loaded = [k for k, v in state["built"].items() if v == "model"]
+    check("no HBD-derived model is loaded", not loaded, str(loaded) or "none")
+    check("the NCIC still stands, because rules are ours",
+          state["placed"].get("ncic") == 1
+          and state["built"].get("ncic") == "written",
+          f"{state['built'].get('ncic')}")
+    check("no key, so no tiles and no library fetched",
+          not state["tiles"], "the measured map, as the public sees it")
     check("the campus keeps its extrusions instead",
           state["blocks"].get("campus") is True,
           ", ".join(f"{k}={v}" for k, v in state["blocks"].items()))

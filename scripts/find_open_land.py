@@ -20,6 +20,8 @@ from collections import deque
 from pathlib import Path
 
 import numpy as np
+
+from heightfield import load_heights
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -145,9 +147,7 @@ def main():
 
     meta, cls, index = load()
     gvmeta = json.loads((GV / "gv-meta.json").read_text())
-    heights = np.frombuffer((GV / gvmeta["binFile"]).read_bytes(),
-                            dtype="<u2").reshape(gvmeta["binPixels"][1],
-                                                 gvmeta["binPixels"][0])
+    heights = load_heights(gvmeta, GV)
     paths = json.loads((GV / "gv-paths.json").read_text())
     E0, N0 = gvmeta["easting"][0], gvmeta["northing"][0]
     W = gvmeta["widthMetres"]

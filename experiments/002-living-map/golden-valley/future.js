@@ -21,6 +21,8 @@
 
 import * as THREE from 'three';
 import { applyLife } from './life.js';
+import { loadClassTexture } from './landcover.js';
+import { facadeChunk } from './facades.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 export const futureMeta = await (await fetch(url('gv-2045-meta.json'))).json();
@@ -32,6 +34,14 @@ const RAGGED = 110;           // metres of noise on the front
 
 // Shared by every material the wave touches, so they cannot disagree about
 // where the front is.
+/**
+ * Task 002. When the photogrammetry is showing, our ground is drawn ONLY
+ * where 2045 changes it — the orchards, the wetland, the new streets — and
+ * discarded everywhere else, because today's ground is now the real town and
+ * the tiles may not be modified. 0 draws the whole terrain, as it always did.
+ */
+export const groundMask = { value: 0 };
+
 export const uniforms = {
   uFront: { value: SWEEP_FROM },
   uSoft: { value: SOFT },
@@ -87,13 +97,28 @@ function share(material, patch, life = {}) {
  * ground keeps its lighting, its shadows, its wind and its cloud shadows, and
  * gains one texture fetch and a mix. Anything else would mean two terrains.
  */
-export function blendGround(mesh, futureTexture) {
+const groundMaskUniforms = [];
+
+/** Draw our ground only where 2045 changes it. */
+export function setGroundMasked(on) {
+  groundMask.value = on ? 1 : 0;
+  for (const u of groundMaskUniforms) u.value = groundMask.value;
+}
+
+export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
   const m = mesh.material;
   const previous = m.onBeforeCompile;
   m.onBeforeCompile = (shader) => {
     if (previous) previous(shader);
     Object.assign(shader.uniforms, uniforms,
-                  { uFutureMap: { value: futureTexture } });
+                  { uFutureMap: { value: futureTexture },
+                    uTodayClass: { value: todayClasses ?? null },
+                    uFutureClass: { value: futureClasses ?? null },
+                    uGroundMask: { value: 0 } });
+    // Held so setGroundMasked can move it without recompiling: a shader
+    // rebuild on a toggle is a stutter, and on a year change it would be a
+    // stutter every frame.
+    groundMaskUniforms.push(shader.uniforms.uGroundMask);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
         '#include <common>\nvarying vec3 vFutureWorld;')
@@ -112,12 +137,32 @@ export function blendGround(mesh, futureTexture) {
       .replace('#include <common>',
         `#include <common>
          uniform sampler2D uFutureMap;
+         uniform sampler2D uTodayClass;
+         uniform sampler2D uFutureClass;
+         uniform float uGroundMask;
          uniform float uFront; uniform float uSoft; uniform float uRagged;
          varying vec3 vFutureWorld;
          ${NOISE}`)
       .replace('#include <map_fragment>',
         `#include <map_fragment>
          {
+           // Over photogrammetry, our ground is drawn ONLY where 2045
+           // actually changes it — an orchard where there was stubble, wet
+           // meadow where there was a culverted brook — and never where the
+           // scheme leaves a field alone. The first version of this masked by
+           // the wave instead, which meant that once the front had crossed,
+           // our terrain covered the real town completely and the whole layer
+           // was pointless. The class maps answer it exactly: two indices,
+           // and they either differ or they do not.
+           //
+           // Discard rather than fade: half our field over a photograph of
+           // the same field is two grounds, and reads as neither.
+           if (uGroundMask > 0.5) {
+             float wasClass = texture2D(uTodayClass, vMapUv).r;
+             float willClass = texture2D(uFutureClass, vMapUv).r;
+             bool changed = abs(wasClass - willClass) > 0.002;
+             if (!changed || futureAt(vFutureWorld) < 0.5) discard;
+           }
            // The sampler is sRGB, so the GPU has already linearised this and
            // it can be mixed with diffuseColor directly.
            vec4 futureTexel = texture2D(uFutureMap, vMapUv);
@@ -143,16 +188,40 @@ function futureGeometry(list, palette) {
   const base = [];
   const anchor = [];
   const col = [];
+  // Phase 8. Two more attributes, both for the facades.
+  //
+  // `aFacade` is the surface in METRES — how far along the wall, and how far
+  // up it — not the 0..1 a texture usually wants. That is the whole trick: a
+  // rule written in metres ("a window every 3 m, a storey every 3.4 m, the
+  // ground floor glazed to 3.4") then holds on a 38 m block and a 17 m one
+  // without a single number changing, and a facade never stretches to fit.
+  //
+  // `aSurface` says whether a triangle is a wall or a roof, because a family
+  // is one mesh and the shader has to tell sedum from stone.
+  const uv = [];
+  const surface = [];
+  const bays = [];
+  const walls = [];
   let tint = new THREE.Color();
-  const push = (x, y, z, b, ax, az) => {
+  let kind = 0;
+  let bayWidth = 3;
+  let wallHeight = 0;
+  const push = (x, y, z, b, ax, az, u = 0, v = 0) => {
     pos.push(x, y, z);
     base.push(b);
     anchor.push(ax, az);
     col.push(tint.r, tint.g, tint.b);
+    uv.push(u, v);
+    surface.push(kind);
+    bays.push(bayWidth);
+    walls.push(wallHeight);
   };
-  const quad = (a, b, c, d, bs, ax, az) => {
-    push(...a, bs, ax, az); push(...b, bs, ax, az); push(...c, bs, ax, az);
-    push(...a, bs, ax, az); push(...c, bs, ax, az); push(...d, bs, ax, az);
+  const quad = (a, b, c, d, bs, ax, az, uvs = null) => {
+    const t = uvs ?? [[0, 0], [0, 0], [0, 0], [0, 0]];
+    push(...a, bs, ax, az, ...t[0]); push(...b, bs, ax, az, ...t[1]);
+    push(...c, bs, ax, az, ...t[2]);
+    push(...a, bs, ax, az, ...t[0]); push(...c, bs, ax, az, ...t[2]);
+    push(...d, bs, ax, az, ...t[3]);
   };
 
   for (const b of list) {
@@ -166,18 +235,38 @@ function futureGeometry(list, palette) {
     const az = ring.reduce((s, p) => s + p[1], 0) / ring.length;
     const eaves = y0 + (b.roof === 'flat' ? b.height : b.eaves);
 
+    kind = 0;
+    // `run` is metres travelled around the building, so a bay grid starts at a
+    // corner and stays continuous around it rather than restarting per wall.
+    let run = 0;
+    const wallTop = eaves - y0;
     for (let i = 0; i < ring.length; i++) {
       const [x1, z1] = ring[i];
       const [x2, z2] = ring[(i + 1) % ring.length];
+      const span = Math.hypot(x2 - x1, z2 - z1);
+      // Bays divide THIS elevation exactly, which is what an architect does:
+      // a 35.2 m wall gets twelve bays of 2.93 m, not eleven of 3.0 and a
+      // sliver. Still metres — the wall's own bay width travels with it, so
+      // the shader keeps working in real sizes rather than in fractions.
+      bayWidth = span / Math.max(1, Math.round(span / 3.0));
+      wallHeight = wallTop;
       quad([x1, y0, z1], [x2, y0, z2], [x2, eaves, z2], [x1, eaves, z1],
-           y0, ax, az);
+           y0, ax, az,
+           [[0, 0], [span, 0], [span, wallTop], [0, wallTop]]);
+      run += span;
     }
 
     tint = roofColour;
+    kind = 1;
     if (b.roof === 'flat') {
       const [p, q, r, s] = ring;
+      // The roof is metres too, measured from the building's own corner, so a
+      // PV array lands on a grid rather than on a stretched square.
+      const ru = (t) => [Math.hypot(t[0] - p[0], t[1] - p[1]), 0];
+      const rv = (t) => Math.hypot(t[0] - q[0], t[1] - q[1]);
       quad([p[0], eaves, p[1]], [q[0], eaves, q[1]],
-           [r[0], eaves, r[1]], [s[0], eaves, s[1]], y0, ax, az);
+           [r[0], eaves, r[1]], [s[0], eaves, s[1]], y0, ax, az,
+           [[0, 0], [ru(q)[0], 0], [ru(q)[0], rv(r)], [0, rv(s)]]);
     } else {
       // A gable on a quad: the ridge runs between the midpoints of the two
       // ends, which for these blocks is the long axis by construction.
@@ -204,6 +293,10 @@ function futureGeometry(list, palette) {
   g.setAttribute('aBase', new THREE.Float32BufferAttribute(base, 1));
   g.setAttribute('aAnchor', new THREE.Float32BufferAttribute(anchor, 2));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute('aFacade', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('aSurface', new THREE.Float32BufferAttribute(surface, 1));
+  g.setAttribute('aBay', new THREE.Float32BufferAttribute(bays, 1));
+  g.setAttribute('aWallTop', new THREE.Float32BufferAttribute(walls, 1));
   g.computeVertexNormals();
   return g;
 }
@@ -282,15 +375,59 @@ function depthFor(declarations, body, key) {
   return d;
 }
 
-function riseMaterial() {
+function riseMaterial(family) {
   const m = new THREE.MeshStandardMaterial({
     vertexColors: true, roughness: 0.85 });
-  return share(m, function future(shader) {
+  // Phase 8. A family whose facade is written gets it here, layered onto the
+  // same material that already carries the wave and the world's clock rather
+  // than replacing it — replacing it would silently drop the growth transform
+  // and the buildings would arrive fully built with no front at all.
+  const facade = facadeChunk(family);
+  share(m, function future(shader) {
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', `#include <common>\n${RISE}\n${NOISE}`)
+      .replace('#include <common>',
+               `#include <common>\n${RISE}\n${NOISE}${facade ? `\n${facade.vertex}` : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-${RISE_BODY}`);
+${RISE_BODY}${facade ? facade.vertexBody : ''}`);
+    if (!facade) return;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${facade.fragment}`)
+      // After <normal_fragment_maps> and not a line earlier. Three's fragment
+      // chunks run roughnessmap → metalnessmap → normal_fragment_begin →
+      // normal_fragment_maps, so `normal` does not exist yet at the roughness
+      // chunk: patching there compiles nothing, and a material that fails to
+      // compile does not draw — while its customDepthMaterial, untouched by
+      // any of this, goes on casting shadows. Twenty campus blocks vanished
+      // and left their shadows lying in the fields.
+      .replace('#include <normal_fragment_maps>',
+               `#include <normal_fragment_maps>\n${facade.fragmentBody}`);
   });
+  // Three caches compiled programs by this key, and every family used to
+  // return the same one. With a facade on only some of them that would hand
+  // the campus's shader to the houses, or the houses' to the campus —
+  // whichever compiled first, silently, and differently between runs.
+  m.customProgramCacheKey = () => `future:rise:${family}`;
+  return m;
+}
+
+/**
+ * A mesh that belongs to 2045: it grows with the front, casts a shadow that
+ * grows with it, and carries whatever facade its family has.
+ *
+ * Exported so a building that is NOT in `gv-2045-buildings.json` — the
+ * National Cyber Innovation Centre, which the scheme sites by rule rather
+ * than by footprint — can be one of the scheme's buildings rather than an
+ * ornament placed on top of it. The alternative was a second copy of the rise
+ * transform, and the shadow pass has already caught this project out once:
+ * two copies drift the first time either changes.
+ */
+export function riseMesh(geometry, family) {
+  const mesh = new THREE.Mesh(geometry, riseMaterial(family));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.frustumCulled = false;
+  mesh.customDepthMaterial = depthFor(RISE, RISE_BODY, 'future:rise:depth');
+  return mesh;
 }
 
 // --- new trees ---------------------------------------------------------------
@@ -333,7 +470,7 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   const blocks = new Map();
   for (const [family, list] of byFamily) {
     const mesh = new THREE.Mesh(
-      futureGeometry(list, futureMeta.families), riseMaterial());
+      futureGeometry(list, futureMeta.families), riseMaterial(family));
     mesh.name = `future:blocks:${family}`;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -359,7 +496,15 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     futureTexture.anisotropy = renderer
       ? renderer.capabilities.getMaxAnisotropy() : 8;
     futureTexture.wrapS = futureTexture.wrapT = THREE.ClampToEdgeWrapping;
-    blendGround(ground, futureTexture);
+    // Both class maps, so the shader can answer the only question that
+    // matters over photogrammetry: did 2045 CHANGE this square metre? Indices,
+    // so nearest filtering and no colour management — a bilinear tap between
+    // "water" and "grass" returns a class nothing is.
+    const [todayClasses, futureClasses] = await Promise.all([
+      loadClassTexture(),
+      loadClassTexture(futureMeta.classFile),
+    ]);
+    blendGround(ground, futureTexture, todayClasses, futureClasses);
   }
 
   // GCHQ's roof is a change to a building that already exists, so it is a
@@ -369,6 +514,12 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   const gchqRoof = scene.getObjectByName('gchq:roof');
   const gchqFrom = gchqRoof && gchqRoof.material.color.clone();
   const gchqTo = change && new THREE.Color(change.roof);
+  // How far the front has passed the ring, 0 to 1. Kept because the tiles
+  // layer needs it: over photogrammetry our GCHQ roof is the ONLY part of our
+  // town still drawn, and it has to arrive with the meadow rather than sit
+  // there from the start covering the real one.
+  let meadowAt = 0;
+  let overTiles = false;
 
   let wave = 0;
   return {
@@ -381,6 +532,31 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
      */
     blocks,
     get wave() { return wave; },
+    /** Draw our ground only where 2045 changes it: see setGroundMasked. */
+    setGroundMasked,
+    /**
+     * Over photogrammetry, our whole town is hidden except one thing: the
+     * ring's 2045 meadow roof, laid over the real building. Overlaying our own
+     * geometry is allowed; modifying a tile is not, and this modifies nothing.
+     */
+    setOverTiles(on) {
+      overTiles = !!on;
+      if (!gchqRoof) return;
+      gchqRoof.material.transparent = overTiles;
+      gchqRoof.material.depthWrite = !overTiles;
+      gchqRoof.material.opacity = overTiles ? meadowAt : 1;
+      gchqRoof.visible = overTiles ? meadowAt > 0.01 : true;
+      gchqRoof.material.needsUpdate = true;
+    },
+    /** How far the front has crossed the ring, 0 to 1. */
+    get gchqMeadow() { return meadowAt; },
+    /**
+     * Where the front is standing, in local metres east. The wave is the
+     * scheme's argument and this is the only number that says whether it
+     * actually moved: a dial can change a year on screen without the ground
+     * under it changing at all, and that failure looks exactly like success.
+     */
+    get frontX() { return uniforms.uFront.value; },
     /** 0 = today, 1 = the front has crossed the whole box. */
     setWave(t) {
       wave = THREE.MathUtils.clamp(t, 0, 1);
@@ -388,9 +564,16 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
       if (gchqRoof && gchqTo) {
         // GCHQ sits at x = 123, so its roof turns when the front reaches it
         // rather than when the toggle is pressed.
-        const at = THREE.MathUtils.clamp(
+        meadowAt = THREE.MathUtils.clamp(
           (uniforms.uFront.value - 123 + SOFT) / (SOFT * 2), 0, 1);
-        gchqRoof.material.color.copy(gchqFrom).lerp(gchqTo, at);
+        gchqRoof.material.color.copy(gchqFrom).lerp(gchqTo, meadowAt);
+        if (overTiles) {
+          // Fading rather than switching: the real ring is underneath, and a
+          // meadow that appears all at once on a photograph of a metal roof
+          // reads as a glitch rather than as a proposal.
+          gchqRoof.material.opacity = meadowAt;
+          gchqRoof.visible = meadowAt > 0.01;
+        }
       }
     },
   };

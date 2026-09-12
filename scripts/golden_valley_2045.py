@@ -34,6 +34,9 @@ crosses the map blends between them:
   gv-2045-meta.json       what changed, in hectares, and the rules that did it
 
 Usage:  python3 scripts/golden_valley_2045.py [--dry-run]
+
+
+Re-running this writes PNG land cover and points the meta at it, which un-does phase 7's compression: run `scripts/compress_assets.py --write` afterwards or the map loads 1.7 MB it does not need. And expect the building bases to move by up to one quantisation step — about a centimetre — because the heightmap this now reads is the packed one. Trees and footprints come back byte-identical.
 """
 import argparse
 import json
@@ -43,6 +46,8 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+
+from heightfield import load_heights
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -94,9 +99,7 @@ def load():
     land = json.loads((VISION / "open-land.json").read_text())
     stamp = np.array(Image.open(VISION / "open-land-parcels.png"))
     cls = np.array(Image.open(GV / cover["classFile"]).convert("L"))
-    heights = np.frombuffer((GV / meta["binFile"]).read_bytes(),
-                            dtype="<u2").reshape(meta["binPixels"][1],
-                                                 meta["binPixels"][0])
+    heights = load_heights(meta, GV)
     return meta, cover, paths, land, stamp, cls, heights
 
 

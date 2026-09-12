@@ -10,6 +10,30 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from '../terrain/vendor/OrbitControls.js';
+import { addViewpoints } from './viewpoints.js';
+
+/**
+ * Exactly one thing moves the camera at a time: a descent, the path walker, a
+ * photograph, or the shot it rests at. The shots own it whenever nothing else
+ * has claimed it, and taking it back re-frames — so a descent returns you to
+ * the shot you left from rather than to wherever the clip happened to finish.
+ *
+ * Declared up here rather than beside the shots, because the descent player
+ * and the walker are built long before the shots are and both report in
+ * through this. Reading a `const` before its declaration throws, and `?.` does
+ * not save you from that — only being above every caller does.
+ */
+let viewpoints = null;
+function syncCameraOwner() {
+  if (!viewpoints) return;
+  // `busy` means moving, and `inside` means standing there. Both are having
+  // the camera. Asking only about `busy` took it back the instant a descent
+  // landed — the flight finished, nothing was busy, and the shots pulled the
+  // view 721 m off the photograph it had just arrived at.
+  viewpoints.hold(Boolean(
+    places.busy || places.inside || player.busy || player.inside
+    || walk.busy || walk.inside));
+}
 import {
   buildWorld, updateLife, worldSeconds, heightAtLocal, toLocal, sizeX, sizeZ,
   pinWorld, releaseWorld,
@@ -19,9 +43,23 @@ import { createDescentPlayer } from '../descent/player.js';
 import { legAt } from './paths.js';
 import { createPathWalk } from './walk.js';
 import { createPlaces } from './places.js';
+import { thin } from './declutter.js';
+import { addTiles } from './tiles.js';
+import { addScheme } from './scheme.js';
 import { mark } from './stage.js';
 
 const app = document.getElementById('app');
+
+// The licence line is required by OGL and ODbL both, so on a phone it is
+// collapsed to one tappable line rather than shortened or dropped. Opening it
+// is the whole interaction; there is nothing to close because it takes the
+// space it needs and gives it back on the next tap.
+const credit = document.getElementById('credit');
+const creditToggle = document.getElementById('credit-toggle');
+creditToggle.addEventListener('click', () => {
+  const open = credit.classList.toggle('open');
+  creditToggle.setAttribute('aria-expanded', String(open));
+});
 
 // ?cam=x,y,z&look=x,z frames a specific shot (used to render descent
 // endpoints); ?clean=1 hides every overlay for capture.
@@ -29,7 +67,7 @@ const params = new URLSearchParams(location.search);
 const clean = params.has('clean');
 const camPos = (params.get('cam') ?? '-750,520,1050').split(',').map(Number);
 if (clean) {
-  for (const id of ['credit', 'hint', 'panel']) document.getElementById(id).hidden = true;
+  for (const id of ['credit', 'shot-card', 'panel']) document.getElementById(id).hidden = true;
 }
 
 const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 2, 20000);
@@ -232,37 +270,130 @@ function updateIgnition(dtMs) {
 }
 
 // --- 2045 -------------------------------------------------------------------
-// One wave, west to east, once. ?future=1 renders it already arrived and
-// ?wave=0.45 holds the front part-way across, which is what a capture wants
-// since it has no button to press.
+// Today, or 2045. Not a year in between.
+//
+// Phase 8 gave the wave a dial, on the reasoning that the idea of the piece is
+// dragging the future across the vale and stopping half way. That was wrong,
+// and looking at it says so: a field caught half way through becoming an
+// orchard is neither the ground as it is nor the scheme as proposed, and those
+// are the only two things a room ever argues about. Nineteen resting states,
+// seventeen of them mush.
+//
+// So the interface offers the two ends, and the sweep between them is a
+// transition rather than a place. The shader is untouched — it still takes a
+// continuous front, `setWave` still accepts any number, and `?wave=0.45` still
+// holds it half way for a capture, which is the one caller that wants it.
+//
+// ?future=1 renders it already arrived.
 const future = scene.userData.future;
-const WAVE_MS = 9000;
-let waveFrom = null;
+// Long enough to read as the front crossing the vale, short enough that nobody
+// waits for it. Eased at both ends, so it gathers and settles.
+const SWEEP_MS = 1400;
+
 future.setWave(params.has('wave') ? Number(params.get('wave'))
                                   : (params.has('future') ? 1 : 0));
 
-const futureButton = document.createElement('button');
-futureButton.id = 'future-toggle';
-futureButton.textContent = 'Show 2045';
-futureButton.hidden = clean || params.has('future') || params.has('wave');
-futureButton.onclick = () => {
-  if (waveFrom !== null || future.wave >= 1) return;
-  waveFrom = performance.now();
-  futureButton.disabled = true;
-  futureButton.textContent = 'The Golden Valley, 2045';
-};
-app.appendChild(futureButton);
+const dial = document.getElementById('year-dial');
+const toggle = document.getElementById('year-toggle');
+const ends = [...toggle.querySelectorAll('.end')];
+dial.hidden = clean || params.has('future') || params.has('wave');
+
+let sweep = null;                  // { from, to, startedAt, ms } while crossing
+
+function sweepTo(to) {
+  // Compared against where it is HEADING rather than where it is. Pressed
+  // twice in quick succession the second press has to turn it round, and at
+  // that moment the vale has barely moved — so comparing against the current
+  // wave would read "you are already going to 2026" and commit you to 2045.
+  const bound = sweep ? sweep.to : future.wave;
+  if (Math.abs(to - bound) < 0.001) return;
+  const from = future.wave;
+  if (Math.abs(to - from) < 0.001) { sweep = null; future.setWave(to); return; }
+  // Pro rata, so turning round after half a crossing is not the same
+  // 1.4 seconds as crossing the whole vale.
+  sweep = { from, to, startedAt: performance.now(),
+            ms: Math.max(500, SWEEP_MS * Math.abs(to - from)) };
+}
+
+// Mid-sweep, the switch answers to where it is going rather than where it is:
+// a control that ignores the second press because the first has not landed is
+// a control that feels broken.
+const heading = () => (sweep ? sweep.to : future.wave) >= 0.5;
+
+toggle.addEventListener('click', () => sweepTo(heading() ? 0 : 1));
+// A two-state control that only answers to space is one you have to discover
+// twice. Left is today and right is 2045, which is also how it is drawn.
+toggle.addEventListener('keydown', (e) => {
+  const to = { ArrowLeft: 0, ArrowDown: 0, ArrowRight: 1, ArrowUp: 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  sweepTo(to);
+});
+
+// What the scheme is, filling as it arrives. It lives inside the switch rather
+// than beside it because they are one object to a viewer: the control, and
+// what the control is doing to the vale.
+const scheme = clean ? null : await addScheme({ future, root: app });
+if (scheme) dial.insertBefore(scheme.band, dial.firstChild);
 
 function updateWave(now) {
-  if (waveFrom === null) return;
-  const k = Math.min(1, (now - waveFrom) / WAVE_MS);
-  // Ease at both ends: the front should gather and settle rather than start
-  // and stop, which is the whole difference between weather and a wipe.
-  future.setWave(k * k * (3 - 2 * k));
-  if (k >= 1) {
-    waveFrom = null;
-    futureButton.classList.add('done');
+  if (sweep) {
+    const k = Math.min(1, (now - sweep.startedAt) / sweep.ms);
+    // Ease at both ends: the front should gather and settle rather than start
+    // and stop, which is the whole difference between weather and a wipe.
+    const e = k * k * (3 - 2 * k);
+    future.setWave(sweep.from + (sweep.to - sweep.from) * e);
+    if (k >= 1) sweep = null;
   }
+  // Read from the world rather than from whatever last set it. Flying to a
+  // place moves the wave too, and a switch that only knew about its own input
+  // would sit there saying TODAY over a photograph of 2045.
+  if (dial.hidden) return;
+  const w = future.wave;
+  // The knob's travel IS the front's travel — one number, read every frame,
+  // so the control cannot disagree with the vale it describes.
+  toggle.style.setProperty('--k', w.toFixed(4));
+  toggle.setAttribute('aria-checked', String(w >= 0.5));
+  ends[0].classList.toggle('on', w < 0.5);
+  ends[1].classList.toggle('on', w >= 0.5);
+  dial.classList.toggle('arrived', w >= 0.999);
+  dial.classList.toggle('today', w <= 0.001);
+  scheme?.update();
+}
+
+// --- today, streamed ---------------------------------------------------------
+// With a key, today's Cheltenham is Google's photogrammetry of the real town
+// and our 2045 scheme stands on it. Without one — which is every environment
+// that is not the local session's, including every test suite and the public
+// build — this is null and the map is exactly the measured one it has always
+// been. That fallback is not a degraded mode; it is the map most people see.
+const tiles = clean ? null : await addTiles(scene, {
+  camera, renderer, future,
+  // ?tileLift=0.7 while the offset between our LiDAR and their photogrammetry
+  // is still being measured, so the local session can find it live without
+  // an edit and a redeploy.
+  lift: params.has('tileLift') ? Number(params.get('tileLift')) : undefined,
+});
+const attribution = document.getElementById('tiles-attribution');
+
+// Photogrammetry is a picture taken from an aeroplane: come close enough and
+// it melts, because nothing ever photographed the underside of that hedge.
+// Below the threshold our measured model takes over, which is the one thing
+// it is unambiguously better at.
+function updateTiles() {
+  if (!tiles) return;
+  const above = camera.position.y - heightAtLocal(camera.position.x, camera.position.z);
+  // Two thresholds, not one: a camera sitting near the line would otherwise
+  // flip the whole town between two versions of itself every few frames, and
+  // the walk rides at a fixed height over rolling ground.
+  const want = tiles.wantsShowing(above);
+  if (want !== tiles.showing) tiles.setShowing(want);
+  tiles.update();
+  // The licence requires this to be visible whenever tiles are, and it is
+  // read from the renderer every frame because what is on screen changes it.
+  const text = tiles.showing ? tiles.attributions() : '';
+  attribution.hidden = !text;
+  if (attribution.textContent !== text) attribution.textContent = text;
 }
 
 // --- places: the photographs ------------------------------------------------
@@ -287,6 +418,7 @@ const places = createPlaces({
     const there = state === 'there';
     placeBack.hidden = clean || !there;
     document.body.classList.toggle('in-photo', there && !clean);
+    syncCameraOwner();
   },
 });
 placeBack.onclick = () => places.leave();
@@ -308,6 +440,7 @@ function render(state, hotspot) {
   panel.hidden = clean || !inPlace;
   document.body.classList.toggle('in-place', inPlace && !clean);
   app.classList.toggle('flying', state === 'descending' || state === 'returning');
+  syncCameraOwner();
   if (inPlace) {
     panelTitle.textContent = hotspot.name;
     panelBody.textContent = hotspot.blurb;
@@ -322,6 +455,7 @@ function renderWalk(state, leg) {
   panel.hidden = clean || !arrived;
   document.body.classList.toggle('in-place', arrived && !clean);
   app.classList.toggle('flying', state === 'diving' || state === 'returning');
+  syncCameraOwner();
   routeLabel.hidden = routeLabel.hidden || walk.busy;
   if (!arrived) return;
   const r = leg.route;
@@ -333,6 +467,34 @@ function renderWalk(state, leg) {
     + `anything is built.`;
   panelNote.textContent = 'Walked live — no clip generated for this leg yet.';
 }
+
+// --- the shots --------------------------------------------------------------
+// Phase 11. Until now this was a map: orbit, pan, dolly, free — so every frame
+// a visitor saw was one they had composed themselves, by accident, on the way
+// to something else, and one of them was a green diamond floating in a void
+// with the edge of the survey showing on all four sides.
+//
+// The reference does not work like that. Primland is *directed*: you are moved
+// between frames somebody made, and the interaction budget for the whole thing
+// is look, choose, arrive. So the camera lives at one of five named shots and
+// moving means moving between them. What survives of the freedom is a lean —
+// see viewpoints.js for the fence.
+//
+// A capture is exempt: `?clean=1` with `?cam=` is how every plate in
+// generate/ was made, and a shot that flew the camera on load would have
+// quietly re-framed all of them.
+viewpoints = await addViewpoints({
+  camera,
+  controls,
+  groundAt: heightAtLocal,
+  root: app,
+  clean,
+  onArrive: (shot) => {
+    // Only what this frame is actually looking at can be descended to.
+    places.setShowing(shot.places);
+  },
+});
+if (!clean && !params.has('cam')) viewpoints.fly(0, { instant: true });
 
 // --- the opening ------------------------------------------------------------
 // The reference opens on a title over a moving landscape rather than on a
@@ -350,25 +512,36 @@ if (!introSkipped) {
   intro.hidden = false;
   document.body.classList.add('intro-open');
   const t0 = performance.now();
+  // Its own flag, not `controls.enabled`. Using the controls as the liveness
+  // test meant the drift ran for as long as anything had them switched off —
+  // so a capture, or anything else that takes the camera while the intro is
+  // still up, had its camera quietly overwritten every frame and never knew.
+  // It cost an afternoon of screenshots that all came out at the same view.
+  let drifting = true;
   const drift = () => {
-    if (!controls.enabled) {
-      // Ease out, so the move is quickest at the start and has all but
-      // stopped by the time anyone reads as far as the button.
-      const k = Math.min(1, (performance.now() - t0) / OPEN_MS);
-      camera.position.lerpVectors(from, to, 1 - Math.pow(1 - k, 3));
-      camera.lookAt(controls.target);
-      requestAnimationFrame(drift);
-    }
+    if (!drifting) return;
+    // Ease out, so the move is quickest at the start and has all but stopped
+    // by the time anyone reads as far as the button.
+    const k = Math.min(1, (performance.now() - t0) / OPEN_MS);
+    camera.position.lerpVectors(from, to, 1 - Math.pow(1 - k, 3));
+    camera.lookAt(controls.target);
+    if (k >= 1) drifting = false;
+    else requestAnimationFrame(drift);
   };
   drift();
+  // Anything that means to drive the camera can say so, whether or not it
+  // wants the controls back.
+  intro.addEventListener('dismiss', () => { drifting = false; });
   document.getElementById('intro-go').onclick = () => {
+    drifting = false;
     intro.classList.add('leaving');
     document.body.classList.remove('intro-open');
     setTimeout(() => { intro.hidden = true; }, 900);
-    // Hand over from wherever the drift has reached, rather than cutting to
-    // the resting camera and undoing the move.
-    controls.enabled = true;
-    controls.update();
+    // Settle into shot one from wherever the drift has reached, rather than
+    // cutting to it and undoing the move. If the drift has already arrived —
+    // which it has, if the words were read rather than skipped — this costs
+    // nothing and hands the controls straight over.
+    viewpoints.fly(0);
   };
 }
 
@@ -384,8 +557,12 @@ function tick() {
   // fight it for the same three numbers.
   const visiting = places.update(now);
   const walking = !visiting && walk.update(now);
-  if (controls.enabled && !visiting && !walking) controls.update();
+  // The shot flight owns the camera the way the walker and the descent do:
+  // three things that move it and exactly one of them at a time.
+  const moving = !visiting && !walking && viewpoints.update(now);
+  if (controls.enabled && !visiting && !walking && !moving) controls.update();
   updateIgnition(dtMs);
+  updateTiles();
   updateWave(now);
   if (!clean) places.updateMarkers();
   updatePick();
@@ -399,16 +576,28 @@ function tick() {
   // canvas end up under the same cloud.
   updateLife(worldSeconds());
   renderer.render(scene, camera);
+  // The descents and the photographs are two systems to us and one thing to a
+  // viewer, so the shot's `places` list names both and both stand down when it
+  // does not name them. A marker over ground this frame is not looking at is a
+  // legend, not a place.
+  const offered = viewpoints?.current?.places ?? null;
   for (const h of hotspots) {
-    // A hotspot you are standing in should not offer to take you there.
-    const hide = player.busy || player.inside === h || walk.busy || !!walk.inside
-      || places.busy || !!places.inside;
+    // Standing somewhere offers nothing else. It used to hide only the place
+    // you were in and leave its neighbours up, which is a map's answer — hop
+    // sideways, keep browsing. Phase 11's answer is that you descended FROM a
+    // frame and you go back to it: the title card, the dots and the arrows are
+    // already gone here, and the markers were the last thing still behaving
+    // like a menu.
+    const hide = player.busy || !!player.inside || walk.busy || !!walk.inside
+      || places.busy || !!places.inside
+      || (offered !== null && !offered.includes(h.id));
     v.copy(h.anchor).project(camera);
     h.button.hidden = hide || v.z > 1;
-    // Clamp, so a place near the edge of the box still reads as a label
-    // rather than half a word running off the screen.
+    // Clamped by the label's own half-width rather than a guessed margin: the
+    // thing being kept on screen has to be the thing you can see.
+    const half = h.button.offsetWidth / 2 + 8;
     h.button.style.left =
-      `${THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * innerWidth, 140, innerWidth - 140)}px`;
+      `${THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * innerWidth, half, innerWidth - half)}px`;
     h.button.style.top =
       `${THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * innerHeight, 60, innerHeight - 20)}px`;
     // Fade with distance rather than showing every marker at the same weight:
@@ -417,6 +606,13 @@ function tick() {
     h.button.style.setProperty('--k',
       THREE.MathUtils.clamp(1.3 - d / 4200, 0.45, 1).toFixed(2));
   }
+  // Last, once everything has been positioned for this frame: the places and
+  // the descent hotspots are two systems to us and one thing to a viewer, and
+  // they stand on the same ground — GCHQ has both — so they are thinned
+  // together or not at all.
+  if (!clean) thin([...places.markers, ...hotspots.map((h) => ({
+    el: h.button, anchor: h.anchor,
+  }))], camera);
 }
 tick();
 
@@ -453,6 +649,7 @@ if (auto) {
 // for. Nothing in the page reads it.
 window.__map = {
   renderer, scene, camera, controls, paths, walk, player, hotspots, future, places,
+  tiles, scheme, viewpoints,
   // A capture that cannot stop the clock is photographing the weather: the
   // flock, the wind and the cloud shadows all move, so two renders of one
   // camera differ by however long the page took to get there.

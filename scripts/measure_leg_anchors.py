@@ -22,6 +22,8 @@ import json
 import math
 from pathlib import Path
 
+from heightfield import sampler
+
 ROOT = Path(__file__).resolve().parent.parent
 GV = ROOT / "experiments" / "002-living-map" / "golden-valley"
 
@@ -74,20 +76,11 @@ def on_frame(p, margin=0.02):
 
 
 def height_field(meta):
-    raw = (GV / meta["binFile"]).read_bytes()
-    w, h = meta["binPixels"]
-    lo, hi = meta["elevationMinMetres"], meta["elevationMaxMetres"]
-    sx, sz = meta["widthMetres"], meta["heightMetres"]
-
-    def at(x, z):
-        # Nearest sample is enough here: this is for describing a picture, not
-        # for standing anything on the ground.
-        px = min(max(int((x / sx + 0.5) * (w - 1)), 0), w - 1)
-        pz = min(max(int((z / sz + 0.5) * (h - 1)), 0), h - 1)
-        i = (pz * w + px) * 2
-        return lo + (raw[i] | (raw[i + 1] << 8)) / 65535 * (hi - lo)
-
-    return at
+    # One reader, shared with the generators and checked by
+    # test_heightmap.py. This used to index the file as raw uint16, which was
+    # true until phase 7 packed it — and the IndexError that followed was
+    # reported as a plate looking over the edge of the box. It was not.
+    return sampler(meta, folder=GV)
 
 
 def describe(leg_file):

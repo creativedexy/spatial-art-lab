@@ -1,0 +1,100 @@
+{
+  "note": "The shots. Phase 11 — the piece stops being a map you fly and becomes a set of frames you are moved between, because every frame a visitor composes with orbit controls is a frame nobody composed. Local metres, x east, y above ordnance datum, z SOUTH. `pos` is the camera; `look` is the ground point (x, z) it is aimed at, with the height read from the terrain there and `lift` added, so a shot survives the heightmap being requantised the way phase 7 requantised it. `places` names what you can descend to from this shot and nothing else — both layers, the photographs in places.json and the clipped descents in ../descent/hotspots.json, because they are two systems to us and one thing to a viewer — a marker floating over ground you are not looking at is a legend, not a place.\n\nChosen by looking, not by arithmetic: scripts/compose_viewpoints.py renders every candidate at BOTH ends of the switch and tiles the pairs, because the pair is the product. Two rounds and sixteen candidates are in generate/phase-11/. Two rules did the cutting. The edge of the box must never appear — which killed every shot that looked north-west, since the terrain runs out 270 m behind the new homes; turning that one round to look back at the town fixed the frame and improved the argument. And there must be horizon in it — which killed the overlay camera, a plan view with no sky, however well it matched the developer's own hero.\n\nThe brook is not here, deliberately. It was tried four ways and the wetland corridor never reads from the air at any distance: it is a thing you stand next to. It belongs to an arrival, which is phase 13.\n\nOne route per ground point, per shot — and it is a rule with teeth, because four of the eight markers in this map stand on the SAME ground: gchq, gchq-meadow and cyber-central are three photographs of the Doughnut and the doughnut descent is a fourth way in, all anchored at (123, 64). Declutter had been quietly discarding three of them since the markers landed, and naming all four on one shot simply moved the argument: the meadow roof listed the descent, declutter kept the photograph, and the descent could not be reached at all. So each shot names at most one route to any one point. `gchq` and `cyber-central` are consequently unattached: they are a today photograph of ground the switch already shows you, and a wide 2045 view of the same ring the vale is already framing. They stay in places.json for phase 13, when arrival gets its own treatment. scripts/test_viewpoints.py fails if any shot ever offers two markers within 60 m of each other.",
+  "defaults": {
+    "fov": 47,
+    "flyMs": 3200,
+    "lift": 20
+  },
+  "viewpoints": [
+    {
+      "id": "the-vale",
+      "name": "The vale",
+      "pos": [
+        -900,
+        420,
+        -400
+      ],
+      "look": [
+        100,
+        200
+      ],
+      "places": [
+        "doughnut",
+        "princess-elizabeth-way"
+      ],
+      "says": "West Cheltenham from above the fields the scheme is allocated on, with GCHQ at the centre and the Cotswold edge behind.",
+      "why": "the establishing shot: whole town, the ring in the middle of it, escarpment on the horizon and no box edge anywhere"
+    },
+    {
+      "id": "the-campus",
+      "name": "Cyber Central",
+      "pos": [
+        -640,
+        230,
+        300
+      ],
+      "look": [
+        -180,
+        -126
+      ],
+      "places": [
+        "campus-courtyards",
+        "gv-site"
+      ],
+      "says": "Nine hectares of campus on the near side of the brook, a hundred metres from the Doughnut and inside the same hedge grid as the fields it replaces.",
+      "why": "the best pair of the sixteen — the brook corridor reads, GCHQ anchors the middle distance and the town runs to the escarpment behind"
+    },
+    {
+      "id": "the-meadow-roof",
+      "name": "The meadow roof",
+      "pos": [
+        430,
+        280,
+        440
+      ],
+      "look": [
+        -120,
+        -120
+      ],
+      "places": [
+        "gchq-meadow"
+      ],
+      "says": "The Doughnut re-roofed: 3.6 hectares of south-facing ground at 20 m, which the open-land survey found and nobody had counted as land.",
+      "why": "the single most legible change in the whole scheme, and the one frame where what is already here becomes the argument"
+    },
+    {
+      "id": "the-homes",
+      "name": "The homes",
+      "pos": [
+        -620,
+        165,
+        -1010
+      ],
+      "look": [
+        -120,
+        -520
+      ],
+      "places": [],
+      "says": "A new quarter in the near field and the Cheltenham it joins on the skyline — fifteen hectares of homes against an edge that is already there.",
+      "why": "turned round to look back at the town: it puts the box edge behind the camera and the does-it-eat-the-town question in front of it"
+    },
+    {
+      "id": "the-panels",
+      "name": "Panels and glasshouses",
+      "pos": [
+        120,
+        260,
+        -60
+      ],
+      "look": [
+        -372,
+        -240
+      ],
+      "places": [
+        "panels-and-glasshouses"
+      ],
+      "says": "Agrivoltaics on the west-facing slopes and glass below them: ground that is still farmed, under panels, and counted as neither building nor field.",
+      "why": "the half of the scheme that is productive landscape rather than architecture, and an honest empty field at 2026"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "note": "One composed plate from the map, rendered with the path network hidden. Local metres, x east, z south, origin at the box centre. Same shape as a leg's sidecar so measure_leg_anchors.py can read either.",
+  "camera": {
+    "fov": 48,
+    "size": [
+      1280,
+      720
+    ]
+  },
+  "wave": 1,
+  "frames": [
+    {
+      "file": "campus-ncic.png",
+      "atMetres": 0,
+      "pos": [
+        -175,
+        92,
+        60
+      ],
+      "look": [
+        -190,
+        49.825,
+        -115
+      ]
+    }
+  ]
+}

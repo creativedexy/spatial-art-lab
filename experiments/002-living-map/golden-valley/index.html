@@ -26,7 +26,20 @@
   /* Same trap: .hotspot and #panel both set `display` in direction.css. */
   #panel[hidden] { display: none; }
 </style>
-<script type="importmap">{ "imports": { "three": "../terrain/vendor/three.module.min.js" } }</script>
+<!-- The tiles layer is the only thing here that is not vendored, and it is
+     fetched ONLY when a key exists: no key, no import, and the public map
+     stays the offline-first measured one at phase 7's weight. -->
+<script type="importmap">{ "imports": {
+  "three": "../terrain/vendor/three.module.min.js",
+  "three/": "https://cdn.jsdelivr.net/npm/three@0.169.0/",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+  "3d-tiles-renderer/three": "https://esm.sh/3d-tiles-renderer@0.5.2/three?external=three",
+  "3d-tiles-renderer/three/plugins": "https://esm.sh/3d-tiles-renderer@0.5.2/three/plugins?external=three",
+  "3d-tiles-renderer/core/plugins": "https://esm.sh/3d-tiles-renderer@0.5.2/core/plugins?external=three"
+} }</script>
+<!-- Gitignored, and absent in every environment that has no key. onerror
+     keeps the console clean when it is not there, which is the normal case. -->
+<script src="./key.js" onerror="window.GOOGLE_TILES_KEY=null"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -37,14 +50,54 @@
   <button id="intro-go">Explore the map</button>
   <div class="aside">Environment Agency LiDAR &middot; OpenStreetMap</div>
 </div>
+<!-- Today, or 2045. Two states, because those are the only two a room ever
+     argues about: this is the ground now, and this is what the scheme makes
+     of it. The shader still takes a continuous front and a capture can still
+     hold it half way with ?wave= — but a year parked at 2034 is a field that
+     is neither a place nor a proposal, so the interface does not offer one. -->
+<!-- The deck: everything that lives at the bottom of the screen, stacked, so
+     nothing in it has to guess how tall anything else is. The scheme band grows
+     a second line at 2045 and the dots used to disappear behind it. -->
+<div id="deck">
+<div id="year-dial" hidden>
+  <!-- The scheme band is inserted above this row by scheme.js: the control and
+       what the control is doing to the vale are one object to a viewer. -->
+  <div class="row">
+    <button id="year-toggle" type="button" role="switch" aria-checked="false"
+            aria-label="Show the Golden Valley in 2045">
+      <span class="knob" aria-hidden="true"></span>
+      <span class="end on">Today</span>
+      <span class="end">2045</span>
+    </button>
+  </div>
+</div>
+</div>
 <div id="panel" hidden>
   <h2 id="panel-title"></h2>
   <p id="panel-body"></p>
   <div id="panel-note"></div>
   <button id="panel-back">Return to the map</button>
 </div>
-<div id="credit">Terrain, building heights and roof shapes: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints, land cover, roads and trees &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</div>
-<div id="hint">click a place to descend &middot; drag: pan &middot; right-drag: orbit &middot; scroll: zoom</div>
+<!-- Attribution is not optional: OGL v3 and ODbL both require it. On a
+     phone it collapses behind a labelled control rather than shrinking,
+     because four lines of licence text under the year switch is how a
+     careful credit turns into noise and stops being read at all. -->
+<!-- Required, always visible, and gathered from the renderer rather than
+     typed: what is being credited changes with what is on screen. -->
+<div id="tiles-attribution" hidden></div>
+<div id="credit">
+  <button id="credit-toggle" type="button" aria-expanded="false"
+          aria-controls="credit-text">Data sources</button>
+  <span id="credit-text">Terrain, building heights and roof shapes: Environment Agency LiDAR composite DTM/DSM, &copy; Environment Agency copyright and/or database right, OGL v3. Building footprints, land cover, roads and trees &copy; OpenStreetMap contributors, ODbL. True scale, no vertical exaggeration.</span>
+</div>
+<!-- Where you are, and what this frame is an argument for. The five shots
+     and their copy live in viewpoints.json; this is the card they are written
+     into. There is no "drag to pan" line any more because there is no panning:
+     phase 11 took the camera back. -->
+<div id="shot-card">
+  <p id="shot-name"></p>
+  <p id="shot-says"></p>
+</div>
 <script type="module" src="./main.js"></script>
 </body>
 </html>

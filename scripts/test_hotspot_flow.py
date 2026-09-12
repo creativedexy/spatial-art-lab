@@ -79,13 +79,35 @@ def main():
         # skipping past it with a parameter no visitor has.
         page.get_by_role("button", name="Explore the map").click()
         page.wait_for_selector("#intro", state="hidden", timeout=60_000)
-        page.wait_for_selector(".hotspot", timeout=120_000)
+        page.wait_for_selector("#shot-dots .dot", timeout=120_000)
         if shots:
             page.screenshot(path=str(shots / "01-map.png"))
 
-        check("three hotspots are offered", page.locator(".hotspot:visible").count() == 3)
+        # Phase 11: the three descents are no longer all on screen at once.
+        # Each belongs to the shot that is looking at it, because a marker
+        # over ground the camera is not pointed at is a legend, not a place.
+        # So the flow is now: choose the view, then choose the place in it.
+        def go_to(shot):
+            page.get_by_role("tab", name=shot).click()
+            page.wait_for_function(
+                "(n) => { const v = window.__map.viewpoints;"
+                " return !v.flying && v.current.name === n; }",
+                arg=shot, timeout=120_000)
 
-        # Click the one with a clip, exactly as a visitor would.
+        seen = {}
+        for shot in page.evaluate(
+                "() => window.__map.viewpoints.shots.map((s) => s.name)"):
+            go_to(shot)
+            page.wait_for_timeout(600)
+            seen[shot] = page.locator(".hotspot:visible").count()
+        check("every descent is offered, from the view that looks at it",
+              sum(seen.values()) == 3 and seen.get("The vale") == 2,
+              ", ".join(f"{k}: {v}" for k, v in seen.items()))
+
+        # Click the one with a clip, exactly as a visitor would — from the
+        # shot it belongs to.
+        go_to("The vale")
+        page.wait_for_selector(".hotspot:visible", timeout=120_000)
         page.get_by_role("button", name="GCHQ — the Doughnut").click()
         # The fallback never puts the video on screen at all, so "displayed and
         # its clock has moved" is what separates the two routes. Media decodes
@@ -121,24 +143,32 @@ def main():
             "   .filter(b => getComputedStyle(b).display !== 'none').length })")
         check("the place panel names where we landed", state["title"] == "GCHQ — the Doughnut")
         check("the clip is off screen once it has handed back", state["clipShown"] is False)
-        check("the place we are standing in stops offering itself", state["pills"] == 2)
+        check("standing in a place offers nothing else", state["pills"] == 0,
+              f"{state['pills']} markers still up")
 
         page.get_by_role("button", name="Return to the map").click()
         page.wait_for_selector("#panel", state="hidden", timeout=240_000)
         back = 0
         try:
+            # Back to the shot you left from, with its own place offered again
+            # — not to wherever the clip happened to finish.
             page.wait_for_function(
-                "() => [...document.querySelectorAll('.hotspot')]"
-                "  .filter(b => getComputedStyle(b).display !== 'none').length === 3",
+                "() => { const v = window.__map.viewpoints;"
+                " return !v.flying && v.current.name === 'The vale'"
+                "   && [...document.querySelectorAll('.hotspot')]"
+                "      .filter((b) => !b.hidden).length === 2; }",
                 timeout=60_000)
-            back = 3
+            back = 2
         except PWTimeout:
             back = page.locator(".hotspot:visible").count()
         if shots:
             page.screenshot(path=str(shots / "04-returned.png"))
-        check("every hotspot is back on the map", back == 3, f"{back} of 3 visible")
+        check("it comes back to the view it left from, places and all",
+              back == 2, f"{back} offered at the vale")
 
         # And the place with no clip should fly the same path live.
+        go_to("Cyber Central")
+        page.wait_for_selector(".hotspot:visible", timeout=120_000)
         page.get_by_role("button", name="Golden Valley — phase 1").click()
         page.wait_for_selector("#panel:not([hidden])", timeout=240_000)
         if shots:

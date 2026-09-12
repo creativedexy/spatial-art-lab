@@ -17,7 +17,7 @@ protocol.
 | 001 | [`001-path-leg.md`](001-path-leg.md) | the first generated leg | **closed**: an empty footpath fails the interesting-imagery rule; do not run B or C |
 | 002 | [`002-gchq.md`](002-gchq.md) | GCHQ filling the frame, with surveyed locks | **done** (free, Codex): passes the rule; ring drawn ~22 px high; car parks are the plate's gap |
 | 003 | [`003-golden-valley-2045.md`](003-golden-valley-2045.md) | the Golden Valley in 2045 — three frames, one session | **done** (free, Codex): all three pass the rule; C is the proposition in one frame; A drifts ~50 px; the box ending before the horizon is the plate's gap |
-| 004 | [`004-campus-close.md`](004-campus-close.md) | the campus at 100 m, now with type models on the footprints | open, free |
+| 004 | [`004-campus-close.md`](004-campus-close.md) | the campus at 100 m, now with type models on the footprints | **done** (free, Codex) on `campus-ncic`: passes the rule; written facades carry through; drawn ~35 px high |
 
 ## The interesting-imagery rule (Dex, 10 Sep 2026)
 
@@ -62,6 +62,13 @@ crossfade is enough.
   glowing strip down the middle of the finished footage.
 - **Cheap first.** Every request names the cheapest rung that could answer it.
   If the cheap rung answers it, stop.
+- **Google's tiles are a live layer and never a source.** Task 002 puts
+  Photorealistic 3D Tiles under the map as today's Cheltenham, but the Map
+  Tiles terms forbid caching and offline use, so **no plate, brief, Codex
+  input or film frame may come from them, ever**. Every generated image still
+  starts from the measured map, which is also what keeps the surveyed locks
+  below meaningful. The layer needs a key that lives only on the machine that
+  holds it; with no key the map is the measured one, unchanged.
 
 ## Surveyed locks
 

@@ -1,5 +1,12 @@
 # Golden Valley: the next phases
 
+> **Superseded in part, 11 Sep 2026.** Phases 7 and 8 shipped. Phase 8's year
+> dial did not survive contact — see [from map to piece](living-map-the-piece.md),
+> which re-plans 11 onwards around three notes from Dex: a toggle rather than a
+> slider, Google's photogrammetry rather than our model of the town, and the
+> piece not being a 3D map you move around. Phase 9 (life) and phase 10 (it
+> transfers) survive as 13 and 15 there.
+
 10 Sep 2026. The four items in [the build plan](golden-valley-build-plan.md)'s
 Order are done or waiting on money: the GCHQ close-up passed, the Meshy kit's
 first two types are placed, the video loops need Dex's yes, and the web build
