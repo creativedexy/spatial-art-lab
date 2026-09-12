@@ -12,6 +12,7 @@ import { applyLook } from './look.js';
 import { addLandCover, loadClassTexture, classIndex, unitTree, KINDS } from './landcover.js';
 import { bringToLife } from './life.js';
 import { addPaths } from './paths.js';
+import { addFarField } from './farfield.js';
 import { addFuture } from './future.js';
 import { addModels } from './models.js';
 import { pathMeta } from './paths.js';
@@ -163,6 +164,14 @@ export async function buildWorld({ renderer, segments = 1000, onStage = null } =
   // and every test — gets exactly what it always got, because the awaits below
   // are unchanged and the scene returned at the end is the same scene.
   if (onStage) await onStage('terrain', scene);
+  // The horizon, before anything is built on the ground: it is 280 KB and it
+  // is the difference between a world and a slab, so it arrives while the
+  // buildings are still coming. It is also the one layer that is allowed to
+  // be approximate — OS Terrain 50 at 50 m, out to 75 km — because every part
+  // of it a viewer can see is at least a kilometre away.
+  scene.userData.farField = await addFarField(scene);
+  mark('far field');
+  if (onStage) await onStage('far field', scene);
   scene.add(await buildBuildings());
   mark('buildings');
   if (onStage) await onStage('buildings', scene);

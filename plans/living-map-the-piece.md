@@ -333,3 +333,86 @@ Restored by re-running the workflow so ours landed last. Two things follow:
    the window a competing deployment lands in and asks the live URL whether the
    map is actually there, failing the run — loudly, naming the Jekyll takeover
    — if it is not. A green deploy is not a live map.
+
+
+---
+
+## The background and the edge, 12 Sep 2026
+
+The world used to end. Two square kilometres of LiDAR, then a cliff and the
+sky — and phase 11 could only compose around it. Of sixteen candidate shots,
+every one that looked north-west was thrown out because the survey runs out
+270 m behind the new homes, and the best establishing frame we had was
+rejected for being a plan view with no sky in it. That is composition paying
+for a data problem.
+
+**What was actually missing is the skyline this place has.** Cleeve Common is
+330 m and 8.6 km out on a bearing of 75, standing 279 m above the box; the
+escarpment runs the whole eastern horizon; the Malverns are 27 km north-west,
+May Hill 22 west, the Black Mountains past 70. The developer's own hero
+photograph has all of it and says so — "Severn Vale and the Welsh hills on the
+far horizon".
+
+So: **OS Terrain 50**, Ordnance Survey's open 50 m model of Great Britain,
+under the same Open Government Licence as the LiDAR. Two grids, because
+resolution should follow distance — 24 km at 50 m for the escarpment, 150 km
+at 500 m for everything behind it. **280 KB**, and the first frame is
+unchanged at 3.0 s because the horizon arrives after the ground does.
+
+### The joins, which are all of the craft
+
+- **The seam.** Two surveys of the same ground disagree — worst 3.2 m at the
+  box edge, measured — and a step there is a crack you cannot unsee. Every
+  far-field sample within 500 m of the boundary is corrected toward what our
+  own LiDAR says at the nearest point on it, at full strength on the edge and
+  eased out. Checked round all four sides afterwards: **worst 1.5 m over 52
+  points**, and invisible in every frame.
+- **The tuck.** The far field runs a little way *under* the box and is dropped
+  while it does, so a 50 m grid and a 2 m one never fight along a line. The
+  join is hidden rather than matched.
+- **The grids.** Near and far divide exactly — 220 posts from the box edge to
+  12 km, 126 from 12 km to 75 — or they would meet at a second seam of their
+  own.
+
+### Two things that are not joins
+
+**Earth curvature.** At 70 km the ground falls 330 m away from you, which is
+the difference between distant hills standing on the horizon and floating
+above it. Applied by the view; the heights on disk stay true elevations.
+
+**Air.** The old fog gave about four and a half kilometres of visibility,
+which was right for a world two kilometres across and wrong the moment there
+was a horizon behind it — the escarpment would have arrived already dissolved
+and the Malverns not at all. It is now an ordinary clear afternoon, and
+because fog is one blend against one colour and could not do the work alone,
+aerial perspective is baked into the far field's own colours as well. Without
+it the horizon came back the same saturated green as the field you are
+standing in, and a horizon the colour of the foreground is not a horizon, it
+is wallpaper.
+
+### What it cost elsewhere
+
+**The approved plates all moved, and the guard was right to reject them.**
+Ten of twelve, worst 17.9% of pixels. Looked at rather than argued with: the
+foreground is untouched in every one — same fields, same hedges, same
+Doughnut, same pixels — and what changed is the top of the frame, where sky
+became land. `a-cyber-central` went from a town that stops in mid-air to a
+town that runs into the vale. So they are **re-baselined**, not reverted, and
+anything regenerated from them should use the new renders.
+
+**And a number that was lying.** `test_public_build.py` counts bytes from
+whichever responses have started when it stops watching, and the map defers
+half its load deliberately — so adding a 0.27 MB horizon moved its reported
+first load *down*, from 6.71 MB to 5.25. A budget that falls when you add
+bytes is not a budget. It now waits for quiet and then some, still reads about
+1.3 MB under the truth, and is documented as a ceiling check rather than the
+figure. The figure comes from `measure_payload.py --site dist`: **6.46 MB**.
+
+### Still to do out here
+
+The far field has no land cover and inventing some would be a lie, so it is
+shaded by height and slope alone. Where that shows most is the middle
+distance, 2–6 km, which is close enough to want woods and fields and too far
+to have them. OpenStreetMap covers that ground and would give real woodland
+and water without inventing anything — the honest next step if the horizon
+ever needs more than a silhouette.

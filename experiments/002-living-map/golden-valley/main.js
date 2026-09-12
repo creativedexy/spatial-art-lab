@@ -70,7 +70,11 @@ if (clean) {
   for (const id of ['credit', 'shot-card', 'panel']) document.getElementById(id).hidden = true;
 }
 
-const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 2, 20000);
+// Far enough to see the far field's 75 km, which costs almost nothing: in a
+// standard depth buffer the precision is set by the NEAR plane, and moving
+// far from 20 km to 180 changes the resolution at the box edge by under a
+// millimetre. Near stays at 2 because the walker gets that close to walls.
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 2, 180000);
 camera.position.set(...camPos);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -387,7 +391,13 @@ function updateTiles() {
   // flip the whole town between two versions of itself every few frames, and
   // the walk rides at a fixed height over rolling ground.
   const want = tiles.wantsShowing(above);
-  if (want !== tiles.showing) tiles.setShowing(want);
+  if (want !== tiles.showing) {
+    tiles.setShowing(want);
+    // Google's photogrammetry brings its own horizon. Ours underneath it
+    // would be a second, coarser one at a slightly different height, which is
+    // the sort of thing nobody can name and everybody can see.
+    scene.userData.farField?.setShowing(!want);
+  }
   tiles.update();
   // The licence requires this to be visible whenever tiles are, and it is
   // read from the renderer every frame because what is on screen changes it.

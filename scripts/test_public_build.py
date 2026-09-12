@@ -97,7 +97,27 @@ def main():
         page.goto(f"http://127.0.0.1:{args.port}/", wait_until="load",
                   timeout=900000)
         page.wait_for_function("window.__terrainReady === true", timeout=900000)
-        page.wait_for_timeout(2000)
+        # This counter is a FLOOR, not the payload figure. It counts whichever
+        # responses have started by the moment it stops watching, and the map
+        # defers half its load on purpose, so the moment matters: adding a
+        # 0.27 MB horizon moved it from 6.71 MB to 5.25, because the extra work
+        # on the main thread pushed later requests past the cutoff. Waiting for
+        # quiet and then some helps and does not cure it — this still reads
+        # about 1.3 MB under what `measure_payload.py --site dist` measures on
+        # a gzip-serving host, which is the number to quote. What this check is
+        # for is the ceiling: it catches a build that ships something enormous,
+        # and it cannot be trusted to notice a build that ships slightly more.
+        try:
+            page.wait_for_load_state("networkidle", timeout=120000)
+        except Exception:
+            pass
+        # AND the grace period, not instead of it. Replacing it made the count
+        # fall again — networkidle was already satisfied, so waiting "until
+        # quiet" stopped the clock sooner than the fixed wait did and counted
+        # less. Whatever is still arriving after that is the deferred half of
+        # the load, and this number is a budget ceiling: it may only ever be
+        # made to count more.
+        page.wait_for_timeout(3000)
         state = page.evaluate("""() => ({
           placed: window.__map.models?.placed ?? {},
           built: window.__map.models?.built ?? {},
@@ -137,7 +157,7 @@ def main():
     check("every place is still on the map", state["markers"] == 5,
           f"{state['markers']} markers, {state['hotspots']} hotspots")
     check("2045 still arrives", wave == 1, f"wave {wave}")
-    check(f"first load is under {BUDGET_MB:.0f} MB",
+    check(f"first load is under {BUDGET_MB:.0f} MB (a floor — see the comment)",
           bytes_in / 1048576 < BUDGET_MB, f"{bytes_in / 1048576:.2f} MB")
 
     print(f"\n{sum(checks)}/{len(checks)} checks passed")
