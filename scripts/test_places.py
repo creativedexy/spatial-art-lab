@@ -104,25 +104,41 @@ PROBE = """async () => {
   const m = window.__map;
   const out = {};
 
-  // Only the ones actually being offered. Phase 8 thins overlapping markers
-  // — nearest wins — and a hidden marker has a zero-size box, so measuring
-  // the whole set reports a 0 px tap target for something nobody can tap.
-  const markers = [...document.querySelectorAll('.place-marker')].filter((e) => !e.hidden);
-  out.markers = markers.map((el) => {
-    // The part of the marker a thumb can actually hit, which is not the same
-    // as the part of it you can see: the stem and the pin below the label are
-    // pointer-events: none, because left clickable they covered the map — and
-    // the descent hotspot — underneath. Measuring the element's box would
-    // have gone on reporting 68 px for a target that had none of it.
-    const hit = [...el.children].filter(
-      (c) => getComputedStyle(c).pointerEvents !== 'none');
-    const boxes = (hit.length ? hit : [el]).map((c) => c.getBoundingClientRect());
-    const top = Math.min(...boxes.map((r) => r.top));
-    const bottom = Math.max(...boxes.map((r) => r.bottom));
-    const r = el.getBoundingClientRect();
-    return { w: Math.round(Math.max(...boxes.map((b) => b.width))),
-             h: Math.round(bottom - top), drawn: Math.round(r.height) };
-  });
+  // Phase 11 offers a different set of routes from each composed shot, and
+  // the opening shot happens to offer descents rather than photographs. Walk
+  // every shot so "every marker on offer" still means the whole piece rather
+  // than whichever kind of route happens to be in the opening frame.
+  const markers = [];
+  const markerMetrics = [];
+  const seen = new Set();
+  const startShot = m.viewpoints.at;
+  for (let i = 0; i < m.viewpoints.shots.length; i++) {
+    m.viewpoints.fly(i, { instant: true });
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const offered = [...document.querySelectorAll('.place-marker, .hotspot')]
+      .filter((e) => !e.hidden);
+    for (const el of offered) {
+      if (seen.has(el)) continue;
+      seen.add(el);
+      markers.push(el);
+      // The part of the marker a thumb can actually hit. Photograph-marker
+      // stems and pins are pointer-events: none because they otherwise cover
+      // the descent hotspot below; hotspot buttons deliberately keep their
+      // whole drawn marker clickable. Measure whichever rule each one uses.
+      const hit = [...el.children].filter(
+        (c) => getComputedStyle(c).pointerEvents !== 'none');
+      const boxes = (hit.length ? hit : [el]).map((c) => c.getBoundingClientRect());
+      const top = Math.min(...boxes.map((r) => r.top));
+      const bottom = Math.max(...boxes.map((r) => r.bottom));
+      const r = el.getBoundingClientRect();
+      markerMetrics.push({ w: Math.round(Math.max(...boxes.map((b) => b.width))),
+                           h: Math.round(bottom - top), drawn: Math.round(r.height) });
+    }
+  }
+  m.viewpoints.fly(startShot, { instant: true });
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  out.markers = markerMetrics;
+  out.views = m.viewpoints.shots.length;
 
   out.models = { ...m.models.placed };
   out.built = { ...m.models.built };
@@ -231,7 +247,7 @@ def check_map(port, doc):
     check(f"every marker on offer is at least {MIN_TAP} px tall "
           f"at {PHONE['width']} px wide",
           out["markers"] and not small,
-          f"{len(out['markers'])} of {len(doc['places'])} places showing, "
+          f"{len(out['markers'])} offered routes across {out['views']} views, "
           f"shortest {min((m['h'] for m in out['markers']), default=0)} px")
 
     place = next(p for p in doc["places"] if p["id"] == "campus-courtyards")
