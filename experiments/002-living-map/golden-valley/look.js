@@ -57,7 +57,12 @@ function skyDome() {
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(9000, 32, 16), material);
+  // Between the far field and the camera's far plane, and it has to be BOTH.
+  // At 260 km it was outside the 180 km far plane and got culled, which does
+  // not draw a bigger sky, it draws no sky: every frame came back with a black
+  // band across the top. The far field reaches 106 km at its corners, so 150
+  // clears the land and stays inside the camera.
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(150000, 48, 24), material);
   dome.frustumCulled = false;
   return dome;
 }
@@ -119,7 +124,15 @@ export function applyLook(scene, renderer, { extent = 1250, grade = true } = {})
 
   // Exponential fog sits the far distance into the sky instead of ending at a
   // hard line, and matches the horizon colour so the join is invisible.
-  scene.fog = new THREE.FogExp2(HORIZON.getHex(), 0.00022);
+  //
+  // 0.00022 gave about four and a half kilometres of visibility, which was
+  // right for a world two kilometres across and wrong the moment there was a
+  // horizon behind it: the escarpment would have arrived already dissolved
+  // and the Malverns would not have arrived at all. 3.3e-5 is an ordinary
+  // clear English afternoon — Cleeve Common at 8.6 km reads at 92% of its
+  // colour, the Malverns at 27 km at about 40%, and everything past 60 km is
+  // haze, which is what distance looks like from here.
+  scene.fog = new THREE.FogExp2(HORIZON.getHex(), 0.000033);
 
   const sun = new THREE.DirectionalLight(0xffe0b5, 3.9);
   sun.position.copy(SUN_DIRECTION).multiplyScalar(3000);

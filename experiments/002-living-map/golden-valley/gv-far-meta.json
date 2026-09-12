@@ -1,0 +1,39 @@
+{
+  "note": "The land beyond the box. Elevations above ordnance datum, true \u2014 Earth curvature is applied by the view, not baked here. Local metres, x east, z SOUTH, origin at the box centre (BNG 391400 222400). Built by scripts/far_field.py.",
+  "origin": [
+    391400.0,
+    222400.0
+  ],
+  "boxHalfMetres": 1000.0,
+  "blendMetres": 500.0,
+  "sources": [
+    "OS Terrain 50 \u00a9 Crown copyright and database right 2026 (OGL v3)",
+    "Environment Agency LiDAR composite DTM (OGL v3), for the seam correction"
+  ],
+  "grids": {
+    "near": {
+      "binFile": "gv-far-near.bin.gz",
+      "binPixels": [
+        481,
+        481
+      ],
+      "binFormat": "delta12",
+      "halfExtentMetres": 12000.0,
+      "stepMetres": 50.0,
+      "elevationMinMetres": -1.2,
+      "elevationMaxMetres": 330.0
+    },
+    "far": {
+      "binFile": "gv-far-far.bin.gz",
+      "binPixels": [
+        301,
+        301
+      ],
+      "binFormat": "delta12",
+      "halfExtentMetres": 75000.0,
+      "stepMetres": 500.0,
+      "elevationMinMetres": -4.0,
+      "elevationMaxMetres": 795.9
+    }
+  }
+}

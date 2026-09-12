@@ -70,7 +70,11 @@ if (clean) {
   for (const id of ['credit', 'shot-card', 'panel']) document.getElementById(id).hidden = true;
 }
 
-const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 2, 20000);
+// Far enough to see the far field's 75 km, which costs almost nothing: in a
+// standard depth buffer the precision is set by the NEAR plane, and moving
+// far from 20 km to 180 changes the resolution at the box edge by under a
+// millimetre. Near stays at 2 because the walker gets that close to walls.
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 2, 180000);
 camera.position.set(...camPos);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -380,14 +384,58 @@ const attribution = document.getElementById('tiles-attribution');
 // it melts, because nothing ever photographed the underside of that hedge.
 // Below the threshold our measured model takes over, which is the one thing
 // it is unambiguously better at.
+// How far away is what the camera is looking at? Screen-space error depends on
+// this and not on the camera's height, so this is what the melt gate is asked.
+// Marched against our own terrain rather than raycast against the tiles: the
+// heightfield is a lookup, it is there whether the tiles are loaded or not, and
+// the answer only needs to be right to a few metres.
+const FOCUS_STEP = 25;
+const FOCUS_MAX = 2500;
+const focusDir = new THREE.Vector3();
+const focusAt = new THREE.Vector3();
+function focusDistance() {
+  focusDir.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  // Looking level or up, there is no ground at the centre of the frame at all.
+  // That reads as "far away", and the floor is what stops the walk trusting it.
+  if (focusDir.y >= 0) return Infinity;
+  let lo = 0;
+  let above = camera.position.y - heightAtLocal(camera.position.x, camera.position.z);
+  for (let s = FOCUS_STEP; s <= FOCUS_MAX; s += FOCUS_STEP) {
+    focusAt.copy(camera.position).addScaledVector(focusDir, s);
+    const h = focusAt.y - heightAtLocal(focusAt.x, focusAt.z);
+    if (above > 0 && h <= 0) {
+      // Bisect the step it crossed in, so a 25 m march still answers to metres.
+      let a = lo;
+      let b = s;
+      for (let i = 0; i < 12; i++) {
+        const mid = (a + b) / 2;
+        focusAt.copy(camera.position).addScaledVector(focusDir, mid);
+        if (focusAt.y - heightAtLocal(focusAt.x, focusAt.z) > 0) a = mid;
+        else b = mid;
+      }
+      return (a + b) / 2;
+    }
+    above = h;
+    lo = s;
+  }
+  return Infinity;
+}
+
 function updateTiles() {
   if (!tiles) return;
   const above = camera.position.y - heightAtLocal(camera.position.x, camera.position.z);
-  // Two thresholds, not one: a camera sitting near the line would otherwise
-  // flip the whole town between two versions of itself every few frames, and
-  // the walk rides at a fixed height over rolling ground.
-  const want = tiles.wantsShowing(above);
-  if (want !== tiles.showing) tiles.setShowing(want);
+  // Two thresholds on each of two quantities, not one on one: a camera sitting
+  // near either line would otherwise flip the whole town between two versions
+  // of itself every few frames, and the walk rides at a fixed height over
+  // rolling ground.
+  const want = tiles.wantsShowing(above, focusDistance());
+  if (want !== tiles.showing) {
+    tiles.setShowing(want);
+    // Google's photogrammetry brings its own horizon. Ours underneath it
+    // would be a second, coarser one at a slightly different height, which is
+    // the sort of thing nobody can name and everybody can see.
+    scene.userData.farField?.setShowing(!want);
+  }
   tiles.update();
   // The licence requires this to be visible whenever tiles are, and it is
   // read from the renderer every frame because what is on screen changes it.

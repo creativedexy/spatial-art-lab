@@ -131,10 +131,13 @@ handed on arrival is the entire difference between a viewer and a piece.
 
 ### Phase 12 — "Today" stops being ours
 
-*Blocked on two measured numbers from the local session.*
+*Step 1 done, 12 Sep — see the result at the foot of this file. Steps 2–4 are
+unblocked and are the main session's.*
 
-1. The probe runs (`scripts/probe_tiles.py`), `MELT_METRES` and
-   `GROUND_OFFSET_METRES` stop being placeholders, and the spread gets quoted.
+1. ~~The probe runs (`scripts/probe_tiles.py`), `MELT_METRES` and
+   `GROUND_OFFSET_METRES` stop being placeholders, and the spread gets
+   quoted.~~ **Done.** `GROUND_OFFSET_METRES = -0.14` (spread 0.46 m),
+   `MELT_METRES = 105` (was a generous 60).
 2. **Tiles become the default today wherever a key exists.** Not a layer you
    switch on — the substrate.
 3. **Our today-geometry retires.** Existing buildings, existing trees and land
@@ -298,3 +301,290 @@ Suites: `test_viewpoints.py` 14/14 (new), `test_year_switch.py` 20/20,
 `test_places.py` 19/19, `test_hotspot_flow.py` rewritten — the three descents
 are no longer all on screen at once, so it now chooses the view and then the
 place in it, which is the flow.
+
+
+---
+
+## Phase 11 — merged, 12 Sep 2026
+
+`aa622a5` on `main`, and the public URL now opens on the five shots with the
+switch under them.
+
+**Merging it took the site down, and nothing went red.** Worth writing down,
+because the fault was a year older than the change that exposed it. Pages was
+still set to *Deploy from a branch*, so every push to `main` started **two**
+deployments: this project's workflow, which publishes what `build_site.py`
+assembles into `dist/`, and GitHub's own `pages build and deployment`, which
+Jekyll-builds the repository **root** and has never heard of `dist/`. Whichever
+finishes last wins.
+
+```
+  10 Sep   ours 20:41:12   ·   theirs 20:41:04     ours won by 8 s   -> the map
+  12 Sep   ours 08:16:46   ·   theirs 08:17:14   theirs won by 28 s  -> 404
+```
+
+So the map had been live on a coin toss since the day it was published, and the
+first toss simply went our way. Both runs report success either way, which is
+why it was invisible.
+
+Restored by re-running the workflow so ours landed last. Two things follow:
+
+1. **The setting, which only Dex can change:** Settings → Pages → Build and
+   deployment → Source: **GitHub Actions**. That retires the branch build and
+   leaves one deployer.
+2. **A guard, in case it is ever turned back:** the deploy job now waits past
+   the window a competing deployment lands in and asks the live URL whether the
+   map is actually there, failing the run — loudly, naming the Jekyll takeover
+   — if it is not. A green deploy is not a live map.
+
+---
+
+## Phase 12, step 1 — the two numbers, 12 Sep 2026
+
+Measured with a key, on a real GPU, at `errorTarget` 6. Both were placeholders;
+both moved, and one moved the unwelcome way.
+
+### The vertical offset: −0.14 m
+
+Their ground sits a fifth of a metre above ours, and the four named points
+disagree by less than half a metre end to end.
+
+| point | ours (AOD) | theirs | theirs − ours |
+|---|---:|---:|---:|
+| GCHQ, the ring | 52.597 | 52.909 | **+0.312** |
+| the brook corridor | 35.169 | 35.384 | +0.214 |
+| the campus field | 43.762 | 43.828 | +0.065 |
+| Princess Elizabeth Way | 56.208 | 56.060 | **−0.147** |
+
+Median **+0.14 m**, spread **0.46 m**, so `GROUND_OFFSET_METRES = -0.14` — the
+negative, because the constant is what to *add* to the photogrammetry.
+
+The spread is the honest residual. Half a metre across two kilometres is what a
+LiDAR datum and a photogrammetric one disagree by, and no single constant
+removes it. It is under the height of a kerb and well inside the 4 m storey the
+scheme is built in, so the montage holds; it would not hold for a hard edge
+where a new pavement meets an old one, and that is a phase 13 problem, at the
+one place it will be visible.
+
+### The melt: 105 m, not 60 m
+
+The ladder walks the camera down at GCHQ and reads the error the visible set
+actually achieves once loading has settled. The median over the in-frustum set:
+
+| above ground | 400 | 300 | 220 | 160 | 120 | 90 | 70 | 55 | 40 | 30 | 20 | 14 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| median error | 4.48 | 4.63 | 4.77 | 5.20 | 5.18 | **6.97** | 8.61 | 10.94 | 13.90 | 16.08 | 18.30 | 19.77 |
+
+It crosses the target of 6 between 120 m and 90 m — interpolated, **105 m**.
+Below that, half the frame is coarser than the renderer asked for and there is
+nothing finer to fetch: the deepest tile Google holds here is depth 25, reached
+by about 70 m, so every further metre of descent stretches the same texels.
+
+Confirmed by eye, which is the part a number cannot do: **220 m is a
+photograph** of the Doughnut, **90 m is soft but honest**, **40 m is smeared
+facade and mush where the courtyard planting is.**
+
+Resolution-independent — the same ladder at devicePixelRatio 1 and 2 gave
+identical medians — so one number holds on any display.
+
+**This is the phase's bad news and it should not be buried.** The placeholder
+of 60 m was called deliberately generous; it was in fact optimistic by 45 m.
+The band where the tiles are the better picture is **105 m and up**, which is
+narrower than phase 12 assumed. Every held shot in phase 11 sits well above it,
+so the piece as composed is unaffected — but it makes phase 13 sharper, not
+softer: an arrival at 1.6 m is nowhere near tiles that give up at 105 m, so the
+descent has to hand over to something else entirely, and "our model takes over"
+now has 105 m of altitude to cover rather than 60.
+
+### What the probe had wrong
+
+The measurement did not work first time, and none of the three faults announced
+themselves — each returned plausible zeros.
+
+- **`tile.__error` does not exist** in this version of 3d-tiles-renderer. The
+  real field is `tile.traversal.error`. An undefined read is absence, not an
+  error, so the ladder reported `0.00` at every rung and looked like a pass.
+- **The melt gate suppressed the melt measurement.** The map switches the tiles
+  off below `MELT_METRES` and `update()` returns early when they are off, so
+  the visible set froze and every rung below 60 m silently repeated the numbers
+  from 70 m. Six identical rows, and only the identity gave it away. The probe
+  now holds `wantsShowing` open: it exists to measure the threshold, so it
+  cannot be subject to it.
+- **The median, not the worst.** The worst tile is always one at the horizon
+  seen edge-on, and below 30 m it reaches 1e12 on a degenerate one — a
+  statistic about the frame edge rather than the ground under the camera.
+
+And two environment traps, now in the probe's docstring, because both waste an
+afternoon and neither fails loudly:
+
+- **A hidden or zero-sized canvas makes every screen-space error zero**, so the
+  renderer never requests a tile. This is what the first run hit: the browser
+  pane was not displayed, `innerWidth` was 0, and the ladder read 0.00 all the
+  way down while the key, the fetches and the root tileset were all fine.
+- **Software GL parses Google's tiles at about one every five seconds.**
+  Headless with swiftshader: 458 tiles still in the parse queue after 100 s,
+  against a full settle in under 3 s on a real GPU. The settle loop times out
+  at every rung and reports what had arrived, which is nothing.
+
+### Not fixed here
+
+Two suites fail on this branch, both before this change and unrelated to it
+(verified by re-running with the key removed):
+
+- `test_places.py` 18/19 — "every marker on offer is at least 44 px tall at
+  390 px wide". Phase 11's write-up records this suite at 19/19, so it is a
+  regression since then and belongs to whoever owns the chrome.
+- `test_heightmap.py` 5/6 — "re-encoding what came back gives the shipped bytes
+  exactly", at an identical 2,077,247 bytes both sides, so a gzip determinism
+  difference rather than a data one.
+
+`test_tiles_frame.py` passes 3/3, including the sign convention, which is the
+one that would have made this commit put the whole town out by twice the error.
+
+---
+
+## The background and the edge, 12 Sep 2026
+
+The world used to end. Two square kilometres of LiDAR, then a cliff and the
+sky — and phase 11 could only compose around it. Of sixteen candidate shots,
+every one that looked north-west was thrown out because the survey runs out
+270 m behind the new homes, and the best establishing frame we had was
+rejected for being a plan view with no sky in it. That is composition paying
+for a data problem.
+
+**What was actually missing is the skyline this place has.** Cleeve Common is
+330 m and 8.6 km out on a bearing of 75, standing 279 m above the box; the
+escarpment runs the whole eastern horizon; the Malverns are 27 km north-west,
+May Hill 22 west, the Black Mountains past 70. The developer's own hero
+photograph has all of it and says so — "Severn Vale and the Welsh hills on the
+far horizon".
+
+So: **OS Terrain 50**, Ordnance Survey's open 50 m model of Great Britain,
+under the same Open Government Licence as the LiDAR. Two grids, because
+resolution should follow distance — 24 km at 50 m for the escarpment, 150 km
+at 500 m for everything behind it. **280 KB**, and the first frame is
+unchanged at 3.0 s because the horizon arrives after the ground does.
+
+### The joins, which are all of the craft
+
+- **The seam.** Two surveys of the same ground disagree — worst 3.2 m at the
+  box edge, measured — and a step there is a crack you cannot unsee. Every
+  far-field sample within 500 m of the boundary is corrected toward what our
+  own LiDAR says at the nearest point on it, at full strength on the edge and
+  eased out. Checked round all four sides afterwards: **worst 1.5 m over 52
+  points**, and invisible in every frame.
+- **The tuck.** The far field runs a little way *under* the box and is dropped
+  while it does, so a 50 m grid and a 2 m one never fight along a line. The
+  join is hidden rather than matched.
+- **The grids.** Near and far divide exactly — 220 posts from the box edge to
+  12 km, 126 from 12 km to 75 — or they would meet at a second seam of their
+  own.
+
+### Two things that are not joins
+
+**Earth curvature.** At 70 km the ground falls 330 m away from you, which is
+the difference between distant hills standing on the horizon and floating
+above it. Applied by the view; the heights on disk stay true elevations.
+
+**Air.** The old fog gave about four and a half kilometres of visibility,
+which was right for a world two kilometres across and wrong the moment there
+was a horizon behind it — the escarpment would have arrived already dissolved
+and the Malverns not at all. It is now an ordinary clear afternoon, and
+because fog is one blend against one colour and could not do the work alone,
+aerial perspective is baked into the far field's own colours as well. Without
+it the horizon came back the same saturated green as the field you are
+standing in, and a horizon the colour of the foreground is not a horizon, it
+is wallpaper.
+
+### What it cost elsewhere
+
+**The approved plates all moved, and the guard was right to reject them.**
+Ten of twelve, worst 17.9% of pixels. Looked at rather than argued with: the
+foreground is untouched in every one — same fields, same hedges, same
+Doughnut, same pixels — and what changed is the top of the frame, where sky
+became land. `a-cyber-central` went from a town that stops in mid-air to a
+town that runs into the vale. So they are **re-baselined**, not reverted, and
+anything regenerated from them should use the new renders.
+
+**And a number that was lying.** `test_public_build.py` counts bytes from
+whichever responses have started when it stops watching, and the map defers
+half its load deliberately — so adding a 0.27 MB horizon moved its reported
+first load *down*, from 6.71 MB to 5.25. A budget that falls when you add
+bytes is not a budget. It now waits for quiet and then some, still reads about
+1.3 MB under the truth, and is documented as a ceiling check rather than the
+figure. The figure comes from `measure_payload.py --site dist`: **6.46 MB**.
+
+### Still to do out here
+
+The far field has no land cover and inventing some would be a lie, so it is
+shaded by height and slope alone. Where that shows most is the middle
+distance, 2–6 km, which is close enough to want woods and fields and too far
+to have them. OpenStreetMap covers that ground and would give real woodland
+and water without inventing anything — the honest next step if the horizon
+ever needs more than a silhouette.
+
+---
+
+## Phase 12, step 1b — height was the wrong question, 12 Sep 2026
+
+Dex, on the map with the measured numbers in it: *"it still regresses to the
+old map at points... it's when you click into locations."* He was right, and it
+was the change above that did it.
+
+**What happened.** The gate asked `camera.y - ground beneath the camera`. That
+is not what screen-space error depends on. A steep oblique sits low over one
+field while framing a building two hundred metres away, and those tiles are
+perfectly good. Measured at the five place cameras:
+
+| place | height | to subject | median error |
+|---|---:|---:|---:|
+| gchq | 67 m | 212 m | **6.02** |
+| gchq-meadow | 79 m | 160 m | **6.32** |
+| campus-courtyards | 190 m | 368 m | 4.44 |
+| panels-and-glasshouses | 210 m | 524 m | 4.92 |
+| cyber-central | 175 m | 967 m | 4.13 |
+
+The two lowest cameras are **at** the target of 6, not past it — their tiles
+are fine. But at 67 m and 79 m they fell under a 105 m height gate, so clicking
+into either dropped the photograph and put our model back. The old placeholder
+of 60 m had been quietly holding them up; raising it to a correctly-measured
+105 m is what exposed the wrong question underneath.
+
+Worth naming: the number was right and the thing it was applied to was wrong.
+A more accurate measurement made the piece worse, which is the failure mode
+that does not announce itself.
+
+**The fix.** The gate is now asked two things:
+
+- **`MELT_FOCUS_METRES`** — the distance to the ground at the centre of the
+  frame, marched against our own heightfield. Kept on down to **140 m**;
+  needs **165 m**, the ladder's measured crossing, to switch on from cold. So
+  it takes the measured melt distance to commit to a photograph and something
+  clearly worse to abandon one, and the closest camera the piece uses
+  (gchq-meadow, 184 m) clears the cold line by 19 m.
+- **`MELT_FLOOR_METRES` = 50 m** — a height floor, because distance alone
+  fails in one direction. The walk rides at 14 m and an arrival stands at
+  1.6 m, both looking level down a path, so the centre of the frame is far
+  away and passes the focus test comfortably — while everything nearer, which
+  is most of what you can see, is the melted part.
+
+**Verified on the running map.** All five places and all five shots keep the
+real town, from a cold start as well as warm; the walk at 14 m, arrivals at
+1.6 m and a 55 m steep hover all fall back to our model; all twenty
+shot-to-shot transitions hold without a single flip; 120 fps with the march in
+the frame loop.
+
+**And a test that would have caught it.** `wantsTiles` is now exported as a
+pure function, so `test_tiles_frame.py` checks the gate without a key: fifteen
+real cameras with their measured height and focus distance, each asserted from
+both states, plus a chatter check that nothing switches on from cold that
+switches off when warm. It went 5/7 on the first run — it caught that
+gchq-meadow at 184 m could not reach the tiles from cold against a 190 m
+switch-on line, which is a bug that would only have shown up as "sometimes the
+meadow roof is on the old map". The thresholds above are what it settled at.
+
+Suite after the change: `test_tiles_frame.py` 7/7, `test_viewpoints.py` 16/16,
+`test_year_switch.py` 20/20, `test_hotspot_flow.py` and `test_world_clock.py`
+all green, `test_path_network.py` 12/12, `test_public_build.py` 11/11. The two
+pre-existing failures noted above are unchanged.
+

@@ -39,7 +39,24 @@ KEEP = {
     "descent": ["path.js", "player.js", "hotspots.json", "descent-path.json"],
     "descent/clips": ["descent-control.webm"],
 }
-PHOTOS = "generate/*/out/*.webp"
+# The photographs the places actually name, read from places.json rather than
+# globbed. `generate/*/out/*.webp` swept up every frame we have ever made in
+# that tree: a contact sheet and two footpath frames nothing references, 984 kB
+# of them, shipped silently. That is exactly the failure the note above says
+# matters — shipping what we did not mean to, quietly, forever — and a glob
+# cannot tell a delivered photograph from a working one. Reading the manifest
+# also means a place added or renamed cannot leave its photograph behind.
+def photos(site):
+    doc = json.loads((site / "golden-valley" / "places.json").read_text())
+    here = site / "golden-valley"
+    seen = {}
+    for place in doc["places"]:
+        f = (here / place["photo"]).resolve()
+        if not f.is_file():
+            raise SystemExit(f"places.json names a photograph that is not on "
+                             f"disk: {place['id']} -> {place['photo']}")
+        seen[f] = None
+    return list(seen)
 MODELS = ["meshy/campus-block.glb", "meshy/ncic.glb"]
 
 # Never, whatever a glob above may match.
@@ -73,7 +90,7 @@ def main():
         for g in globs:
             for f in sorted((SITE / folder).glob(g)):
                 copy(f.relative_to(SITE), out, log)
-    for f in sorted(SITE.glob(PHOTOS)):
+    for f in sorted(photos(SITE)):
         copy(f.relative_to(SITE), out, log)
 
     if args.internal:
