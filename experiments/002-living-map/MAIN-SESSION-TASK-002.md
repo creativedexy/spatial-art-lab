@@ -159,8 +159,15 @@ axes are measured, not trusted.
 
 ### The two numbers
 
-`MELT_METRES = 60` and `GROUND_OFFSET_METRES = 0` are **placeholders, marked as
-such in the source**. There is no key in the cloud session and there should not
+**Both measured, 12 Sep 2026** — see "Phase 12, step 1" in
+[the piece plan](../../plans/living-map-the-piece.md). `GROUND_OFFSET_METRES`
+is `-0.14`, and the melt is no longer a height at all: it is
+`MELT_FOCUS_METRES`, the distance to what the camera is looking at, with
+`MELT_FLOOR_METRES` underneath it. The paragraph below describes the probe as
+it was written; what follows is kept because the method still stands.
+
+~~`MELT_METRES = 60` and `GROUND_OFFSET_METRES = 0` are **placeholders, marked as
+such in the source**.~~ There is no key in the cloud session and there should not
 be one. `scripts/probe_tiles.py` is the measurement: it drops a ray onto the
 tiles at GCHQ, the campus field, the brook and Princess Elizabeth Way and
 prints the offset at each plus the value to paste, then walks a camera down

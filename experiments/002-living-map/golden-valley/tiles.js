@@ -66,34 +66,66 @@ import * as THREE from 'three';
 export const ORIGIN = { lat: 51.900076, lon: -2.126397, geoid: 48.6 };
 
 /**
- * Below this height above the ground, photogrammetry stops being photoreal:
- * it melts, because a camera flying over a town never saw the underside of a
- * hedge or the face of a wall from six metres. Our measured map takes over.
+ * Photogrammetry melts up close: a camera flying over a town never saw the
+ * underside of that hedge or the face of that wall from six metres. Below the
+ * melt our measured map takes over, which is the one thing it is unambiguously
+ * better at.
  *
- * MEASURED, 12 Sep 2026, at GCHQ with a key, on a real GPU. The ladder walks
- * the camera down and reads the screen-space error the visible set actually
- * achieves once loading has settled. Against an errorTarget of 6, the median
- * error over the in-frustum set runs:
+ * MEASURED, 12 Sep 2026, at GCHQ with a key, on a real GPU, by reading the
+ * screen-space error the visible set actually achieves once loading settles.
+ * Against an errorTarget of 6, the median in-frustum error, by camera height
+ * above the ground beneath it:
  *
  *     400 m  4.48      160 m  5.20       70 m   8.61      30 m  16.08
  *     300 m  4.63      120 m  5.18       55 m  10.94      20 m  18.30
  *     220 m  4.77       90 m  6.97       40 m  13.90      14 m  19.77
  *
- * It crosses the target between 120 m and 90 m; interpolated, 105 m. Below
- * that half the frame is coarser than the renderer asked for, and no finer
- * tile exists to fix it: the deepest tile Google has here is depth 25, and
- * that floor is reached by about 70 m, so descending further only stretches
- * the same texels. Confirmed by eye — 220 m is a photograph, 90 m is soft but
- * honest, 40 m is smeared facade and mush where the courtyard planting is.
+ * Crossing the target between 120 m and 90 m: 105 m. Nothing finer exists to
+ * fix it either — Google's deepest tile here is depth 25, reached by about
+ * 70 m, so descending further only stretches the same texels. By eye, 220 m is
+ * a photograph, 90 m is soft but honest, 40 m is smeared facade.
  *
- * Resolution-independent: the same ladder at devicePixelRatio 1 and 2 gave
- * identical medians, so this one number holds on any display.
+ * BUT HEIGHT IS THE WRONG QUESTION, and shipping it as one cost us the two
+ * closest places. Screen-space error is set by how far the camera is from what
+ * it is LOOKING AT, not by how far it is above the ground beneath it. A steep
+ * oblique sits low over one field while framing a building two hundred metres
+ * away, and those tiles are fine. Measured at the five place cameras:
  *
- * This REPLACES the deliberately generous placeholder of 60 m. The measurement
- * moved it the unwelcome way: the photogrammetry gives up higher than we hoped,
- * not lower.
+ *     place                    height   to subject   median error
+ *     gchq                       67 m       212 m       6.02
+ *     gchq-meadow                79 m       160 m       6.32
+ *     campus-courtyards         190 m       368 m       4.44
+ *     panels-and-glasshouses    210 m       524 m       4.92
+ *     cyber-central             175 m       967 m       4.13
+ *
+ * The two lowest cameras are at the target, not past it — yet a 105 m height
+ * gate switched both to our model, which is what "it regresses to the old map
+ * when you click into locations" was. So the gate is on the distance to what
+ * is at the centre of the frame instead.
+ *
+ * 140 m is where the tiles are given up once they are already on. The ladder's
+ * 105 m of height is 165 m of this distance, and that is the line for turning
+ * them ON (below, with the hysteresis) — so it takes the measured melt distance
+ * to commit to the photograph, and something clearly worse to abandon it.
+ * Between the two sit the closest cameras the piece actually uses: gchq-meadow
+ * at 184 m, which has to reach the real town from cold when you click into it.
  */
-export const MELT_METRES = 105;
+export const MELT_FOCUS_METRES = 140;
+
+/**
+ * And a floor, because distance alone is not enough in one direction.
+ *
+ * The walk rides at 14 m and an arrival stands at 1.6 m. Both look level, down
+ * a path or a street, so the ground at the centre of the frame is far away and
+ * passes the focus test comfortably — while the ground immediately under and
+ * around you, which is most of what you can see, is the melted part. Below
+ * this height the tiles are never trusted, whatever the camera is aimed at.
+ *
+ * 50 m: above the 40 m rung, which measured 13.90 and looks like smeared
+ * facade, and well under the 67 m of the lowest camera that must keep its
+ * photograph.
+ */
+export const MELT_FLOOR_METRES = 50;
 
 /**
  * Metres to lift the photogrammetry so its ground agrees with ours.
@@ -132,13 +164,32 @@ export const MELT_METRES = 105;
 export const GROUND_OFFSET_METRES = -0.14;
 
 /**
- * The melt switch has two thresholds, not one. A single one at the altitude
- * where the tiles give up means a camera hovering there flips the entire town
- * between two versions of itself every few frames — and the walk, which rides
- * at a fixed height over rolling ground, would do exactly that all the way
- * along a route.
+ * Each threshold is really two. A single one at the point where the tiles give
+ * up means a camera sitting on the line flips the entire town between two
+ * versions of itself every few frames — and the walk, which rides at a fixed
+ * height over rolling ground, would do exactly that all the way along a route.
  */
-export const MELT_HYSTERESIS = 15;
+export const MELT_FOCUS_HYSTERESIS = 25;   // so the ON line is the measured 165
+export const MELT_FLOOR_HYSTERESIS = 15;
+
+/**
+ * The melt gate itself, as a pure function so it can be tested without a key.
+ *
+ * `focusMetres` is the distance to the ground at the centre of the frame, and
+ * `aboveGround` the camera's height over the ground beneath it. Both lines
+ * widen while the tiles are off, so a camera resting on either cannot flip the
+ * town back and forth.
+ */
+export function wantsTiles(showing, aboveGround, focusMetres = Infinity) {
+  const focus = Number.isFinite(focusMetres) ? focusMetres : Infinity;
+  const focusLine = showing
+    ? MELT_FOCUS_METRES
+    : MELT_FOCUS_METRES + MELT_FOCUS_HYSTERESIS;
+  const floorLine = showing
+    ? MELT_FLOOR_METRES
+    : MELT_FLOOR_METRES + MELT_FLOOR_HYSTERESIS;
+  return focus >= focusLine && aboveGround >= floorLine;
+}
 
 const D = THREE.MathUtils.DEG2RAD;
 
@@ -296,19 +347,24 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
       if (future?.setGroundMasked) future.setGroundMasked(showing);
     },
 
-    /** Metres above the ground, below which the tiles are not trusted. */
-    meltsBelow: MELT_METRES,
+    /** Where the photogrammetry stops being trusted. */
+    meltsBelow: { focus: MELT_FOCUS_METRES, floor: MELT_FLOOR_METRES },
     /** How far the photogrammetry was lifted to meet our datum. */
     lift: offset,
 
     /**
-     * Should the tiles be on at this height above the ground? Two thresholds,
-     * so a camera sitting near the line does not flip the town on and off.
+     * Should the tiles be on for this camera?
+     *
+     * `focusMetres` is the distance to the ground at the centre of the frame —
+     * what you are looking at — and is the thing screen-space error actually
+     * depends on. `aboveGround` is only a floor, for the level views where the
+     * centre of the frame is far away and everything nearer is mush.
+     *
+     * Both thresholds widen while the tiles are off, so a camera resting on
+     * either line cannot flip the town back and forth.
      */
-    wantsShowing(aboveGround) {
-      return showing
-        ? aboveGround >= MELT_METRES
-        : aboveGround >= MELT_METRES + MELT_HYSTERESIS;
+    wantsShowing(aboveGround, focusMetres = Infinity) {
+      return wantsTiles(showing, aboveGround, focusMetres);
     },
 
     update() {
