@@ -131,10 +131,13 @@ handed on arrival is the entire difference between a viewer and a piece.
 
 ### Phase 12 — "Today" stops being ours
 
-*Blocked on two measured numbers from the local session.*
+*Step 1 done, 12 Sep — see the result at the foot of this file. Steps 2–4 are
+unblocked and are the main session's.*
 
-1. The probe runs (`scripts/probe_tiles.py`), `MELT_METRES` and
-   `GROUND_OFFSET_METRES` stop being placeholders, and the spread gets quoted.
+1. ~~The probe runs (`scripts/probe_tiles.py`), `MELT_METRES` and
+   `GROUND_OFFSET_METRES` stop being placeholders, and the spread gets
+   quoted.~~ **Done.** `GROUND_OFFSET_METRES = -0.14` (spread 0.46 m),
+   `MELT_METRES = 105` (was a generous 60).
 2. **Tiles become the default today wherever a key exists.** Not a layer you
    switch on — the substrate.
 3. **Our today-geometry retires.** Existing buildings, existing trees and land
@@ -334,6 +337,109 @@ Restored by re-running the workflow so ours landed last. Two things follow:
    map is actually there, failing the run — loudly, naming the Jekyll takeover
    — if it is not. A green deploy is not a live map.
 
+---
+
+## Phase 12, step 1 — the two numbers, 12 Sep 2026
+
+Measured with a key, on a real GPU, at `errorTarget` 6. Both were placeholders;
+both moved, and one moved the unwelcome way.
+
+### The vertical offset: −0.14 m
+
+Their ground sits a fifth of a metre above ours, and the four named points
+disagree by less than half a metre end to end.
+
+| point | ours (AOD) | theirs | theirs − ours |
+|---|---:|---:|---:|
+| GCHQ, the ring | 52.597 | 52.909 | **+0.312** |
+| the brook corridor | 35.169 | 35.384 | +0.214 |
+| the campus field | 43.762 | 43.828 | +0.065 |
+| Princess Elizabeth Way | 56.208 | 56.060 | **−0.147** |
+
+Median **+0.14 m**, spread **0.46 m**, so `GROUND_OFFSET_METRES = -0.14` — the
+negative, because the constant is what to *add* to the photogrammetry.
+
+The spread is the honest residual. Half a metre across two kilometres is what a
+LiDAR datum and a photogrammetric one disagree by, and no single constant
+removes it. It is under the height of a kerb and well inside the 4 m storey the
+scheme is built in, so the montage holds; it would not hold for a hard edge
+where a new pavement meets an old one, and that is a phase 13 problem, at the
+one place it will be visible.
+
+### The melt: 105 m, not 60 m
+
+The ladder walks the camera down at GCHQ and reads the error the visible set
+actually achieves once loading has settled. The median over the in-frustum set:
+
+| above ground | 400 | 300 | 220 | 160 | 120 | 90 | 70 | 55 | 40 | 30 | 20 | 14 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| median error | 4.48 | 4.63 | 4.77 | 5.20 | 5.18 | **6.97** | 8.61 | 10.94 | 13.90 | 16.08 | 18.30 | 19.77 |
+
+It crosses the target of 6 between 120 m and 90 m — interpolated, **105 m**.
+Below that, half the frame is coarser than the renderer asked for and there is
+nothing finer to fetch: the deepest tile Google holds here is depth 25, reached
+by about 70 m, so every further metre of descent stretches the same texels.
+
+Confirmed by eye, which is the part a number cannot do: **220 m is a
+photograph** of the Doughnut, **90 m is soft but honest**, **40 m is smeared
+facade and mush where the courtyard planting is.**
+
+Resolution-independent — the same ladder at devicePixelRatio 1 and 2 gave
+identical medians — so one number holds on any display.
+
+**This is the phase's bad news and it should not be buried.** The placeholder
+of 60 m was called deliberately generous; it was in fact optimistic by 45 m.
+The band where the tiles are the better picture is **105 m and up**, which is
+narrower than phase 12 assumed. Every held shot in phase 11 sits well above it,
+so the piece as composed is unaffected — but it makes phase 13 sharper, not
+softer: an arrival at 1.6 m is nowhere near tiles that give up at 105 m, so the
+descent has to hand over to something else entirely, and "our model takes over"
+now has 105 m of altitude to cover rather than 60.
+
+### What the probe had wrong
+
+The measurement did not work first time, and none of the three faults announced
+themselves — each returned plausible zeros.
+
+- **`tile.__error` does not exist** in this version of 3d-tiles-renderer. The
+  real field is `tile.traversal.error`. An undefined read is absence, not an
+  error, so the ladder reported `0.00` at every rung and looked like a pass.
+- **The melt gate suppressed the melt measurement.** The map switches the tiles
+  off below `MELT_METRES` and `update()` returns early when they are off, so
+  the visible set froze and every rung below 60 m silently repeated the numbers
+  from 70 m. Six identical rows, and only the identity gave it away. The probe
+  now holds `wantsShowing` open: it exists to measure the threshold, so it
+  cannot be subject to it.
+- **The median, not the worst.** The worst tile is always one at the horizon
+  seen edge-on, and below 30 m it reaches 1e12 on a degenerate one — a
+  statistic about the frame edge rather than the ground under the camera.
+
+And two environment traps, now in the probe's docstring, because both waste an
+afternoon and neither fails loudly:
+
+- **A hidden or zero-sized canvas makes every screen-space error zero**, so the
+  renderer never requests a tile. This is what the first run hit: the browser
+  pane was not displayed, `innerWidth` was 0, and the ladder read 0.00 all the
+  way down while the key, the fetches and the root tileset were all fine.
+- **Software GL parses Google's tiles at about one every five seconds.**
+  Headless with swiftshader: 458 tiles still in the parse queue after 100 s,
+  against a full settle in under 3 s on a real GPU. The settle loop times out
+  at every rung and reports what had arrived, which is nothing.
+
+### Not fixed here
+
+Two suites fail on this branch, both before this change and unrelated to it
+(verified by re-running with the key removed):
+
+- `test_places.py` 18/19 — "every marker on offer is at least 44 px tall at
+  390 px wide". Phase 11's write-up records this suite at 19/19, so it is a
+  regression since then and belongs to whoever owns the chrome.
+- `test_heightmap.py` 5/6 — "re-encoding what came back gives the shipped bytes
+  exactly", at an identical 2,077,247 bytes both sides, so a gzip determinism
+  difference rather than a data one.
+
+`test_tiles_frame.py` passes 3/3, including the sign convention, which is the
+one that would have made this commit put the whole town out by twice the error.
 
 ---
 

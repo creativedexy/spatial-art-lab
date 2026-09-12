@@ -70,13 +70,30 @@ export const ORIGIN = { lat: 51.900076, lon: -2.126397, geoid: 48.6 };
  * it melts, because a camera flying over a town never saw the underside of a
  * hedge or the face of a wall from six metres. Our measured map takes over.
  *
- * UNMEASURED. There is no key in this container, so this is the local
- * session's number to fill in — `scripts/probe_tiles.py` prints it. Until it
- * does, this is deliberately generous rather than a guess dressed as a
- * finding: the walk rides at 14 m and the low wide 003 camera was already
- * reported as melting, so nothing under 60 m is trusted.
+ * MEASURED, 12 Sep 2026, at GCHQ with a key, on a real GPU. The ladder walks
+ * the camera down and reads the screen-space error the visible set actually
+ * achieves once loading has settled. Against an errorTarget of 6, the median
+ * error over the in-frustum set runs:
+ *
+ *     400 m  4.48      160 m  5.20       70 m   8.61      30 m  16.08
+ *     300 m  4.63      120 m  5.18       55 m  10.94      20 m  18.30
+ *     220 m  4.77       90 m  6.97       40 m  13.90      14 m  19.77
+ *
+ * It crosses the target between 120 m and 90 m; interpolated, 105 m. Below
+ * that half the frame is coarser than the renderer asked for, and no finer
+ * tile exists to fix it: the deepest tile Google has here is depth 25, and
+ * that floor is reached by about 70 m, so descending further only stretches
+ * the same texels. Confirmed by eye — 220 m is a photograph, 90 m is soft but
+ * honest, 40 m is smeared facade and mush where the courtyard planting is.
+ *
+ * Resolution-independent: the same ladder at devicePixelRatio 1 and 2 gave
+ * identical medians, so this one number holds on any display.
+ *
+ * This REPLACES the deliberately generous placeholder of 60 m. The measurement
+ * moved it the unwelcome way: the photogrammetry gives up higher than we hoped,
+ * not lower.
  */
-export const MELT_METRES = 60;
+export const MELT_METRES = 105;
 
 /**
  * Metres to lift the photogrammetry so its ground agrees with ours.
@@ -96,12 +113,23 @@ export const MELT_METRES = 60;
  * `theirs − ours` at each point, so what goes here is the NEGATIVE of its
  * median — if their ground reads 0.7 m above ours, the value is −0.7.
  *
- * UNMEASURED, and 0 until it is. The probe samples GCHQ, the campus field,
- * the brook and Princess Elizabeth Way; it will not be one number, so the
- * median goes here and the spread is a residual worth stating rather than
- * hiding. `?tileLift=-0.7` overrides it while that is being worked out.
+ * MEASURED, 12 Sep 2026, by dropping a ray onto the tiles at four named
+ * points and comparing with `heightAtLocal`. `theirs − ours`, in metres:
+ *
+ *     GCHQ, the ring          +0.312
+ *     the brook corridor      +0.214
+ *     the campus field        +0.065
+ *     Princess Elizabeth Way  −0.147
+ *
+ * Median +0.14, spread 0.46 m. So their ground sits a touch above ours and
+ * this is the negative of that median, as the sign note above requires.
+ *
+ * The spread is the residual worth stating: half a metre across two kilometres
+ * is the disagreement between a LiDAR datum and a photogrammetric one, and no
+ * single number removes it. It is well under the height of a kerb, and an
+ * order below the 4 m storey the scheme is built in, so the montage holds.
  */
-export const GROUND_OFFSET_METRES = 0;
+export const GROUND_OFFSET_METRES = -0.14;
 
 /**
  * The melt switch has two thresholds, not one. A single one at the altitude

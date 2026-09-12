@@ -27,6 +27,17 @@ error the visible set actually achieves.
 
 Both numbers go in `golden-valley/tiles.js` and in the commit that carries
 them, replacing the deliberately generous placeholder there.
+
+**Run it on a real GPU, with a visible window.** Two environment traps, both
+of which return plausible-looking zeros rather than failing:
+
+- A hidden or zero-sized canvas makes every screen-space error zero, so the
+  renderer never asks for a tile and the ladder reads 0.00 all the way down.
+  Headless Playwright at a set viewport is fine; a hidden browser pane is not.
+- Software GL (swiftshader) parses Google's tiles at roughly one every five
+  seconds. The settle loop then times out at every rung and reports whatever
+  had arrived, which is nothing. Measured 12 Sep: 458 tiles still in the parse
+  queue after 100 s, against a full settle in under 3 s on a real GPU.
 """
 import argparse
 import http.server
@@ -78,6 +89,7 @@ SETTLE = """async (ms) => {
   let quiet = 0;
   while (performance.now() < until) {
     await new Promise((r) => requestAnimationFrame(r));
+    t.update();
     const busy = t.stats.downloading + t.stats.parsing;
     quiet = busy === 0 ? quiet + 1 : 0;
     if (quiet > 30) break;
@@ -89,6 +101,12 @@ LOOK = """({ x, z, above }) => {
   const m = window.__map;
   const y = m.groundAt(x, z) + above;
   m.controls.enabled = false;
+  // Hold the melt gate open. The map turns the tiles off below MELT_METRES and
+  // `update()` returns early when they are off, so the visible set freezes and
+  // every rung below the CURRENT threshold silently repeats the last rung above
+  // it. The probe exists to measure that threshold, so it cannot be subject to
+  // it.
+  m.tiles.wantsShowing = () => true;
   m.camera.position.set(x, y, z + above * 1.2);
   m.camera.lookAt(x, m.groundAt(x, z) + 4, z);
   m.camera.updateMatrixWorld();
@@ -98,14 +116,30 @@ LOOK = """({ x, z, above }) => {
 
 ERROR_NOW = """() => {
   const t = window.__map.tiles.tiles;
-  let worst = 0, n = 0;
-  // `__error` is the screen-space error the renderer computed for each tile
-  // it chose to show. If the worst of them sits above the target after the
-  // loading has settled, no finer tile exists: that is the melt.
+  // The per-tile screen-space error lives on `tile.traversal.error`. An
+  // earlier draft read `tile.__error`, which does not exist in this version of
+  // 3d-tiles-renderer: every rung reported 0.00 and looked like a clean pass.
+  // An undefined field reads as absence, not as an error, so a wrong name here
+  // is a silent zero rather than a crash.
+  //
+  // The MEDIAN, not the worst. The worst is always a tile at the horizon seen
+  // edge-on, and below 30 m it reaches 1e12 on a degenerate one: a statistic
+  // about the frame edge, not about the ground under the camera.
+  const es = [];
+  let deepest = 0;
   for (const tile of t.visibleTiles) {
-    if (typeof tile.__error === 'number') { worst = Math.max(worst, tile.__error); n++; }
+    const tr = tile.traversal;
+    if (!tr || !tr.inFrustum || typeof tr.error !== 'number') continue;
+    es.push(tr.error);
+    deepest = Math.max(deepest, tile.internal?.depth ?? 0);
   }
-  return { worst: +worst.toFixed(2), target: t.errorTarget, visible: n };
+  es.sort((a, b) => a - b);
+  const q = (f) => es.length ? +es[Math.min(es.length - 1, Math.floor(f * es.length))].toFixed(2) : 0;
+  return {
+    median: q(0.5), p90: q(0.9),
+    worst: es.length ? +es[es.length - 1].toFixed(2) : 0,
+    target: t.errorTarget, visible: es.length, deepest,
+  };
 }"""
 
 DROP = """({ x, z }) => {
@@ -178,7 +212,10 @@ def main():
 
         offs = [p["offset"] for p in report["points"].values()]
         if offs:
-            mid = sorted(offs)[len(offs) // 2]
+            srt = sorted(offs)
+            noff = len(srt)
+            mid = (srt[noff // 2] if noff % 2
+                   else (srt[noff // 2 - 1] + srt[noff // 2]) / 2)
             print(f"\n  median offset {mid:+.2f} m "
                   f"(spread {max(offs) - min(offs):.2f} m)")
             report["medianOffset"] = mid
@@ -192,7 +229,7 @@ def main():
 
         print("\n  the melt threshold — where the finest tile stops being fine "
               "enough\n")
-        print(f"  {'above ground':>13} {'worst error':>12} {'target':>7} "
+        print(f"  {'above ground':>13} {'median err':>12} {'target':>7} "
               f"{'visible':>8}")
         x, z = POINTS["GCHQ, the ring"]
         melt = None
@@ -202,10 +239,10 @@ def main():
             e = page.evaluate(ERROR_NOW)
             report["ladder"].append({"above": above, **e})
             flag = ""
-            if melt is None and e["worst"] > e["target"] * 1.5:
+            if melt is None and e["median"] > e["target"]:
                 melt = above
                 flag = "   <- melts"
-            print(f"  {above:11d} m {e['worst']:12.2f} {e['target']:7.1f} "
+            print(f"  {above:11d} m {e['median']:12.2f} {e['target']:7.1f} "
                   f"{e['visible']:8d}{flag}")
         report["meltMetres"] = melt
         print(f"\n  melts below about {melt} m above ground"
