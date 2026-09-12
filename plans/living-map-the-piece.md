@@ -298,3 +298,38 @@ Suites: `test_viewpoints.py` 14/14 (new), `test_year_switch.py` 20/20,
 `test_places.py` 19/19, `test_hotspot_flow.py` rewritten — the three descents
 are no longer all on screen at once, so it now chooses the view and then the
 place in it, which is the flow.
+
+
+---
+
+## Phase 11 — merged, 12 Sep 2026
+
+`aa622a5` on `main`, and the public URL now opens on the five shots with the
+switch under them.
+
+**Merging it took the site down, and nothing went red.** Worth writing down,
+because the fault was a year older than the change that exposed it. Pages was
+still set to *Deploy from a branch*, so every push to `main` started **two**
+deployments: this project's workflow, which publishes what `build_site.py`
+assembles into `dist/`, and GitHub's own `pages build and deployment`, which
+Jekyll-builds the repository **root** and has never heard of `dist/`. Whichever
+finishes last wins.
+
+```
+  10 Sep   ours 20:41:12   ·   theirs 20:41:04     ours won by 8 s   -> the map
+  12 Sep   ours 08:16:46   ·   theirs 08:17:14   theirs won by 28 s  -> 404
+```
+
+So the map had been live on a coin toss since the day it was published, and the
+first toss simply went our way. Both runs report success either way, which is
+why it was invisible.
+
+Restored by re-running the workflow so ours landed last. Two things follow:
+
+1. **The setting, which only Dex can change:** Settings → Pages → Build and
+   deployment → Source: **GitHub Actions**. That retires the branch build and
+   leaves one deployer.
+2. **A guard, in case it is ever turned back:** the deploy job now waits past
+   the window a competing deployment lands in and asks the live URL whether the
+   map is actually there, failing the run — loudly, naming the Jekyll takeover
+   — if it is not. A green deploy is not a live map.
