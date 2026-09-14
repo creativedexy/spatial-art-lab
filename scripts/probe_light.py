@@ -109,9 +109,16 @@ SETTLE = """async (ms) => {
     quiet = busy === 0 ? quiet + 1 : 0;
     if (quiet > 30) break;
   }
+  // How far the camera is from where the framer put it. Anything that writes
+  // the camera during a settle — the intro, a flight, orbit damping — shows up
+  // here as metres, instead of as a measurement of somewhere else.
+  const want = window.__probeCam;
+  const p = m.camera.position;
+  const drift = want ? Math.hypot(p.x - want.x, p.y - want.y, p.z - want.z) : 0;
   return {
     downloading: t.stats.downloading,
     parsing: t.stats.parsing,
+    drift,
   };
 }"""
 
@@ -124,6 +131,16 @@ PREPARE = """async () => {
   m.tiles.wantsShowing = () => true;
   m.tiles.setShowing(true);
   m.future.setWave(0);
+
+  // End the opening drift before framing anything. It lerps the camera every
+  // frame for fifteen seconds and is skipped only for ?clean=1, which cannot
+  // be used here because clean also refuses the tiles. The first runs of this
+  // probe framed their patches while the drift was still writing the camera,
+  // so the pixels came from the intro and the raycast came from the patch —
+  // which is how a patch labelled west-campus photographed GCHQ, and why the
+  // sun would not resolve. Hold the shots too, so no flight can take it back.
+  document.getElementById('intro')?.dispatchEvent(new Event('dismiss'));
+  m.viewpoints?.hold?.(true);
 
   // Take our own interface out of the photograph before measuring it. The
   // first run measured the title card and the bottom deck along with the town:
@@ -165,6 +182,7 @@ FRAME_PATCH = """({ x, z, span }) => {
   m.camera.up.set(0, 0, -1); // north (-z) is the top of the image
   m.camera.position.set(x, ground + above, z);
   m.camera.lookAt(x, ground, z);
+  window.__probeCam = { x, y: ground + above, z };
   m.camera.updateProjectionMatrix();
   m.camera.updateMatrixWorld(true);
   m.tiles.update();
@@ -221,6 +239,7 @@ FRAME_VIEWPOINT = """(view) => {
   m.camera.fov = view.fov;
   m.camera.position.set(...view.pos);
   m.camera.lookAt(view.look[0], lookY, view.look[1]);
+  window.__probeCam = { x: view.pos[0], y: view.pos[1], z: view.pos[2] };
   m.camera.updateProjectionMatrix();
   m.camera.updateMatrixWorld(true);
   m.tiles.update();
@@ -783,6 +802,10 @@ def main():
                     "span": PATCH_SPAN_METRES,
                 })
                 settled = page.evaluate(SETTLE, args.settle_ms)
+                if settled['drift'] > 1.0:
+                    raise SystemExit(
+                        f"camera moved {settled['drift']:.1f} m during settle; "
+                        "refusing to measure somewhere other than the frame")
 
                 image_path = image_dir / f"sun-{slug(name)}.png"
                 page.locator("#app canvas").screenshot(path=str(image_path))
@@ -921,6 +944,10 @@ def main():
                 }
                 page.evaluate(FRAME_VIEWPOINT, framed)
                 settled = page.evaluate(SETTLE, args.settle_ms)
+                if settled['drift'] > 1.0:
+                    raise SystemExit(
+                        f"camera moved {settled['drift']:.1f} m during settle; "
+                        "refusing to measure somewhere other than the frame")
 
                 today = decode_data_url(page.evaluate(CAPTURE, 0))
                 future = decode_data_url(page.evaluate(CAPTURE, 1))

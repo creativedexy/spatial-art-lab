@@ -588,3 +588,36 @@ Suite after the change: `test_tiles_frame.py` 7/7, `test_viewpoints.py` 16/16,
 all green, `test_path_network.py` 12/12, `test_public_build.py` 11/11. The two
 pre-existing failures noted above are unchanged.
 
+
+---
+
+## Decided, 14 Sep 2026 — the map is the product
+
+Dex: *primarily now just the map, with generated frames reserved for arrival.*
+
+The reasoning that got there. Above the melt line (about 165 m of focus
+distance) Google's tiles already give us a photograph, so generating an aerial
+still no longer fills a gap — it duplicates one we have, and does it worse,
+because a still cannot be moved around. Below the melt line no photography
+exists and never will. That is the only place generation still earns its keep,
+and it is exactly where phase 13 wants to take people.
+
+What changes:
+
+- **The 2045 model, as rendered live, is now the deliverable**, not plate
+  preparation. Its faults are the product's faults: 3.94 stops too dark,
+  facades that do not read at 300 m, empty roofs, a flat-green ground with mask
+  seams, repeated planting, and nothing that casts a shadow onto the
+  photograph.
+- **Generation work moves to close range.** Plates for arrival, at 1.6 m, are
+  where our model is weakest and where a generator has the most to add.
+- **No new aerial generation briefs.** The five existing place photographs
+  stay for now.
+
+The order this implies: the measured corrections first (exposure, cast
+shadow, and the sun once the probe is fixed — its camera was being taken back
+by the shot system during settle, so every sun reading so far is void); then
+facade legibility; then generated close-range material studies projected back
+onto the model as textures, so the generator's work lands in the live map and
+not only in a still.
+
