@@ -621,3 +621,83 @@ facade legibility; then generated close-range material studies projected back
 onto the model as textures, so the generator's work lands in the live map and
 not only in a still.
 
+
+---
+
+## Phase 12 step 4 — why the 2045 buildings read black, 14 Sep 2026
+
+Measured before touching a light, because a 16.7x multiplier would have been
+the wrong fix applied with confidence.
+
+**The brightness gap is real.** Against photographed existing buildings in the
+same frames — not against the fields under ours, which is what the first
+measurement compared — our 2045 buildings sit about 3.5 stops darker, give or
+take a stop by view. Contrast is not the problem: within a tenth of a stop
+overall once the reference is buildings.
+
+**But most of it is not the light.** Three causes, in the order they matter:
+
+1. **There is no environment map.** `look.js` sets `envMapIntensity = 0.6` on
+   the materials, and nothing anywhere sets `scene.environment` or builds a
+   PMREM map, so that line does nothing. The sky dome is a painted background,
+   not a light. Facade glass is albedo 0.10-0.16 at roughness 0.13 — smooth,
+   dark, and reflecting nothing, so it renders black. Glass is 1.9 m of every
+   bay, 1.35 m tall, on every floor. That is the black slab.
+2. **The sun is 22 degrees up, and on the wrong side.** A roof's irradiance
+   goes with the sine of elevation: 0.37 at 22 degrees against 0.75 at the
+   measured 49, so moving the sun is about a stop on every roof before any
+   intensity changes. And the vector points west-north-west when its comment
+   says west-south-west: it treats -z as south, which in this frame is north.
+3. **The roofs are green.** Sedum at 0.40 / 0.47 / 0.29 is the largest surface
+   in every aerial, set against grey slate and pale flat roofs. The probe's
+   "add red and blue" colour gain is this, a material difference, not light.
+
+Walls are not the issue — `#e6dcc6` by default.
+
+**So the correction is three levers, not one, applied to the keyed build:**
+the measured sun (azimuth 137, elevation 49); a sky environment so smooth
+surfaces have something to reflect; then a small exposure step, re-measured
+after each change. The keyless public map has the same missing environment and
+the same sign error in its sun, and is left as Dex's call, because its low
+afternoon light was a deliberate look.
+
+### Measured after the change — the buildings match, the ground does not
+
+Probe run on the keyed build with the measured sun and a PMREM sky
+environment, against photographed existing buildings in the same frames,
+filtered to tiles whose geometric error is at most 8 m:
+
+| view | buildings, stops | reference px | fields under footprint |
+|---|---:|---:|---:|
+| the-vale | indeterminate | 272 | -0.50 |
+| the-campus | -0.89 | 4,176 | -0.63 |
+| the-meadow-roof | +0.55 | 29,728 | -0.57 |
+| the-homes | indeterminate | 0 | -0.59 |
+| the-panels | -0.31 | 6,112 | -0.59 |
+| **median of 3** | **-0.31** | | |
+
+**From +3.6 stops to -0.3, and the spread straddles zero.** No exposure step is
+needed for the buildings: the sun and the environment were the whole fix.
+Against the fields under each footprint the figure is now -0.50 to -0.63 in
+every view, which says the light is consistent across the shots rather than
+fitted to one of them.
+
+Three things this does not yet settle:
+
+- **Two views are starved by the gate.** Photographed-building samples at
+  these distances sit on tiles with geometric error of 6 to 16 m; none are at
+  4 m or finer. At 8 m the Vale keeps 62 of 637 and the Homes 55 of 1,084.
+  16 m keeps the near and middle town and still cuts every coarse parent (the
+  tail runs to 64, 513, 1,027 and 8,218 m).
+- **The colour gain wants blue (1.18).** Our sun tint, 0xffe0b5, is a warm late
+  afternoon; the photograph's sun is 49 degrees up. A more neutral sun may be
+  right, but not on three views.
+- **The ground is still wrong, and it is not the light.** Dropping the
+  hemisphere light — on the theory that the environment counted the sky twice —
+  moved lower-frame brightness by 0.004 to 0.009 and saturation not at all. The
+  2045 vegetated land cover is authored at saturation 0.31 to 0.47 (pitch 0.47,
+  orchard 0.43, park 0.42): muddy under the old dark light, lurid under a
+  correct one. That is palette, and it gets measured against photographed
+  fields before it is changed. The hemisphere drop stays, because the sky
+  should not be counted twice, but it is not the ground fix.
+

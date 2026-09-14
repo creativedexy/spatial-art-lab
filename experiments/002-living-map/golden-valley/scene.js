@@ -166,7 +166,9 @@ export async function buildWorld({
   // (its mesh loop walks scene.children, and the buildings arrive as a group),
   // so running it here instead of after them is the same world and one that
   // can be shown a second sooner.
-  applyLook(scene, renderer, { grade: false });
+  // `deferFallback` is exactly "this is a keyed build" (main.js passes keyed),
+  // and a keyed build is lit to match the photograph rather than as designed.
+  applyLook(scene, renderer, { grade: false, keyed: deferFallback });
   mark('terrain');
   // Each stage hands back the scene as it stands. A caller that takes it can
   // start drawing on ground alone; one that ignores it — every capture script
