@@ -5,10 +5,10 @@ into Google's photograph, and for our written geometry to arrive at the same
 brightness and colour as that photograph. Neither answer can be taken in this
 session: the tiles need a key, and the measurement needs their final pixels.
 
-STATUS, 14 Sep 2026: the first headed real-GPU run completed. Its tone result
-compared future buildings with the fields beneath them, so that result is now
-retained only as an explicitly labelled diagnostic; the photographed-building
-reference added here needs a new real-GPU run.
+STATUS, 14 Sep 2026: the photographed-building reference has run on a real GPU.
+Its masks exposed coarse distant speckle and one view dominated by GCHQ's pale
+roof, so this filtered reference and the field/canopy references added here
+need a new real-GPU run.
 
   python3 scripts/probe_light.py
 
@@ -38,6 +38,11 @@ hidden for that auxiliary render, never edited. A tile raycast separately
 finds raised planar roofs and facades in Today, outside future footprints.
 Those two building populations supply median log luminance, the P10–P90
 luminance span, and neutral-pixel chromaticity.
+
+The same frames also compare masked 2045 ground with photographed fields and
+future trees with rough photographed canopy, reporting luminance, contrast and
+saturation deltas. GCHQ's meadow roof uses the field population only as an
+explicitly labelled proxy because no like-for-like photographed roof exists.
 
 Run it in a visible browser on a real GPU. Settling means no tile downloads or
 parses for thirty consecutive frames — not "waited a bit", which measures the
@@ -80,6 +85,14 @@ SAMPLE_PIXELS = 144
 TONE_SAMPLE_WIDTH = 320
 TONE_SAMPLE_HEIGHT = 180
 MIN_REFERENCE_SAMPLES = 200
+MIN_REFERENCE_COMPONENT_CELLS = 16
+DOMINANCE_THRESHOLD = 0.5
+GROUND_HEIGHT_TOLERANCE_METRES = 1.5
+GROUND_PLANAR_ROUGHNESS_METRES = 1.0
+GROUND_MIN_NORMAL_Y = 0.8
+CANOPY_MIN_HEIGHT_METRES = 3.0
+CANOPY_MAX_HEIGHT_METRES = 25.0
+CANOPY_MAX_COHERENT_NEIGHBOURS = 1
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -106,11 +119,22 @@ SETTLE = """async (ms) => {
   // Settled means nothing left to fetch or parse, held for a moment — not
   // "waited a bit", which on a slow link measures the link.
   let quiet = 0;
+  let frames = 0;
   while (performance.now() < until) {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     t.update();
+    frames++;
+    // Nothing downloading is not the same as nothing left to download. Right
+    // after a camera move, and always on a loaded machine, the renderer can
+    // go thirty frames without having requested anything yet — so "quiet"
+    // was satisfied before loading began, the first patch photographed an
+    // empty frame, and the tone views settled on coarse parents that the tile
+    // error filter then rightly rejected wholesale. Quiet only counts once the
+    // root tileset exists and something is actually on screen, and never in
+    // the first half-second after the camera moved.
+    const started = !!t.root && t.visibleTiles.size > 0 && frames > 30;
     const busy = t.stats.downloading + t.stats.parsing;
-    quiet = busy === 0 ? quiet + 1 : 0;
+    quiet = started && busy === 0 ? quiet + 1 : 0;
     if (quiet > 30) break;
   }
   // How far the camera is from where the framer put it. Anything that writes
@@ -122,6 +146,8 @@ SETTLE = """async (ms) => {
   return {
     downloading: t.stats.downloading,
     parsing: t.stats.parsing,
+    visible: t.visibleTiles.size,
+    settled: quiet > 30,
     drift,
   };
 }"""
@@ -249,7 +275,9 @@ SAMPLE_TONE_GEOMETRY = """({ width, height }) => {
   const normalZ = new Array(size).fill(null);
   const east = new Array(size).fill(null);
   const south = new Array(size).fill(null);
+  const tileGeometricError = new Array(size).fill(null);
   const futureFootprint = new Array(size).fill(false);
+  const all2045Footprint = new Array(size).fill(false);
 
   // CPU geometry stays full-sized while the arrival wave is in the shader,
   // so a vertical ray gives the actual plan footprint at either wave end.
@@ -266,6 +294,7 @@ SAMPLE_TONE_GEOMETRY = """({ width, height }) => {
   m.scene.getObjectByName('models')?.traverse((object) => {
     if (object.isMesh) footprintMeshes.push(object);
   });
+  const gchqMeadowRoof = m.scene.getObjectByName('gchq:roof');
 
   for (let py = 0; py < height; py++) {
     for (let px = 0; px < width; px++) {
@@ -283,6 +312,15 @@ SAMPLE_TONE_GEOMETRY = """({ width, height }) => {
       surfaceY[i] = hit.point.y;
       east[i] = hit.point.x;
       south[i] = hit.point.z;
+
+      // 3d-tiles-renderer 0.5.2 stamps every object in a loaded tile scene
+      // with this owning-tile back-reference. A raycast intersection therefore
+      // maps straight back to the geometric error of that tile, in metres.
+      const tile = hit.object.userData.tile;
+      const geometricError = tile?.geometricError;
+      if (Number.isFinite(geometricError)) {
+        tileGeometricError[i] = geometricError;
+      }
       if (hit.face) {
         normal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld);
         normalX[i] = normal.x;
@@ -292,13 +330,18 @@ SAMPLE_TONE_GEOMETRY = """({ width, height }) => {
 
       origin.set(hit.point.x, hit.point.y + 1000, hit.point.z);
       footprintRay.set(origin, down);
-      futureFootprint[i] = footprintRay
+      const inFutureFootprint = footprintRay
         .intersectObjects(footprintMeshes, false).length > 0;
+      futureFootprint[i] = inFutureFootprint;
+      all2045Footprint[i] = inFutureFootprint || !!(
+        gchqMeadowRoof?.isMesh
+        && footprintRay.intersectObject(gchqMeadowRoof, false).length > 0
+      );
     }
   }
   return {
     heights, surfaceY, normalX, normalY, normalZ, east, south,
-    futureFootprint,
+    tileGeometricError, futureFootprint, all2045Footprint,
   };
 }"""
 
@@ -378,6 +421,90 @@ FUTURE_MASK = """() => {
 
   renderer.render(scene, m.camera);
   return data;
+}"""
+
+SURFACE_MASKS = """() => {
+  const THREE = window.__LightProbeTHREE;
+  const m = window.__map;
+  const scene = m.scene;
+  const renderer = m.renderer;
+  const terrain = scene.getObjectByName('terrain');
+  const future = scene.getObjectByName('future');
+  const futureTrees = scene.getObjectByName('future:trees');
+  const buildings = scene.getObjectByName('buildings');
+  const gchqMeadowRoof = scene.getObjectByName('gchq:roof');
+
+  const visibility = [];
+  scene.traverse((object) => visibility.push({ object, visible: object.visible }));
+  const oldBackground = scene.background;
+  const oldFog = scene.fog;
+  const oldOverride = scene.overrideMaterial;
+  const oldToneMapping = renderer.toneMapping;
+  const oldExposure = renderer.toneMappingExposure;
+  const white = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    fog: false,
+    toneMapped: false,
+  });
+
+  const hideAllTopLevel = () => {
+    for (const object of scene.children) object.visible = false;
+  };
+  const restoreVisibility = () => {
+    for (const entry of visibility) entry.object.visible = entry.visible;
+  };
+  const capture = () => {
+    renderer.render(scene, m.camera);
+    return renderer.domElement.toDataURL('image/png');
+  };
+
+  m.future.setWave(1);
+  scene.background = new THREE.Color(0x000000);
+  scene.fog = null;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1;
+
+  // Keep the terrain's own shader for this pass: its discard is the exact
+  // future-class != today-class mask used over tiles. Everything else is
+  // absent, so blocks, placed models and future trees cannot enter the mask.
+  hideAllTopLevel();
+  if (terrain) terrain.visible = true;
+  for (const object of scene.children) {
+    if (object.isLight) object.visible = true;
+  }
+  scene.overrideMaterial = null;
+  const ground = capture();
+
+  // These targets have ordinary geometry, so an unlit white override gives
+  // a binary screen mask without changing any tile or application material.
+  hideAllTopLevel();
+  if (future && futureTrees) {
+    future.visible = true;
+    for (const child of future.children) child.visible = child === futureTrees;
+    futureTrees.visible = true;
+  }
+  scene.overrideMaterial = white;
+  const planting = capture();
+
+  hideAllTopLevel();
+  if (buildings && gchqMeadowRoof) {
+    buildings.visible = true;
+    for (const child of buildings.children) {
+      child.visible = child === gchqMeadowRoof;
+    }
+    gchqMeadowRoof.visible = true;
+  }
+  const meadowRoof = capture();
+
+  white.dispose();
+  scene.overrideMaterial = oldOverride;
+  scene.background = oldBackground;
+  scene.fog = oldFog;
+  renderer.toneMapping = oldToneMapping;
+  renderer.toneMappingExposure = oldExposure;
+  restoreVisibility();
+  renderer.render(scene, m.camera);
+  return { ground, planting, meadowRoof };
 }"""
 
 READ_LOOK = """() => {
@@ -734,7 +861,31 @@ def consistency_report(patches):
     }
 
 
-def photographed_building_mask(geometry, output_size):
+def connected_components(mask):
+    """Return 8-connected component coordinates, largest first."""
+    seen = np.zeros(mask.shape, dtype=bool)
+    components = []
+    height, width = mask.shape
+    for start_y, start_x in zip(*np.nonzero(mask)):
+        if seen[start_y, start_x]:
+            continue
+        seen[start_y, start_x] = True
+        stack = [(start_y, start_x)]
+        component = []
+        while stack:
+            y, x = stack.pop()
+            component.append((y, x))
+            for ny in range(max(0, y - 1), min(height, y + 2)):
+                for nx in range(max(0, x - 1), min(width, x + 2)):
+                    if mask[ny, nx] and not seen[ny, nx]:
+                        seen[ny, nx] = True
+                        stack.append((ny, nx))
+        components.append(component)
+    return sorted(components, key=len, reverse=True)
+
+
+def photographed_building_masks(
+        geometry, output_size, max_geometric_error_m):
     shape = (TONE_SAMPLE_HEIGHT, TONE_SAMPLE_WIDTH)
 
     def values(name):
@@ -750,6 +901,7 @@ def photographed_building_mask(geometry, output_size):
     nx = values("normalX")
     ny = values("normalY")
     nz = values("normalZ")
+    geometric_error = values("tileGeometricError")
     future_footprint = np.array(
         geometry["futureFootprint"], dtype=bool).reshape(shape)
 
@@ -793,14 +945,269 @@ def photographed_building_mask(geometry, output_size):
         )
     facade = (abs_ny <= 0.35) & (support >= 2)
 
-    sampled = raised & (roof | facade) & ~future_footprint
-    sampled[:2, :] = False
-    sampled[-2:, :] = False
-    sampled[:, :2] = False
-    sampled[:, -2:] = False
-    image = Image.fromarray(np.uint8(sampled) * 255).resize(
-        output_size, Image.Resampling.NEAREST)
-    return np.asarray(image) >= 128, int(sampled.sum())
+    unfiltered = raised & (roof | facade) & ~future_footprint
+    unfiltered[:2, :] = False
+    unfiltered[-2:, :] = False
+    unfiltered[:, :2] = False
+    unfiltered[:, -2:] = False
+
+    mapped = np.isfinite(geometric_error)
+    measured_errors = geometric_error[unfiltered & mapped]
+    error_filtered = (
+        unfiltered & mapped & (geometric_error <= max_geometric_error_m))
+    components = connected_components(error_filtered)
+    kept = [
+        component for component in components
+        if len(component) >= MIN_REFERENCE_COMPONENT_CELLS
+    ]
+    filtered = np.zeros(shape, dtype=bool)
+    for component in kept:
+        yy, xx = zip(*component)
+        filtered[yy, xx] = True
+
+    reference_samples = int(filtered.sum())
+    dominant_cells = len(kept[0]) if kept else 0
+    dominant_fraction = (
+        dominant_cells / reference_samples if reference_samples else 0.0)
+
+    if measured_errors.size:
+        percentiles = np.percentile(measured_errors, [10, 50, 90])
+        bucket_counts = {
+            f"<={bound}": int(np.sum(measured_errors <= bound))
+            for bound in (2, 4, 6, 8, 12, 16)
+        }
+        bucket_counts[">16"] = int(np.sum(measured_errors > 16))
+        geometric_error_distribution = {
+            "samples": int(measured_errors.size),
+            "p10": round(float(percentiles[0]), 4),
+            "p50": round(float(percentiles[1]), 4),
+            "p90": round(float(percentiles[2]), 4),
+            "max": round(float(np.max(measured_errors)), 4),
+            "cumulativeBucketCounts": bucket_counts,
+        }
+    else:
+        geometric_error_distribution = {
+            "samples": 0,
+            "p10": None,
+            "p50": None,
+            "p90": None,
+            "max": None,
+            "cumulativeBucketCounts": {
+                key: 0 for key in (
+                    "<=2", "<=4", "<=6", "<=8", "<=12", "<=16", ">16")
+            },
+        }
+
+    details = {
+        "tileMapping": "hit.object.userData.tile",
+        "provisionalGeometricErrorFilter": (
+            "tile.geometricError <= provisionalMaxGeometricErrorMetres"),
+        "provisionalMaxGeometricErrorMetres": max_geometric_error_m,
+        "unfilteredBuildingGeometricErrorMetres": (
+            geometric_error_distribution),
+        "unfilteredGeometrySamples": int(unfiltered.sum()),
+        "missingGeometricErrorSamplesRejected": int(
+            (unfiltered & ~mapped).sum()),
+        "overProvisionalGeometricErrorSamplesRejected": int(
+            (unfiltered & mapped
+             & (geometric_error > max_geometric_error_m)).sum()),
+        "minimumComponentCells": MIN_REFERENCE_COMPONENT_CELLS,
+        "smallComponentSamplesRejected": int(
+            error_filtered.sum() - reference_samples),
+        "keptComponents": len(kept),
+        "referenceSamples": reference_samples,
+        "dominantComponent": "component-1" if kept else None,
+        "dominantComponentCells": dominant_cells,
+        "dominantComponentFraction": round(dominant_fraction, 4),
+        "dominated": dominant_fraction > DOMINANCE_THRESHOLD,
+        "dominanceThreshold": DOMINANCE_THRESHOLD,
+    }
+
+    def resized(sample_mask):
+        image = Image.fromarray(np.uint8(sample_mask) * 255).resize(
+            output_size, Image.Resampling.NEAREST)
+        return np.asarray(image) >= 128
+
+    return resized(unfiltered), resized(filtered), details
+
+
+def filtered_reference_mask(
+        unfiltered, geometric_error, output_size, max_geometric_error_m,
+        criteria):
+    """Apply the building reference's metres, component and dominance gates."""
+    mapped = np.isfinite(geometric_error)
+    error_filtered = (
+        unfiltered & mapped & (geometric_error <= max_geometric_error_m))
+    components = connected_components(error_filtered)
+    kept = [
+        component for component in components
+        if len(component) >= MIN_REFERENCE_COMPONENT_CELLS
+    ]
+    filtered = np.zeros(unfiltered.shape, dtype=bool)
+    for component in kept:
+        yy, xx = zip(*component)
+        filtered[yy, xx] = True
+
+    reference_samples = int(filtered.sum())
+    dominant_cells = len(kept[0]) if kept else 0
+    dominant_fraction = (
+        dominant_cells / reference_samples if reference_samples else 0.0)
+    details = {
+        "tileMapping": "hit.object.userData.tile",
+        "provisionalGeometricErrorFilter": (
+            "tile.geometricError <= provisionalMaxGeometricErrorMetres"),
+        "provisionalMaxGeometricErrorMetres": max_geometric_error_m,
+        "criteria": criteria,
+        "unfilteredGeometrySamples": int(unfiltered.sum()),
+        "missingGeometricErrorSamplesRejected": int(
+            (unfiltered & ~mapped).sum()),
+        "overProvisionalGeometricErrorSamplesRejected": int(
+            (unfiltered & mapped
+             & (geometric_error > max_geometric_error_m)).sum()),
+        "minimumComponentCells": MIN_REFERENCE_COMPONENT_CELLS,
+        "smallComponentSamplesRejected": int(
+            error_filtered.sum() - reference_samples),
+        "keptComponents": len(kept),
+        "referenceSamples": reference_samples,
+        "dominantComponent": "component-1" if kept else None,
+        "dominantComponentCells": dominant_cells,
+        "dominantComponentFraction": round(dominant_fraction, 4),
+        "dominated": dominant_fraction > DOMINANCE_THRESHOLD,
+        "dominanceThreshold": DOMINANCE_THRESHOLD,
+    }
+
+    def resized(sample_mask):
+        image = Image.fromarray(np.uint8(sample_mask) * 255).resize(
+            output_size, Image.Resampling.NEAREST)
+        return np.asarray(image) >= 128
+
+    return resized(unfiltered), resized(filtered), details
+
+
+def photographed_surface_masks(
+        geometry, future_ground_mask_image, output_size,
+        max_geometric_error_m):
+    """Build like-for-like photographed field and canopy references."""
+    shape = (TONE_SAMPLE_HEIGHT, TONE_SAMPLE_WIDTH)
+
+    def values(name):
+        return np.array([
+            np.nan if value is None else value
+            for value in geometry[name]
+        ], dtype=float).reshape(shape)
+
+    height = values("heights")
+    surface_y = values("surfaceY")
+    east = values("east")
+    south = values("south")
+    nx = values("normalX")
+    ny = values("normalY")
+    nz = values("normalZ")
+    geometric_error = values("tileGeometricError")
+    all_2045_footprint = np.array(
+        geometry["all2045Footprint"], dtype=bool).reshape(shape)
+
+    ground_sample_image = future_ground_mask_image.resize(
+        (TONE_SAMPLE_WIDTH, TONE_SAMPLE_HEIGHT),
+        Image.Resampling.NEAREST,
+    )
+    future_ground = (
+        np.max(np.asarray(ground_sample_image.convert("RGB")), axis=2) >= 8)
+
+    finite = (
+        np.isfinite(height) & np.isfinite(surface_y)
+        & np.isfinite(east) & np.isfinite(south)
+        & np.isfinite(nx) & np.isfinite(ny) & np.isfinite(nz)
+    )
+    rough = np.full(shape, np.inf)
+    rough[1:-1, 1:-1] = np.maximum.reduce([
+        np.abs(height[1:-1, 1:-1] - height[:-2, 1:-1]),
+        np.abs(height[1:-1, 1:-1] - height[2:, 1:-1]),
+        np.abs(height[1:-1, 1:-1] - height[1:-1, :-2]),
+        np.abs(height[1:-1, 1:-1] - height[1:-1, 2:]),
+    ])
+
+    points = np.stack([east, surface_y, south], axis=2)
+    normals = np.stack([nx, ny, nz], axis=2)
+    plane_support = np.zeros(shape, dtype=np.uint8)
+    normal_agreement = np.zeros(shape, dtype=np.uint8)
+    finite_neighbours = np.zeros(shape, dtype=np.uint8)
+    for ys, xs, yn, xn in (
+        (slice(1, None), slice(None), slice(None, -1), slice(None)),
+        (slice(None, -1), slice(None), slice(1, None), slice(None)),
+        (slice(None), slice(1, None), slice(None), slice(None, -1)),
+        (slice(None), slice(None, -1), slice(None), slice(1, None)),
+    ):
+        dot_normals = np.abs(np.sum(
+            normals[ys, xs] * normals[yn, xn], axis=2))
+        displacement = points[yn, xn] - points[ys, xs]
+        residual = np.abs(np.sum(
+            displacement * normals[ys, xs], axis=2))
+        neighbour_ok = finite[ys, xs] & finite[yn, xn]
+        finite_neighbours[ys, xs] += neighbour_ok
+        normal_agreement[ys, xs] += neighbour_ok & (dot_normals >= 0.94)
+        plane_support[ys, xs] += (
+            neighbour_ok & (dot_normals >= 0.94) & (residual <= 0.75)
+        )
+
+    abs_ny = np.abs(ny)
+    building_roof = (abs_ny >= 0.72) & (rough <= 1.5)
+    building_facade = (abs_ny <= 0.35) & (plane_support >= 2)
+    outside_2045 = ~all_2045_footprint
+    field = (
+        finite
+        & (np.abs(height) <= GROUND_HEIGHT_TOLERANCE_METRES)
+        & (abs_ny >= GROUND_MIN_NORMAL_Y)
+        & (rough <= GROUND_PLANAR_ROUGHNESS_METRES)
+        & outside_2045
+        & ~future_ground
+    )
+    canopy = (
+        finite
+        & (height >= CANOPY_MIN_HEIGHT_METRES)
+        & (height <= CANOPY_MAX_HEIGHT_METRES)
+        & (finite_neighbours >= 2)
+        & (normal_agreement <= CANOPY_MAX_COHERENT_NEIGHBOURS)
+        & ~(building_roof | building_facade)
+        & outside_2045
+    )
+    for mask in (field, canopy):
+        mask[:2, :] = False
+        mask[-2:, :] = False
+        mask[:, :2] = False
+        mask[:, -2:] = False
+
+    field_criteria = {
+        "heightFromGroundMetres": (
+            f"absolute value <= {GROUND_HEIGHT_TOLERANCE_METRES}"),
+        "minimumAbsoluteNormalY": GROUND_MIN_NORMAL_Y,
+        "maximumCardinalHeightResidualMetres": (
+            GROUND_PLANAR_ROUGHNESS_METRES),
+        "exclusions": [
+            "all 2045 building/model/GCHQ-meadow-roof footprints",
+            "masked future-ground area",
+        ],
+    }
+    canopy_criteria = {
+        "heightFromGroundMetres": [
+            CANOPY_MIN_HEIGHT_METRES, CANOPY_MAX_HEIGHT_METRES],
+        "roughNormals": (
+            "at most one of four finite cardinal neighbours has "
+            "abs(normal dot) >= 0.94"),
+        "minimumFiniteCardinalNeighbours": 2,
+        "buildingPlaneRejection": (
+            "reject the same locally planar roof or supported facade "
+            "accepted by the building mask"),
+        "exclusions": [
+            "all 2045 building/model/GCHQ-meadow-roof footprints"],
+    }
+    field_masks = filtered_reference_mask(
+        field, geometric_error, output_size, max_geometric_error_m,
+        field_criteria)
+    canopy_masks = filtered_reference_mask(
+        canopy, geometric_error, output_size, max_geometric_error_m,
+        canopy_criteria)
+    return field_masks, canopy_masks
 
 
 def tone_arrays(today, future, mask_image):
@@ -849,6 +1256,7 @@ def tone_arrays(today, future, mask_image):
         "futureNeutral": future_neutral,
         "todayLuminance": today_y,
         "todaySaturation": saturation(today_rgb),
+        "futureSaturation": saturation(future_rgb),
     }
 
 
@@ -931,9 +1339,9 @@ def under_footprint_statistics(arrays):
     return result
 
 
-def photographed_building_statistics(arrays, building_mask,
-                                      reference_samples):
+def photographed_building_statistics(arrays, building_mask, filter_details):
     future_mask = arrays["futureMask"]
+    reference_samples = filter_details["referenceSamples"]
     reference_mask = (
         building_mask
         & (arrays["todayLuminance"] > 0.003)
@@ -945,6 +1353,8 @@ def photographed_building_statistics(arrays, building_mask,
         "photographedBuildingPixels": int(reference_mask.sum()),
         "photographedBuildingGeometrySamples": reference_samples,
         "futureBuildingPixels": int(future_mask.sum()),
+        "filters": filter_details,
+        "dominated": filter_details["dominated"],
     }
     if int(future_mask.sum()) < 100:
         result["reason"] = "fewer than 100 visible future pixels"
@@ -999,6 +1409,300 @@ def photographed_building_statistics(arrays, building_mask,
     return result
 
 
+def authored_target_mask(arrays, mask_image, threshold=96):
+    mask = np.asarray(mask_image.convert("L")) >= threshold
+    mask = np.asarray(
+        Image.fromarray(np.uint8(mask) * 255)
+        .filter(ImageFilter.MinFilter(5))
+    ) >= 128
+    changed = np.mean(
+        np.abs(arrays["futureRgb"] - arrays["todayRgb"]), axis=2) >= 0.015
+    future_y = np.sum(
+        arrays["futureRgb"] * np.array([0.2126, 0.7152, 0.0722]), axis=2)
+    return mask & changed & (future_y > 0.003) & (future_y < 0.95)
+
+
+def dilated_screen_mask(mask_image, threshold=96):
+    mask = np.asarray(mask_image.convert("L")) >= threshold
+    return np.asarray(
+        Image.fromarray(np.uint8(mask) * 255)
+        .filter(ImageFilter.MaxFilter(5))
+    ) >= 128
+
+
+def saturation_statistics(values):
+    p10, p50, p90 = np.percentile(values, [10, 50, 90])
+    return {
+        "p10": round(float(p10), 4),
+        "median": round(float(p50), 4),
+        "p90": round(float(p90), 4),
+        "p10P90Span": round(float(p90 - p10), 4),
+    }
+
+
+def photographed_surface_statistics(
+        arrays, target_mask, reference_mask, filter_details,
+        reference_name, target_name, proxy=False):
+    reference_samples = filter_details["referenceSamples"]
+    reference_pixels = (
+        reference_mask
+        & (arrays["todayLuminance"] > 0.003)
+        & (arrays["todayLuminance"] < 0.95)
+    )
+    result = {
+        "status": "indeterminate",
+        "comparisonType": "proxy" if proxy else "like-for-like",
+        "proxy": proxy,
+        "reference": reference_name,
+        "target": target_name,
+        "photographedReferencePixels": int(reference_pixels.sum()),
+        "photographedReferenceGeometrySamples": reference_samples,
+        "authoredTargetPixels": int(target_mask.sum()),
+        "filters": filter_details,
+        "dominated": filter_details["dominated"],
+    }
+    if int(target_mask.sum()) < 100:
+        result["reason"] = "fewer than 100 visible authored target pixels"
+        return result
+    if reference_samples < MIN_REFERENCE_SAMPLES:
+        result["reason"] = (
+            f"fewer than {MIN_REFERENCE_SAMPLES} independent photographed-"
+            "reference geometry samples"
+        )
+        return result
+    if int(reference_pixels.sum()) < 100:
+        result["reason"] = "fewer than 100 unclipped photographed-reference pixels"
+        return result
+
+    weights = np.array([0.2126, 0.7152, 0.0722])
+    reference_luminance = np.log2(np.maximum(
+        np.sum(arrays["todayRgb"] * weights, axis=2)[reference_pixels],
+        1e-6,
+    ))
+    target_luminance = np.log2(np.maximum(
+        np.sum(arrays["futureRgb"] * weights, axis=2)[target_mask],
+        1e-6,
+    ))
+    reference_lum_stats = luminance_statistics(reference_luminance)
+    target_lum_stats = luminance_statistics(target_luminance)
+    reference_saturation = arrays["todaySaturation"][reference_pixels]
+    target_saturation = arrays["futureSaturation"][target_mask]
+    median_delta = float(
+        np.median(reference_luminance) - np.median(target_luminance))
+    contrast_delta = float(
+        target_lum_stats["p10P90SpanStops"]
+        - reference_lum_stats["p10P90SpanStops"])
+    saturation_delta = float(
+        np.median(target_saturation) - np.median(reference_saturation))
+    result.update({
+        "status": "ok",
+        "photographedReferenceLuminance": reference_lum_stats,
+        "authoredTargetLuminance": target_lum_stats,
+        "photographedReferenceSaturation": saturation_statistics(
+            reference_saturation),
+        "authoredTargetSaturation": saturation_statistics(target_saturation),
+        "medianDeltaStops": round(median_delta, 4),
+        "medianDeltaDefinition": (
+            "photographed reference median minus authored target median"),
+        "contrastDeltaStops": round(contrast_delta, 4),
+        "contrastDeltaDefinition": (
+            "authored target P10-P90 span minus photographed reference span"),
+        "saturationDelta": round(saturation_delta, 4),
+        "saturationDeltaDefinition": (
+            "authored target median minus photographed reference median"),
+        "firstPassLightScale": round(2 ** median_delta, 4),
+        "contrastAdvice": {
+            "action": (
+                "reduce-target-contrast" if contrast_delta > 0.1
+                else "increase-target-contrast" if contrast_delta < -0.1
+                else "hold"
+            ),
+            "p10P90Stops": round(abs(contrast_delta), 4),
+        },
+        "saturationAdvice": {
+            "action": (
+                "reduce-target-saturation" if saturation_delta > 0.03
+                else "increase-target-saturation" if saturation_delta < -0.03
+                else "hold"
+            ),
+            "absoluteMedianDelta": round(abs(saturation_delta), 4),
+        },
+    })
+    return result
+
+
+def spread(values):
+    return {
+        "minimum": round(float(min(values)), 4),
+        "maximum": round(float(max(values)), 4),
+        "range": round(float(max(values) - min(values)), 4),
+    }
+
+
+def aggregate_photographed_building_statistics(view_statistics):
+    dominated = [
+        {
+            "view": name,
+            "dominantComponentFraction": value["filters"][
+                "dominantComponentFraction"],
+        }
+        for name, value in view_statistics
+        if value["dominated"]
+    ]
+    indeterminate = [
+        name for name, value in view_statistics
+        if value["status"] != "ok" and not value["dominated"]
+    ]
+    accepted = [
+        (name, value) for name, value in view_statistics
+        if value["status"] == "ok" and not value["dominated"]
+    ]
+    result = {
+        "status": "indeterminate",
+        "reference": "photographed existing buildings outside 2045 footprints",
+        "aggregation": "median across non-dominated determinate views",
+        "viewCount": len(accepted),
+        "views": [name for name, _ in accepted],
+        "excludedDominatedViews": dominated,
+        "excludedIndeterminateViews": indeterminate,
+    }
+    if not accepted:
+        result["reason"] = (
+            "no non-dominated viewpoint supplied a determinate reference")
+        return result
+
+    median_deltas = [
+        value["medianDeltaStops"] for _, value in accepted]
+    contrast_deltas = [
+        value["contrastDeltaStops"] for _, value in accepted]
+    median_delta = float(np.median(median_deltas))
+    contrast_delta = float(np.median(contrast_deltas))
+    result.update({
+        "status": "ok",
+        "medianDeltaStops": round(median_delta, 4),
+        "medianDeltaSpreadStops": spread(median_deltas),
+        "contrastDeltaStops": round(contrast_delta, 4),
+        "contrastDeltaSpreadStops": spread(contrast_deltas),
+        "firstPassLightScale": round(2 ** median_delta, 4),
+        "contrastAdvice": {
+            "action": (
+                "reduce-future-contrast" if contrast_delta > 0.1
+                else "increase-future-contrast" if contrast_delta < -0.1
+                else "hold"
+            ),
+            "p10P90Stops": round(abs(contrast_delta), 4),
+        },
+    })
+
+    white_balances = [
+        value["whiteBalance"] for _, value in accepted
+        if "redVsGreenDeltaStops" in value.get("whiteBalance", {})
+        and "blueVsGreenDeltaStops" in value.get("whiteBalance", {})
+    ]
+    if white_balances:
+        red = [value["redVsGreenDeltaStops"] for value in white_balances]
+        blue = [value["blueVsGreenDeltaStops"] for value in white_balances]
+        median_red = float(np.median(red))
+        median_blue = float(np.median(blue))
+        result["whiteBalance"] = {
+            "aggregation": "median across determinate accepted views",
+            "viewCount": len(white_balances),
+            "redVsGreenDeltaStops": round(median_red, 4),
+            "redVsGreenSpreadStops": spread(red),
+            "blueVsGreenDeltaStops": round(median_blue, 4),
+            "blueVsGreenSpreadStops": spread(blue),
+            "firstPassRgbGain": [
+                round(2 ** median_red, 4),
+                1.0,
+                round(2 ** median_blue, 4),
+            ],
+        }
+    else:
+        result["whiteBalance"] = {
+            "status": "indeterminate",
+            "reason": "no accepted view supplied enough neutral pixels",
+            "viewCount": 0,
+        }
+    return result
+
+
+def aggregate_photographed_surface_statistics(
+        view_statistics, reference_name, target_name, proxy=False):
+    dominated = [
+        {
+            "view": name,
+            "dominantComponentFraction": value["filters"][
+                "dominantComponentFraction"],
+        }
+        for name, value in view_statistics
+        if value["dominated"]
+    ]
+    indeterminate = [
+        name for name, value in view_statistics
+        if value["status"] != "ok" and not value["dominated"]
+    ]
+    accepted = [
+        (name, value) for name, value in view_statistics
+        if value["status"] == "ok" and not value["dominated"]
+    ]
+    result = {
+        "status": "indeterminate",
+        "comparisonType": "proxy" if proxy else "like-for-like",
+        "proxy": proxy,
+        "reference": reference_name,
+        "target": target_name,
+        "aggregation": "median across non-dominated determinate views",
+        "viewCount": len(accepted),
+        "views": [name for name, _ in accepted],
+        "excludedDominatedViews": dominated,
+        "excludedIndeterminateViews": indeterminate,
+    }
+    if not accepted:
+        result["reason"] = (
+            "no non-dominated viewpoint supplied a determinate reference")
+        return result
+
+    median_deltas = [value["medianDeltaStops"] for _, value in accepted]
+    contrast_deltas = [value["contrastDeltaStops"] for _, value in accepted]
+    saturation_deltas = [value["saturationDelta"] for _, value in accepted]
+    median_delta = float(np.median(median_deltas))
+    contrast_delta = float(np.median(contrast_deltas))
+    saturation_delta = float(np.median(saturation_deltas))
+    result.update({
+        "status": "ok",
+        "medianDeltaStops": round(median_delta, 4),
+        "medianDeltaDefinition": (
+            "photographed reference median minus authored target median"),
+        "medianDeltaSpreadStops": spread(median_deltas),
+        "contrastDeltaStops": round(contrast_delta, 4),
+        "contrastDeltaDefinition": (
+            "authored target P10-P90 span minus photographed reference span"),
+        "contrastDeltaSpreadStops": spread(contrast_deltas),
+        "saturationDelta": round(saturation_delta, 4),
+        "saturationDeltaSpread": spread(saturation_deltas),
+        "saturationDeltaDefinition": (
+            "authored target median minus photographed reference median"),
+        "firstPassLightScale": round(2 ** median_delta, 4),
+        "contrastAdvice": {
+            "action": (
+                "reduce-target-contrast" if contrast_delta > 0.1
+                else "increase-target-contrast" if contrast_delta < -0.1
+                else "hold"
+            ),
+            "p10P90Stops": round(abs(contrast_delta), 4),
+        },
+        "saturationAdvice": {
+            "action": (
+                "reduce-target-saturation" if saturation_delta > 0.03
+                else "increase-target-saturation" if saturation_delta < -0.03
+                else "hold"
+            ),
+            "absoluteMedianDelta": round(abs(saturation_delta), 4),
+        },
+    })
+    return result
+
+
 def combine_tone_arrays(items):
     combined = {}
     for key in ("todayRgb", "futureRgb"):
@@ -1007,7 +1711,7 @@ def combine_tone_arrays(items):
         ]).reshape(1, -1, 3)
     for key in (
         "underFootprint", "underNeutral", "futureMask", "futureNeutral",
-        "todayLuminance", "todaySaturation",
+        "todayLuminance", "todaySaturation", "futureSaturation",
     ):
         combined[key] = np.concatenate([
             item[key].reshape(-1) for item in items
@@ -1021,11 +1725,23 @@ def main():
     parser.add_argument("--settle-ms", type=int, default=30000)
     parser.add_argument("--headless", action="store_true")
     parser.add_argument(
+        "--max-geometric-error-m",
+        type=float,
+        default=16.0,
+        help=(
+            "provisional maximum tile geometric error in metres for the "
+            "photographed building, field and canopy references (default: 8)"),
+    )
+    parser.add_argument(
         "--out",
         type=Path,
         default=SITE / "payload" / "light-probe.json",
     )
     args = parser.parse_args()
+
+    if (not np.isfinite(args.max_geometric_error_m)
+            or args.max_geometric_error_m <= 0):
+        parser.error("--max-geometric-error-m must be finite and greater than 0")
 
     if not KEY.exists():
         print(
@@ -1248,14 +1964,18 @@ def main():
             print("\n  the photograph's tone against our 2045 geometry\n")
             print(
                 f"  {'view / reference':42} {'median Δ':>10} "
-                f"{'contrast Δ':>12} {'ref px':>9} {'2045 px':>9}"
+                f"{'contrast Δ':>12} {'sat Δ':>9} "
+                f"{'ref px':>9} {'2045 px':>9}"
             )
 
             viewpoint_data = json.loads(VIEWPOINTS.read_text())
             default_fov = viewpoint_data["defaults"].get("fov", 47)
             default_lift = viewpoint_data["defaults"].get("lift", 20)
             tone_arrays_all = []
-            photographed_arrays = []
+            photographed_view_statistics = []
+            ground_view_statistics = []
+            planting_view_statistics = []
+            meadow_roof_proxy_view_statistics = []
 
             page.set_viewport_size({"width": 1280, "height": 720})
             for view in viewpoint_data["viewpoints"]:
@@ -1279,8 +1999,29 @@ def main():
                 today = decode_data_url(page.evaluate(CAPTURE, 0))
                 future = decode_data_url(page.evaluate(CAPTURE, 1))
                 mask = decode_data_url(page.evaluate(FUTURE_MASK))
-                building_mask, reference_samples = photographed_building_mask(
-                    geometry, today.size)
+                surface_masks = page.evaluate(SURFACE_MASKS)
+                ground_target_mask_image = decode_data_url(
+                    surface_masks["ground"])
+                planting_target_mask_image = decode_data_url(
+                    surface_masks["planting"])
+                meadow_roof_target_mask_image = decode_data_url(
+                    surface_masks["meadowRoof"])
+                unfiltered_building_mask, building_mask, filter_details = (
+                    photographed_building_masks(
+                        geometry,
+                        today.size,
+                        args.max_geometric_error_m,
+                    ))
+                field_masks, canopy_masks = photographed_surface_masks(
+                    geometry,
+                    ground_target_mask_image,
+                    today.size,
+                    args.max_geometric_error_m,
+                )
+                (unfiltered_field_mask, field_mask,
+                 field_filter_details) = field_masks
+                (unfiltered_canopy_mask, canopy_mask,
+                 canopy_filter_details) = canopy_masks
 
                 stem = slug(view["id"])
                 today_path = image_dir / f"tone-{stem}-today.png"
@@ -1288,34 +2029,154 @@ def main():
                 mask_path = image_dir / f"tone-{stem}-mask.png"
                 reference_mask_path = (
                     image_dir / f"tone-{stem}-photographed-buildings.png")
+                filtered_reference_mask_path = (
+                    image_dir
+                    / f"tone-{stem}-photographed-buildings-filtered.png")
+                ground_target_mask_path = (
+                    image_dir / f"tone-{stem}-2045-ground-mask.png")
+                planting_target_mask_path = (
+                    image_dir / f"tone-{stem}-future-trees-mask.png")
+                meadow_roof_target_mask_path = (
+                    image_dir / f"tone-{stem}-gchq-meadow-roof-mask.png")
+                unfiltered_field_mask_path = (
+                    image_dir / f"tone-{stem}-photographed-fields.png")
+                field_mask_path = (
+                    image_dir / f"tone-{stem}-photographed-fields-filtered.png")
+                unfiltered_canopy_mask_path = (
+                    image_dir / f"tone-{stem}-photographed-canopy.png")
+                canopy_mask_path = (
+                    image_dir / f"tone-{stem}-photographed-canopy-filtered.png")
                 today.save(today_path)
                 future.save(future_path)
                 mask.save(mask_path)
                 Image.fromarray(
-                    np.uint8(building_mask) * 255, "L").save(reference_mask_path)
+                    np.uint8(unfiltered_building_mask) * 255,
+                    "L",
+                ).save(reference_mask_path)
+                Image.fromarray(
+                    np.uint8(building_mask) * 255,
+                    "L",
+                ).save(filtered_reference_mask_path)
+                Image.fromarray(
+                    np.uint8(unfiltered_field_mask) * 255,
+                    "L",
+                ).save(unfiltered_field_mask_path)
+                Image.fromarray(
+                    np.uint8(field_mask) * 255,
+                    "L",
+                ).save(field_mask_path)
+                Image.fromarray(
+                    np.uint8(unfiltered_canopy_mask) * 255,
+                    "L",
+                ).save(unfiltered_canopy_mask_path)
+                Image.fromarray(
+                    np.uint8(canopy_mask) * 255,
+                    "L",
+                ).save(canopy_mask_path)
 
                 arrays = tone_arrays(today, future, mask)
+                ground_target_mask = authored_target_mask(
+                    arrays, ground_target_mask_image, threshold=8)
+                planting_target_mask = authored_target_mask(
+                    arrays, planting_target_mask_image)
+                meadow_roof_target_mask = authored_target_mask(
+                    arrays, meadow_roof_target_mask_image)
+                building_occluders = dilated_screen_mask(mask)
+                planting_occluders = dilated_screen_mask(
+                    planting_target_mask_image)
+                meadow_roof_occluders = dilated_screen_mask(
+                    meadow_roof_target_mask_image)
+                ground_target_mask &= ~(
+                    building_occluders
+                    | planting_occluders
+                    | meadow_roof_occluders
+                )
+                planting_target_mask &= ~(
+                    building_occluders | meadow_roof_occluders)
+                meadow_roof_target_mask &= ~(
+                    building_occluders | planting_occluders)
+                for target_mask, target_path in (
+                    (ground_target_mask, ground_target_mask_path),
+                    (planting_target_mask, planting_target_mask_path),
+                    (meadow_roof_target_mask, meadow_roof_target_mask_path),
+                ):
+                    Image.fromarray(
+                        np.uint8(target_mask) * 255,
+                        "L",
+                    ).save(target_path)
                 under_stats = under_footprint_statistics(arrays)
                 photographed_stats = photographed_building_statistics(
-                    arrays, building_mask, reference_samples)
+                    arrays, building_mask, filter_details)
+                ground_stats = photographed_surface_statistics(
+                    arrays,
+                    ground_target_mask,
+                    field_mask,
+                    field_filter_details,
+                    "photographed fields outside all 2045 footprints and "
+                    "future-ground areas",
+                    "visible masked 2045 ground, excluding blocks, placed "
+                    "models and future trees",
+                )
+                planting_stats = photographed_surface_statistics(
+                    arrays,
+                    planting_target_mask,
+                    canopy_mask,
+                    canopy_filter_details,
+                    "photographed canopy outside all 2045 footprints",
+                    "future trees",
+                )
+                meadow_roof_proxy_stats = photographed_surface_statistics(
+                    arrays,
+                    meadow_roof_target_mask,
+                    field_mask,
+                    field_filter_details,
+                    "photographed fields (PROXY; no photographed meadow-roof "
+                    "counterpart exists)",
+                    "GCHQ 2045 meadow roof",
+                    proxy=True,
+                )
                 tone_arrays_all.append(arrays)
-                if photographed_stats["status"] == "ok":
-                    photographed_arrays.append((arrays, building_mask,
-                                                reference_samples))
+                photographed_view_statistics.append(
+                    (view["id"], photographed_stats))
+                ground_view_statistics.append((view["id"], ground_stats))
+                planting_view_statistics.append((view["id"], planting_stats))
+                meadow_roof_proxy_view_statistics.append(
+                    (view["id"], meadow_roof_proxy_stats))
                 report["toneViews"][view["id"]] = {
                     "settled": settled,
                     "underFootprintReference": under_stats,
                     "photographedBuildingReference": photographed_stats,
+                    "groundAgainstPhotographedFields": ground_stats,
+                    "futureTreesAgainstPhotographedCanopy": planting_stats,
+                    "gchqMeadowRoofAgainstPhotographedFieldsProxy": (
+                        meadow_roof_proxy_stats),
                     "todayImage": str(today_path.relative_to(ROOT)),
                     "futureImage": str(future_path.relative_to(ROOT)),
                     "maskImage": str(mask_path.relative_to(ROOT)),
-                    "photographedBuildingMaskImage": str(
+                    "unfilteredPhotographedBuildingMaskImage": str(
                         reference_mask_path.relative_to(ROOT)),
+                    "photographedBuildingMaskImage": str(
+                        filtered_reference_mask_path.relative_to(ROOT)),
+                    "ground2045MaskImage": str(
+                        ground_target_mask_path.relative_to(ROOT)),
+                    "futureTreesMaskImage": str(
+                        planting_target_mask_path.relative_to(ROOT)),
+                    "gchqMeadowRoofMaskImage": str(
+                        meadow_roof_target_mask_path.relative_to(ROOT)),
+                    "unfilteredPhotographedFieldMaskImage": str(
+                        unfiltered_field_mask_path.relative_to(ROOT)),
+                    "photographedFieldMaskImage": str(
+                        field_mask_path.relative_to(ROOT)),
+                    "unfilteredPhotographedCanopyMaskImage": str(
+                        unfiltered_canopy_mask_path.relative_to(ROOT)),
+                    "photographedCanopyMaskImage": str(
+                        canopy_mask_path.relative_to(ROOT)),
                 }
                 print(
                     f"  {(view['id'] + ' / UNDER-FOOTPRINT OLD'):42} "
                     f"{under_stats.get('medianDeltaStops', float('nan')):+10.3f} "
                     f"{under_stats.get('contrastDeltaStops', float('nan')):+12.3f} "
+                    f"{'n/a':>9} "
                     f"{under_stats.get('underFootprintPixels', 0):9d} "
                     f"{under_stats.get('futureBuildingPixels', 0):9d}"
                 )
@@ -1323,32 +2184,109 @@ def main():
                     f"  {(view['id'] + ' / PHOTOGRAPHED BUILDINGS'):42} "
                     f"{photographed_stats.get('medianDeltaStops', float('nan')):+10.3f} "
                     f"{photographed_stats.get('contrastDeltaStops', float('nan')):+12.3f} "
+                    f"{'n/a':>9} "
                     f"{photographed_stats.get('photographedBuildingPixels', 0):9d} "
                     f"{photographed_stats.get('futureBuildingPixels', 0):9d}"
                 )
+                for label, statistics in (
+                    ("GROUND / PHOTOGRAPHED FIELDS", ground_stats),
+                    ("PLANTING / PHOTOGRAPHED CANOPY", planting_stats),
+                    ("GCHQ MEADOW ROOF / FIELD PROXY",
+                     meadow_roof_proxy_stats),
+                ):
+                    print(
+                        f"  {(view['id'] + ' / ' + label):42} "
+                        f"{statistics.get('medianDeltaStops', float('nan')):+10.3f} "
+                        f"{statistics.get('contrastDeltaStops', float('nan')):+12.3f} "
+                        f"{statistics.get('saturationDelta', float('nan')):+9.3f} "
+                        f"{statistics.get('photographedReferencePixels', 0):9d} "
+                        f"{statistics.get('authoredTargetPixels', 0):9d}"
+                    )
+                    if statistics["status"] != "ok":
+                        print(f"    indeterminate: {statistics['reason']}")
+                    if statistics["dominated"]:
+                        fraction = statistics["filters"][
+                            "dominantComponentFraction"]
+                        print(
+                            "    DOMINATED: component-1 supplies "
+                            f"{fraction:.1%} of reference samples; excluded "
+                            "from aggregate"
+                        )
+                error_distribution = filter_details[
+                    "unfilteredBuildingGeometricErrorMetres"]
+                buckets = error_distribution["cumulativeBucketCounts"]
+                print(
+                    "    geometric error m (unfiltered) "
+                    f"n={error_distribution['samples']} p10/p50/p90/max "
+                    f"{error_distribution['p10']}/"
+                    f"{error_distribution['p50']}/"
+                    f"{error_distribution['p90']}/"
+                    f"{error_distribution['max']}; buckets "
+                    f"<=2:{buckets['<=2']} "
+                    f"<=4:{buckets['<=4']} "
+                    f"<=6:{buckets['<=6']} "
+                    f"<=8:{buckets['<=8']} "
+                    f"<=12:{buckets['<=12']} "
+                    f"<=16:{buckets['<=16']} "
+                    f">16:{buckets['>16']}; PROVISIONAL "
+                    f"<={args.max_geometric_error_m:g} m rejects "
+                    f"{filter_details['overProvisionalGeometricErrorSamplesRejected']}"
+                )
                 if photographed_stats["status"] != "ok":
                     print(f"    indeterminate: {photographed_stats['reason']}")
+                if photographed_stats["dominated"]:
+                    fraction = photographed_stats["filters"][
+                        "dominantComponentFraction"]
+                    print(
+                        f"    DOMINATED: component-1 supplies "
+                        f"{fraction:.1%} of reference samples; excluded "
+                        "from aggregate"
+                    )
 
             if tone_arrays_all:
                 report["toneAggregate"] = {
                     "underFootprintReference": under_footprint_statistics(
                         combine_tone_arrays(tone_arrays_all)),
                 }
-            if photographed_arrays:
-                photographed_combined = combine_tone_arrays([
-                    item[0] for item in photographed_arrays])
-                photographed_mask = np.concatenate([
-                    item[1].reshape(-1) for item in photographed_arrays
-                ]).reshape(1, -1)
-                reference_samples = sum(
-                    item[2] for item in photographed_arrays)
-                aggregate = photographed_building_statistics(
-                    photographed_combined,
-                    photographed_mask,
-                    reference_samples,
-                )
-                report["toneAggregate"][
-                    "photographedBuildingReference"] = aggregate
+            aggregate = aggregate_photographed_building_statistics(
+                photographed_view_statistics)
+            report.setdefault("toneAggregate", {})[
+                "photographedBuildingReference"] = aggregate
+            surface_aggregates = (
+                (
+                    "groundAgainstPhotographedFields",
+                    aggregate_photographed_surface_statistics(
+                        ground_view_statistics,
+                        "photographed fields outside all 2045 footprints and "
+                        "future-ground areas",
+                        "visible masked 2045 ground, excluding blocks, placed "
+                        "models and future trees",
+                    ),
+                ),
+                (
+                    "futureTreesAgainstPhotographedCanopy",
+                    aggregate_photographed_surface_statistics(
+                        planting_view_statistics,
+                        "photographed canopy outside all 2045 footprints",
+                        "future trees",
+                    ),
+                ),
+                (
+                    "gchqMeadowRoofAgainstPhotographedFieldsProxy",
+                    aggregate_photographed_surface_statistics(
+                        meadow_roof_proxy_view_statistics,
+                        "photographed fields (PROXY; no photographed meadow-"
+                        "roof counterpart exists)",
+                        "GCHQ 2045 meadow roof",
+                        proxy=True,
+                    ),
+                ),
+            )
+            for key, surface_aggregate in surface_aggregates:
+                report.setdefault("toneAggregate", {})[key] = surface_aggregate
+            if aggregate["status"] == "ok":
+                delta_spread = aggregate["medianDeltaSpreadStops"]
+                contrast_spread = aggregate["contrastDeltaSpreadStops"]
                 print(
                     f"\n  -> PHOTOGRAPHED-BUILDING median Δ "
                     f"{aggregate['medianDeltaStops']:+.3f} stops; "
@@ -1356,8 +2294,16 @@ def main():
                     f"{aggregate['firstPassLightScale']:.3f}"
                 )
                 print(
-                    f"     contrast Δ "
-                    f"{aggregate['contrastDeltaStops']:+.3f} stops"
+                    f"     median of {aggregate['viewCount']} views; "
+                    f"spread {delta_spread['minimum']:+.3f} to "
+                    f"{delta_spread['maximum']:+.3f} stops "
+                    f"(range {delta_spread['range']:.3f})"
+                )
+                print(
+                    f"     contrast Δ {aggregate['contrastDeltaStops']:+.3f} "
+                    f"stops; spread {contrast_spread['minimum']:+.3f} to "
+                    f"{contrast_spread['maximum']:+.3f} "
+                    f"(range {contrast_spread['range']:.3f})"
                 )
                 wb = aggregate.get("whiteBalance", {})
                 if "firstPassRgbGain" in wb:
@@ -1367,13 +2313,40 @@ def main():
                         f"{gain[0]:.3f}, {gain[1]:.3f}, {gain[2]:.3f}"
                     )
             else:
-                report.setdefault("toneAggregate", {})[
-                    "photographedBuildingReference"] = {
-                    "status": "indeterminate",
-                    "reason": "no viewpoint supplied enough photographed-"
-                              "building reference pixels",
-                }
                 print("\n  -> photographed-building tone indeterminate")
+
+            for label, surface_aggregate in (
+                ("GROUND / PHOTOGRAPHED FIELDS", surface_aggregates[0][1]),
+                ("PLANTING / PHOTOGRAPHED CANOPY", surface_aggregates[1][1]),
+                ("GCHQ MEADOW ROOF / PHOTOGRAPHED-FIELD PROXY",
+                 surface_aggregates[2][1]),
+            ):
+                if surface_aggregate["status"] != "ok":
+                    print(f"\n  -> {label} indeterminate")
+                    continue
+                luminance_spread = surface_aggregate[
+                    "medianDeltaSpreadStops"]
+                contrast_spread = surface_aggregate[
+                    "contrastDeltaSpreadStops"]
+                saturation_spread = surface_aggregate[
+                    "saturationDeltaSpread"]
+                print(
+                    f"\n  -> {label}: median Δ "
+                    f"{surface_aggregate['medianDeltaStops']:+.3f} stops, "
+                    f"contrast Δ "
+                    f"{surface_aggregate['contrastDeltaStops']:+.3f} stops, "
+                    f"saturation Δ "
+                    f"{surface_aggregate['saturationDelta']:+.3f}"
+                )
+                print(
+                    f"     median of {surface_aggregate['viewCount']} views; "
+                    f"luminance spread {luminance_spread['minimum']:+.3f} to "
+                    f"{luminance_spread['maximum']:+.3f}; contrast spread "
+                    f"{contrast_spread['minimum']:+.3f} to "
+                    f"{contrast_spread['maximum']:+.3f}; saturation spread "
+                    f"{saturation_spread['minimum']:+.3f} to "
+                    f"{saturation_spread['maximum']:+.3f}"
+                )
 
             browser.close()
 
