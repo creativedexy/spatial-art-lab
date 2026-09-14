@@ -43,6 +43,39 @@ const RAGGED = 110;           // metres of noise on the front
 export const groundMask = { value: 0 };
 const groundDirect = { value: 0 };
 
+/**
+ * A keyed build's grade for what 2045 paints over the photograph.
+ *
+ * Measured by scripts/probe_light.py, 14 Sep 2026, on the keyed build with the
+ * photograph's sun and a sky environment: our 2045 ground, future trees and
+ * GCHQ's meadow roof against photographed fields and canopy in the same
+ * frames. Saturation is the reliable part — too high in every view that
+ * measured it — and each value is a ratio of photographed to authored median.
+ *
+ *   ground vs fields        saturation 0.68 (0.43-0.72, 4 views)  exposure 0.74
+ *   trees vs canopy         saturation 0.53 (0.47-0.57, 3 views)  exposure 1.16
+ *   meadow roof, field proxy saturation 0.80 (2 views)            exposure 0.55
+ *
+ * First pass. The probe reads saturation off the rendered, tone-mapped frame,
+ * so a factor applied to albedo does not land one-for-one; it is re-measured
+ * after each change, as the lighting was. The keyless map is not graded.
+ */
+export const KEYED_GRADE = {
+  ground: { saturation: 0.68, exposure: 0.74 },
+  trees: { saturation: 0.53, exposure: 1.16 },
+  meadow: { saturation: 0.80, exposure: 0.55 },
+};
+const groundGrade = { saturation: { value: 1 }, exposure: { value: 1 } };
+
+/** Desaturate a colour toward its own luminance, then scale it. In place. */
+function gradeColour(c, { saturation, exposure }) {
+  const l = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  return c.setRGB(
+    (l + (c.r - l) * saturation) * exposure,
+    (l + (c.g - l) * saturation) * exposure,
+    (l + (c.b - l) * saturation) * exposure);
+}
+
 export const uniforms = {
   uFront: { value: SWEEP_FROM },
   uSoft: { value: SOFT },
@@ -116,6 +149,8 @@ export function blendGround(
   mesh, futureTexture, todayClasses, futureClasses, directGround = false,
 ) {
   groundDirect.value = directGround ? 1 : 0;
+  groundGrade.saturation.value = directGround ? KEYED_GRADE.ground.saturation : 1;
+  groundGrade.exposure.value = directGround ? KEYED_GRADE.ground.exposure : 1;
   const m = mesh.material;
   const previous = m.onBeforeCompile;
   m.onBeforeCompile = (shader) => {
@@ -125,7 +160,9 @@ export function blendGround(
                     uTodayClass: { value: todayClasses ?? null },
                     uFutureClass: { value: futureClasses ?? null },
                     uGroundMask: { value: groundMask.value },
-                    uDirectGround: { value: groundDirect.value } });
+                    uDirectGround: { value: groundDirect.value },
+                    uGroundSaturation: groundGrade.saturation,
+                    uGroundExposure: groundGrade.exposure });
     // Held so setGroundMasked can move it without recompiling: a shader
     // rebuild on a toggle is a stutter, and on a year change it would be a
     // stutter every frame.
@@ -153,6 +190,8 @@ export function blendGround(
          uniform sampler2D uFutureClass;
          uniform float uGroundMask;
          uniform float uDirectGround;
+         uniform float uGroundSaturation;
+         uniform float uGroundExposure;
          uniform float uFront; uniform float uSoft; uniform float uRagged;
          varying vec3 vFutureWorld;
          ${NOISE}`)
@@ -177,6 +216,14 @@ export function blendGround(
            }
          }
          #include <map_fragment>
+         // Drawn straight from the 2045 map over the photograph: graded to the
+         // photographed fields it sits among (KEYED_GRADE.ground). Off the moment
+         // the measured fallback takes over, which draws the ground as designed.
+         if (uDirectGround > 0.5) {
+           float gl = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+           diffuseColor.rgb = mix(vec3(gl), diffuseColor.rgb, uGroundSaturation)
+                              * uGroundExposure;
+         }
          if (uDirectGround < 0.5) {
            // The sampler is sRGB, so the GPU has already linearised this and
            // it can be mixed with diffuseColor directly.
@@ -497,7 +544,8 @@ export async function addFuture(scene, renderer, {
     blocks.set(family, mesh);
   }
 
-  const trees = await loadFutureTrees(groundAt, unitTree, treeKinds);
+  const trees = await loadFutureTrees(groundAt, unitTree, treeKinds,
+    directGround ? KEYED_GRADE.trees : null);
   if (trees) group.add(trees);
 
   scene.add(group);
@@ -540,6 +588,7 @@ export async function addFuture(scene, renderer, {
   const gchqRoof = scene.getObjectByName('gchq:roof');
   const gchqFrom = gchqRoof && gchqRoof.material.color.clone();
   const gchqTo = change && new THREE.Color(change.roof);
+  if (gchqTo && directGround) gradeColour(gchqTo, KEYED_GRADE.meadow);
   // How far the front has passed the ring, 0 to 1. Kept because the tiles
   // layer needs it: over photogrammetry our GCHQ roof is the ONLY part of our
   // town still drawn, and it has to arrive with the meadow rather than sit
@@ -607,7 +656,7 @@ export async function addFuture(scene, renderer, {
   };
 }
 
-async function loadFutureTrees(groundAt, unitTree, treeKinds) {
+async function loadFutureTrees(groundAt, unitTree, treeKinds, grade = null) {
   const buf = await (await fetch(url(futureMeta.treeFile))).arrayBuffer();
   const view = new DataView(buf);
   const count = buf.byteLength / 8;
@@ -651,6 +700,10 @@ async function loadFutureTrees(groundAt, unitTree, treeKinds) {
       const v = 0.78 + ((t.rot * 97) % 1) * 0.44;
       tint.setHex(kind.colour).multiplyScalar(v);
       tint.offsetHSL(((t.spread * 31) % 1 - 0.5) * 0.06, 0, 0);
+      // Baked into the instance colour, so unlike the ground it stays graded if
+      // the measured fallback takes over below the melt line. A small mismatch
+      // at low camera heights against our ungraded existing trees; noted.
+      if (grade) gradeColour(tint, grade);
       mesh.setColorAt(i, tint);
     });
     mesh.instanceMatrix.needsUpdate = true;

@@ -701,3 +701,39 @@ Three things this does not yet settle:
   fields before it is changed. The hemisphere drop stays, because the sky
   should not be counted twice, but it is not the ground fix.
 
+### The grade — ground and planting measured into the photograph
+
+The first correct light showed that the 2045 ground and planting were the
+wrong colour, so the probe gained two more references (masked 2045 ground
+against photographed fields, future trees against photographed canopy) and
+a keyed-only grade was written from them: `KEYED_GRADE` in `future.js`, a
+saturation ratio and exposure per surface, applied to the ground in the
+shader only while it is drawn over the photograph, to the future tree tints
+and to GCHQ's meadow colour.
+
+| surface | saturation, before -> after | brightness, before -> after | views |
+|---|---|---|---:|
+| ground vs photographed fields | +0.193 -> **-0.024** | -0.44 -> **-0.11** | 4 |
+| trees vs photographed canopy | +0.343 -> **+0.019** | +0.21 -> **+0.07** | 3 |
+| GCHQ meadow roof, field proxy | +0.104 -> **-0.015** | -0.86 -> **-0.25** | 2 |
+| buildings (not graded) | — | -0.31 -> -0.31 | 3 |
+
+First pass, within measurement noise everywhere. Ground contrast went from
++0.55 to -0.01 with it.
+
+**A change that did not earn its place was taken out.** The keyed sun was made
+less warm (0xffe0b5 to 0xffe0d6) to meet the buildings' measured RGB gain of
+1.18 on blue. Re-measured, the gain went from 1.180 to 1.178: the warmth is not
+the light, it is the materials — facade stone authored at 0.87 / 0.83 / 0.74
+against grey and blue photographed buildings. Reverted; it is a palette
+question for the facades.
+
+**What a grade cannot fix, now measured rather than suspected.** Future trees
+are 0.51 stops flatter than photographed canopy: desaturating one tree
+scattered on a grid gives one grey-green tree on a grid. The land cover's
+hard-edged polygons are the same kind of problem. Both are craft, not light.
+
+So phase 12 step 4 is done for light and colour: the keyed switch now puts
+buildings, ground, planting and the meadow roof within a fraction of a stop,
+and a hundredth or two of saturation, of the photograph around them.
+
