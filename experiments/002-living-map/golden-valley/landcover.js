@@ -59,7 +59,7 @@ export async function loadCoverTexture(renderer) {
 // The terrain mesh's vertex colours become a near-neutral modulation once the
 // cover image supplies the hue: standard materials multiply map by vertex
 // colour, so anything but white here would tint the whole ground twice.
-function neutralGrade(mesh) {
+export function neutralGrade(mesh) {
   const pos = mesh.geometry.attributes.position;
   const nrm = mesh.geometry.attributes.normal;
   const col = mesh.geometry.attributes.color;
@@ -79,6 +79,13 @@ function neutralGrade(mesh) {
     col.setXYZ(i, c.r, c.g, c.b);
   }
   col.needsUpdate = true;
+}
+
+export function useCoverTexture(mesh, texture) {
+  mesh.material.map = texture;
+  mesh.material.vertexColors = true;
+  mesh.material.roughness = 1;
+  mesh.material.needsUpdate = true;
 }
 
 /**
@@ -105,10 +112,8 @@ export async function applyLandCover(scene, renderer) {
   for (const obj of scene.children) {
     const m = obj.isMesh && obj.material;
     if (!m || !m.vertexColors) continue;
-    m.map = tex;
-    m.roughness = 1;
-    m.needsUpdate = true;
     neutralGrade(obj);
+    useCoverTexture(obj, tex);
   }
   return tex;
 }

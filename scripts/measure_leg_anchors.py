@@ -87,7 +87,7 @@ def describe(leg_file):
     leg = json.loads(Path(leg_file).read_text())
     meta = load("gv-meta.json")
     paths = load("gv-paths.json")
-    buildings = load("gv-buildings.json")
+    buildings = load("gv-buildings.json") + load("gv-gchq.json")
     # A plate rendered with the wave up also has the 2045 blocks standing in
     # it, and they are most of what the frame is about. They carry no names —
     # nothing invented gets to be a landmark — so they are reported as a band

@@ -9,8 +9,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
 import { applyLook } from './look.js';
-import { addLandCover, loadClassTexture, classIndex, unitTree, KINDS } from './landcover.js';
-import { bringToLife } from './life.js';
+import {
+  addLandCover, loadClassTexture, loadCoverTexture, loadTrees, neutralGrade,
+  useCoverTexture, classIndex, unitTree, KINDS,
+} from './landcover.js';
+import { applyLife, bringToLife } from './life.js';
 import { addPaths } from './paths.js';
 import { addFarField } from './farfield.js';
 import { addFuture } from './future.js';
@@ -23,7 +26,10 @@ import { loadHeights } from './heights.js';
 // and to move it, and cannot end up driving a different clock than the one
 // buildWorld installed.
 export { updateLife, worldSeconds, pinWorld, releaseWorld } from './life.js';
-import { buildBuildings, loadFootprints } from './buildings.js';
+import {
+  buildBuildings, buildFallbackBuildings, buildGchq, loadFootprints,
+  loadGchqFootprint,
+} from './buildings.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 
@@ -117,7 +123,8 @@ export async function buildScene({ segments = 1000, flatBuildings = true } = {})
   if (flatBuildings) {
     const gchq = [];
     const rest = [];
-    for (const b of await loadFootprints()) {
+    const buildings = [...await loadFootprints(), await loadGchqFootprint()];
+    for (const b of buildings) {
       (b.name === 'Government Communications Headquarters' ? gchq : rest)
         .push(footprintGeometry(b));
     }
@@ -150,7 +157,9 @@ export async function buildScene({ segments = 1000, flatBuildings = true } = {})
  * Needs the renderer, because tone mapping and the shadow map are properties
  * of the renderer rather than of the scene, so it must be constructed first.
  */
-export async function buildWorld({ renderer, segments = 1000, onStage = null } = {}) {
+export async function buildWorld({
+  renderer, segments = 1000, onStage = null, deferFallback = false,
+} = {}) {
   const scene = await buildScene({ segments, flatBuildings: false });
   // Phase 7. applyLook is what makes this a place rather than a mesh — the
   // afternoon sun, the fog, the sky — and it only ever touched the terrain
@@ -169,15 +178,20 @@ export async function buildWorld({ renderer, segments = 1000, onStage = null } =
   // buildings are still coming. It is also the one layer that is allowed to
   // be approximate — OS Terrain 50 at 50 m, out to 75 km — because every part
   // of it a viewer can see is at least a kilometre away.
-  scene.userData.farField = await addFarField(scene);
-  mark('far field');
-  if (onStage) await onStage('far field', scene);
-  scene.add(await buildBuildings());
+  if (!deferFallback) {
+    scene.userData.farField = await addFarField(scene);
+    mark('far field');
+    if (onStage) await onStage('far field', scene);
+  }
+  const measuredBuildings = deferFallback ? await buildGchq() : await buildBuildings();
+  scene.add(measuredBuildings);
   mark('buildings');
   if (onStage) await onStage('buildings', scene);
-  await addLandCover(scene, renderer, heightAtLocal);
-  mark('land cover');
-  if (onStage) await onStage('land cover', scene);
+  if (!deferFallback) {
+    await addLandCover(scene, renderer, heightAtLocal);
+    mark('land cover');
+    if (onStage) await onStage('land cover', scene);
+  }
   // Last, because it patches every material it can find and adds the flock —
   // both of which need everything else to already be in the scene.
   bringToLife(scene, {
@@ -191,13 +205,17 @@ export async function buildWorld({ renderer, segments = 1000, onStage = null } =
   // and the seam test measures what it always measured.
   scene.userData.paths = addPaths(scene, { groundAt: heightAtLocal });
   mark('life and paths');
-  if (onStage) await onStage('life and paths', scene);
+  // In a keyed build the terrain gets its first map from addFuture below.
+  // Rendering the water patch before that map exists would compile vMapUv
+  // out from under it, so the next keyed stage is the complete future ground.
+  if (onStage && !deferFallback) await onStage('life and paths', scene);
   // Last of all, because it patches the terrain material that bringToLife has
   // just patched and adds meshes that need the same clock. The front starts
   // west of the box, so a world built with 2045 in it renders as today until
   // something moves it.
   scene.userData.future = await addFuture(scene, renderer, {
     groundAt: heightAtLocal, unitTree, treeKinds: KINDS,
+    directGround: deferFallback,
   });
   // After the future, because a placed model hides the extrusion it replaces
   // and the extrusions do not exist until addFuture has made them.
@@ -209,5 +227,72 @@ export async function buildWorld({ renderer, segments = 1000, onStage = null } =
     groundAt: heightAtLocal,
   });
   mark('models');
+
+  if (deferFallback) {
+    const terrain = scene.getObjectByName('terrain');
+    let loading = null;
+    let ready = false;
+    let error = null;
+    let todayTexture = null;
+    let trees = null;
+
+    scene.userData.fallback = {
+      get ready() { return ready; },
+      get error() { return error; },
+
+      /** Build every measured layer while the tiles still cover it. */
+      ensure() {
+        if (loading) return loading;
+        loading = Promise.all([
+          addFarField(scene).then((farField) => {
+            farField.setShowing(false);
+            scene.userData.farField = farField;
+          }),
+          loadTrees(heightAtLocal).then((group) => {
+            group.visible = false;
+            group.traverse((obj) => {
+              if (obj.isMesh && obj.material?.isMeshStandardMaterial) {
+                applyLife(obj.material, { wind: 0.05 });
+              }
+            });
+            trees = group;
+            scene.add(group);
+          }),
+          buildFallbackBuildings().then((group) => {
+            for (const child of [...group.children]) {
+              child.visible = false;
+              if (child.material?.isMeshStandardMaterial) applyLife(child.material);
+              measuredBuildings.add(child);
+            }
+          }),
+          loadCoverTexture(renderer).then((texture) => {
+            // This million-vertex pass is also deferred. Vertex colours are
+            // disabled over tiles, so preparing them cannot alter that frame.
+            neutralGrade(terrain);
+            todayTexture = texture;
+          }),
+        ]).then(() => { ready = true; }).catch((err) => {
+          error = err;
+          throw err;
+        });
+        return loading;
+      },
+
+      /** Called only after ensure() resolves, before the tile gate opens. */
+      setShowing(on) {
+        if (!ready) return false;
+        scene.userData.farField?.setShowing(on);
+        if (trees) trees.visible = on;
+        for (const child of measuredBuildings.children) {
+          if (!child.name.startsWith('gchq:')) child.visible = on;
+        }
+        if (on && todayTexture) {
+          scene.userData.future.setGroundDirect(false);
+          useCoverTexture(terrain, todayTexture);
+        }
+        return true;
+      },
+    };
+  }
   return scene;
 }

@@ -33,10 +33,11 @@ half of them say only `building=yes`, so those are inferred from what we
 measured: the land cover under the centroid, the footprint area, and whether
 the roof turned out to be pitched.
 
-This script *augments* gv-buildings.json in place. `ring`, `holes`, `base`
-and `height` are recomputed and asserted identical to what is already there,
-because golden-valley/scene.js renders from those fields and the descent seam
-is measured in pixels — the map page must not move.
+This script *augments* gv-buildings.json and gv-gchq.json in place. `ring`,
+`holes`, `base` and `height` are recomputed and asserted identical to what is
+already there, because golden-valley/scene.js renders from those fields and
+the descent seam is measured in pixels — the map page must not move. GCHQ is
+kept separate because its roof is needed over tiles before the measured town.
 
 Usage:  python3 scripts/golden_valley_roofs.py [--dry-run]
 """
@@ -300,6 +301,7 @@ def main():
 
     out = ROOT / OUT
     existing = json.loads((out / "gv-buildings.json").read_text())
+    existing_gchq = json.loads((out / "gv-gchq.json").read_text())[0]
     cover = json.loads((out / "gv-landcover.json").read_text())
     classes = {v["index"]: k for k, v in cover["classes"].items()}
     landclass = np.array(Image.open(out / cover["classFile"]))
@@ -347,8 +349,10 @@ def main():
         if not len(heights) or not len(base):
             continue
 
-        rec = existing[index]
-        index += 1
+        is_gchq = b["tags"].get("name") == "Government Communications Headquarters"
+        rec = existing_gchq if is_gchq else existing[index]
+        if not is_gchq:
+            index += 1
         h = float(np.median(heights))
         if h < 2:
             h = 3.0
@@ -458,7 +462,7 @@ def main():
         rec["roof"] = shape
         rows.append(rec)
 
-    assert index == len(existing), f"{index} rebuilt, {len(existing)} on file"
+    assert index == len(existing), f"{index} fallback buildings rebuilt, {len(existing)} on file"
     pitched = stats["gable"] + stats["hip"]
     if args.calibrate:
         calibrate(evidence)
@@ -480,7 +484,13 @@ def main():
     if args.dry_run:
         print("dry run — nothing written")
         return
-    (out / "gv-buildings.json").write_text(json.dumps(rows))
+    gchq = [r for r in rows
+            if r.get("name") == "Government Communications Headquarters"]
+    fallback = [r for r in rows
+                if r.get("name") != "Government Communications Headquarters"]
+    assert len(gchq) == 1 and len(fallback) == 4032
+    (out / "gv-gchq.json").write_text(json.dumps(gchq, separators=(",", ":")))
+    (out / "gv-buildings.json").write_text(json.dumps(fallback))
     meta = json.loads((out / "gv-meta.json").read_text())
     meta["roofs"] = {
         "note": "eaves and ridge are heights above `base`, in the same units "
@@ -494,7 +504,7 @@ def main():
                      for k, v in FAMILIES.items()},
     }
     (out / "gv-meta.json").write_text(json.dumps(meta, indent=2))
-    print("wrote gv-buildings.json and gv-meta.json")
+    print("wrote gv-gchq.json, gv-buildings.json and gv-meta.json")
 
 
 if __name__ == "__main__":

@@ -32,9 +32,15 @@ const meta = await (await fetch(url('gv-meta.json'))).json();
 // footprints stood between a phone and its first frame of ground, for meshes
 // that are not wanted until a second later.
 let buildings = null;
+let gchq = null;
 export async function loadFootprints() {
   buildings ??= await (await fetch(url('gv-buildings.json'))).json();
   return buildings;
+}
+
+export async function loadGchqFootprint() {
+  gchq ??= await (await fetch(url('gv-gchq.json'))).json();
+  return gchq[0];
 }
 
 // Walls stay in a narrow off-white range on purpose. The map's proposition is
@@ -150,8 +156,7 @@ function pitchedRoof(b) {
  * The town, in eleven meshes: walls and roofs for each material family, plus
  * GCHQ, which is neither a house nor a shed.
  */
-export async function buildBuildings() {
-  const buildings = await loadFootprints();
+async function buildGroup(buildings) {
   const group = new THREE.Group();
   group.name = 'buildings';
   const parts = {};
@@ -193,4 +198,23 @@ export async function buildBuildings() {
     group.add(mesh);
   }
   return group;
+}
+
+/** GCHQ is always present: its roof is the carrier for the meadow in 2045. */
+export async function buildGchq() {
+  return buildGroup([await loadGchqFootprint()]);
+}
+
+/** The other 4,032 buildings, used only by the measured fallback. */
+export async function buildFallbackBuildings() {
+  return buildGroup(await loadFootprints());
+}
+
+/** The complete measured town, used by keyless and capture builds. */
+export async function buildBuildings() {
+  const [kept, fallback] = await Promise.all([
+    buildGchq(), buildFallbackBuildings(),
+  ]);
+  for (const child of [...fallback.children]) kept.add(child);
+  return kept;
 }

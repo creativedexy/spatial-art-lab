@@ -294,7 +294,9 @@ export function bringToLife(scene, { groundAt, classMap, waterIndex }) {
   scene.traverse((obj) => {
     const m = obj.isMesh && obj.material;
     if (!m || !m.isMeshStandardMaterial) return;
-    if (m.vertexColors && m.map) applyLife(m, { water: true });         // the ground
+    if (obj.name === 'terrain' || (m.vertexColors && m.map)) {
+      applyLife(m, { water: true });                                    // the ground
+    }
     else if (obj.parent && obj.parent.name === 'trees') applyLife(m, { wind: 0.05 });
     else applyLife(m);
   });

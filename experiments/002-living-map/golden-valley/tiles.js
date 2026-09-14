@@ -172,6 +172,12 @@ export const GROUND_OFFSET_METRES = -0.14;
 export const MELT_FOCUS_HYSTERESIS = 25;   // so the ON line is the measured 165
 export const MELT_FLOOR_HYSTERESIS = 15;
 
+// Start the measured fallback well before either warm-state melt line. These
+// are warning lines, not a second visibility gate: if a camera jumps straight
+// past them, main.js holds the tiles until the fallback promise has resolved.
+export const FALLBACK_FOCUS_METRES = 300;
+export const FALLBACK_FLOOR_METRES = 100;
+
 /**
  * The melt gate itself, as a pure function so it can be tested without a key.
  *
@@ -189,6 +195,11 @@ export function wantsTiles(showing, aboveGround, focusMetres = Infinity) {
     ? MELT_FLOOR_METRES
     : MELT_FLOOR_METRES + MELT_FLOOR_HYSTERESIS;
   return focus >= focusLine && aboveGround >= floorLine;
+}
+
+export function needsFallback(aboveGround, focusMetres = Infinity) {
+  const focus = Number.isFinite(focusMetres) ? focusMetres : Infinity;
+  return focus < FALLBACK_FOCUS_METRES || aboveGround < FALLBACK_FLOOR_METRES;
 }
 
 const D = THREE.MathUtils.DEG2RAD;
@@ -324,6 +335,10 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
     setShowing(on) {
       showing = !!on;
       frame.visible = showing;
+      if (!ours.trees) {
+        ours.trees = scene.getObjectByName('trees');
+        if (ours.trees) wasVisible.trees = ours.trees.visible;
+      }
       for (const [k, o] of Object.entries(ours)) {
         if (o) o.visible = showing ? false : wasVisible[k];
       }

@@ -6,6 +6,7 @@ measures each building's height as median(DSM - DTM) inside its footprint,
 and writes:
   experiments/002-living-map/golden-valley/gv-height-<N>.bin  (uint16 LE)
   experiments/002-living-map/golden-valley/gv-meta.json
+  experiments/002-living-map/golden-valley/gv-gchq.json
   experiments/002-living-map/golden-valley/gv-buildings.json
 
 Terrain: Environment Agency LIDAR Composite DTM/DSM 1m, OGL v3.
@@ -140,8 +141,15 @@ def main():
             "height": round(h, 1),
         })
 
+    gchq = [b for b in buildings
+            if b["name"] == "Government Communications Headquarters"]
+    fallback = [b for b in buildings
+                if b["name"] != "Government Communications Headquarters"]
+    assert len(gchq) == 1
+    with open(f"{OUT}/gv-gchq.json", "w") as f:
+        json.dump(gchq, f, separators=(",", ":"))
     with open(f"{OUT}/gv-buildings.json", "w") as f:
-        json.dump(buildings, f)
+        json.dump(fallback, f)
     with open(f"{OUT}/gv-meta.json", "w") as f:
         json.dump({
             "crs": "EPSG:27700", "easting": [E0, E1], "northing": [N0, N1],
