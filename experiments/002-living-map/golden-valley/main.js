@@ -44,7 +44,7 @@ import { legAt } from './paths.js';
 import { createPathWalk } from './walk.js';
 import { createPlaces } from './places.js';
 import { thin } from './declutter.js';
-import { addTiles } from './tiles.js';
+import { addTiles, needsFallback } from './tiles.js';
 import { addScheme } from './scheme.js';
 import { mark } from './stage.js';
 
@@ -65,6 +65,7 @@ creditToggle.addEventListener('click', () => {
 // endpoints); ?clean=1 hides every overlay for capture.
 const params = new URLSearchParams(location.search);
 const clean = params.has('clean');
+const keyed = !clean && Boolean(globalThis.GOOGLE_TILES_KEY);
 const camPos = (params.get('cam') ?? '-750,520,1050').split(',').map(Number);
 if (clean) {
   for (const id of ['credit', 'shot-card', 'panel']) document.getElementById(id).hidden = true;
@@ -97,6 +98,7 @@ app.appendChild(renderer.domElement);
 let drawn = false;
 const scene = await buildWorld({
   renderer,
+  deferFallback: keyed,
   onStage: async (name, partial) => {
     renderer.render(partial, camera);
     if (!drawn) {
@@ -378,6 +380,21 @@ const tiles = clean ? null : await addTiles(scene, {
   // an edit and a redeploy.
   lift: params.has('tileLift') ? Number(params.get('tileLift')) : undefined,
 });
+const fallback = scene.userData.fallback;
+let warmingFallback = null;
+function warmFallback() {
+  if (!fallback || fallback.ready || fallback.error) return warmingFallback;
+  warmingFallback ??= fallback.ensure().catch((err) => {
+    // Keep the tiles on. A soft photograph below the melt line is preferable
+    // to a frame with no town or horizon in it.
+    console.warn('measured fallback did not load; keeping tiles visible:', err);
+  });
+  return warmingFallback;
+}
+if (!tiles && fallback) {
+  await fallback.ensure();
+  fallback.setShowing(true);
+}
 const attribution = document.getElementById('tiles-attribution');
 
 // Photogrammetry is a picture taken from an aeroplane: come close enough and
@@ -424,17 +441,29 @@ function focusDistance() {
 function updateTiles() {
   if (!tiles) return;
   const above = camera.position.y - heightAtLocal(camera.position.x, camera.position.z);
+  const focus = focusDistance();
+  if (needsFallback(above, focus)) warmFallback();
   // Two thresholds on each of two quantities, not one on one: a camera sitting
   // near either line would otherwise flip the whole town between two versions
   // of itself every few frames, and the walk rides at a fixed height over
   // rolling ground.
-  const want = tiles.wantsShowing(above, focusDistance());
+  const want = tiles.wantsShowing(above, focus);
   if (want !== tiles.showing) {
-    tiles.setShowing(want);
-    // Google's photogrammetry brings its own horizon. Ours underneath it
-    // would be a second, coarser one at a slightly different height, which is
-    // the sort of thing nobody can name and everybody can see.
-    scene.userData.farField?.setShowing(!want);
+    // Lazy may never mean late: a direct camera jump can cross both warning
+    // lines in one frame, so the tiles remain the cover until all four
+    // measured layers are constructed. The next frame after resolution opens
+    // the gate onto a complete fallback, never onto a hole.
+    if (!want && fallback && !fallback.ready) {
+      warmFallback();
+    } else {
+      if (!want) fallback?.setShowing(true);
+      tiles.setShowing(want);
+      if (want) fallback?.setShowing(false);
+      // Google's photogrammetry brings its own horizon. Ours underneath it
+      // would be a second, coarser one at a slightly different height, which is
+      // the sort of thing nobody can name and everybody can see.
+      scene.userData.farField?.setShowing(!want);
+    }
   }
   tiles.update();
   // The licence requires this to be visible whenever tiles are, and it is
@@ -484,6 +513,7 @@ document.getElementById('panel-back').onclick = () => {
 };
 
 function render(state, hotspot) {
+  if (state === 'descending') warmFallback();
   const inPlace = state === 'arrived';
   panel.hidden = clean || !inPlace;
   document.body.classList.toggle('in-place', inPlace && !clean);
@@ -499,6 +529,7 @@ function render(state, hotspot) {
 }
 
 function renderWalk(state, leg) {
+  if (state === 'diving') warmFallback();
   const arrived = state === 'arrived';
   panel.hidden = clean || !arrived;
   document.body.classList.toggle('in-place', arrived && !clean);

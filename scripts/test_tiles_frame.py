@@ -29,7 +29,10 @@ THREE = ROOT / "experiments" / "002-living-map" / "terrain" / "vendor" / "three.
 # with the transpose, the negation and the ordering all wrong.
 NODE = r"""
 import * as THREE from 'three';
-import { intoLocalFrame, wantsTiles } from '%s';
+import {
+  FALLBACK_FLOOR_METRES, FALLBACK_FOCUS_METRES, intoLocalFrame,
+  needsFallback, wantsTiles,
+} from '%s';
 
 // East, north, up as an orthonormal set rotated well away from the axes, and
 // an origin far from zero — which is what the real one is, since the tileset
@@ -97,6 +100,14 @@ const chatter = gate.filter((g) => g.fromOff && !g.fromOn);
 
 console.log(JSON.stringify({
   flat: run(0), lifted: run(2.75), gate, chatter,
+  warning: {
+    focus: FALLBACK_FOCUS_METRES,
+    floor: FALLBACK_FLOOR_METRES,
+    outside: needsFallback(FALLBACK_FLOOR_METRES,
+                           FALLBACK_FOCUS_METRES),
+    byFocus: needsFallback(1000, FALLBACK_FOCUS_METRES - 0.1),
+    byFloor: needsFallback(FALLBACK_FLOOR_METRES - 0.1, Infinity),
+  },
 }));
 """
 
@@ -186,6 +197,22 @@ def main():
           "nothing switches on from cold that switches off when warm"
           if not out["chatter"]
           else ", ".join(g["name"] for g in out["chatter"]))
+
+    warning = out["warning"]
+    check("fallback warming starts before either melt line",
+          warning["focus"] > 140 and warning["floor"] > 50
+          and warning["byFocus"] and warning["byFloor"]
+          and not warning["outside"],
+          f"{warning['focus'] - 140:.0f} m focus warning, "
+          f"{warning['floor'] - 50:.0f} m floor warning")
+
+    bulk = json.loads((GV / "gv-buildings.json").read_text())
+    gchq = json.loads((GV / "gv-gchq.json").read_text())
+    check("GCHQ is the only eager measured footprint",
+          len(bulk) == 4032 and len(gchq) == 1
+          and gchq[0].get("name") == "Government Communications Headquarters"
+          and not any(b.get("name") == gchq[0]["name"] for b in bulk),
+          f"{len(gchq)} eager, {len(bulk)} deferred")
 
     print(f"\n{sum(checks)}/{len(checks)} checks passed")
     return 0 if all(checks) else 1

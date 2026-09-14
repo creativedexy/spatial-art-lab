@@ -89,6 +89,11 @@ def main():
     for folder, globs in KEEP.items():
         for g in globs:
             for f in sorted((SITE / folder).glob(g)):
+                # The local tiles key is gitignored but still matches *.js.
+                # Never copy it, even transiently; the public stub is written
+                # explicitly below.
+                if folder == "golden-valley" and f.name == "key.js":
+                    continue
                 copy(f.relative_to(SITE), out, log)
     for f in sorted(photos(SITE)):
         copy(f.relative_to(SITE), out, log)

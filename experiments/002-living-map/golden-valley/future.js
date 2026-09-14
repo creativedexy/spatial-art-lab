@@ -41,6 +41,7 @@ const RAGGED = 110;           // metres of noise on the front
  * the tiles may not be modified. 0 draws the whole terrain, as it always did.
  */
 export const groundMask = { value: 0 };
+const groundDirect = { value: 0 };
 
 export const uniforms = {
   uFront: { value: SWEEP_FROM },
@@ -98,6 +99,7 @@ function share(material, patch, life = {}) {
  * gains one texture fetch and a mix. Anything else would mean two terrains.
  */
 const groundMaskUniforms = [];
+const groundDirectUniforms = [];
 
 /** Draw our ground only where 2045 changes it. */
 export function setGroundMasked(on) {
@@ -105,7 +107,15 @@ export function setGroundMasked(on) {
   for (const u of groundMaskUniforms) u.value = groundMask.value;
 }
 
-export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
+export function setGroundDirect(on) {
+  groundDirect.value = on ? 1 : 0;
+  for (const u of groundDirectUniforms) u.value = groundDirect.value;
+}
+
+export function blendGround(
+  mesh, futureTexture, todayClasses, futureClasses, directGround = false,
+) {
+  groundDirect.value = directGround ? 1 : 0;
   const m = mesh.material;
   const previous = m.onBeforeCompile;
   m.onBeforeCompile = (shader) => {
@@ -114,11 +124,13 @@ export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
                   { uFutureMap: { value: futureTexture },
                     uTodayClass: { value: todayClasses ?? null },
                     uFutureClass: { value: futureClasses ?? null },
-                    uGroundMask: { value: 0 } });
+                    uGroundMask: { value: groundMask.value },
+                    uDirectGround: { value: groundDirect.value } });
     // Held so setGroundMasked can move it without recompiling: a shader
     // rebuild on a toggle is a stutter, and on a year change it would be a
     // stutter every frame.
     groundMaskUniforms.push(shader.uniforms.uGroundMask);
+    groundDirectUniforms.push(shader.uniforms.uDirectGround);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
         '#include <common>\nvarying vec3 vFutureWorld;')
@@ -140,12 +152,12 @@ export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
          uniform sampler2D uTodayClass;
          uniform sampler2D uFutureClass;
          uniform float uGroundMask;
+         uniform float uDirectGround;
          uniform float uFront; uniform float uSoft; uniform float uRagged;
          varying vec3 vFutureWorld;
          ${NOISE}`)
       .replace('#include <map_fragment>',
-        `#include <map_fragment>
-         {
+        `{
            // Over photogrammetry, our ground is drawn ONLY where 2045
            // actually changes it — an orchard where there was stubble, wet
            // meadow where there was a culverted brook — and never where the
@@ -163,6 +175,9 @@ export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
              bool changed = abs(wasClass - willClass) > 0.002;
              if (!changed || futureAt(vFutureWorld) < 0.5) discard;
            }
+         }
+         #include <map_fragment>
+         if (uDirectGround < 0.5) {
            // The sampler is sRGB, so the GPU has already linearised this and
            // it can be mixed with diffuseColor directly.
            vec4 futureTexel = texture2D(uFutureMap, vMapUv);
@@ -452,7 +467,9 @@ ${GROW_BODY}`);
  * geometry as the surveyed woods — a future that used different trees would
  * announce itself as a different dataset.
  */
-export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds }) {
+export async function addFuture(scene, renderer, {
+  groundAt, unitTree, treeKinds, directGround = false,
+}) {
   const group = new THREE.Group();
   group.name = 'future';
 
@@ -485,9 +502,10 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
 
   scene.add(group);
 
-  // Today's terrain, whichever mesh carries the surveyed ground.
-  const ground = scene.children.find(
-    (o) => o.isMesh && o.material && o.material.map && o.material.vertexColors);
+  // The surveyed terrain is named at construction. In a keyed build it has no
+  // today texture yet: the future map is its direct material until the
+  // measured fallback is prepared, so discovery must not depend on `map`.
+  const ground = scene.getObjectByName('terrain');
   let futureTexture = null;
   if (ground) {
     futureTexture = await new THREE.TextureLoader().loadAsync(
@@ -496,6 +514,14 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     futureTexture.anisotropy = renderer
       ? renderer.capabilities.getMaxAnisotropy() : 8;
     futureTexture.wrapS = futureTexture.wrapT = THREE.ClampToEdgeWrapping;
+    if (directGround) {
+      ground.material.map = futureTexture;
+      // The colour map supplies the colour directly. The surveyed vertex
+      // grade is prepared only with the measured fallback, while still hidden.
+      ground.material.vertexColors = false;
+      ground.material.roughness = 1;
+      ground.material.needsUpdate = true;
+    }
     // Both class maps, so the shader can answer the only question that
     // matters over photogrammetry: did 2045 CHANGE this square metre? Indices,
     // so nearest filtering and no colour management — a bilinear tap between
@@ -504,7 +530,7 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
       loadClassTexture(),
       loadClassTexture(futureMeta.classFile),
     ]);
-    blendGround(ground, futureTexture, todayClasses, futureClasses);
+    blendGround(ground, futureTexture, todayClasses, futureClasses, directGround);
   }
 
   // GCHQ's roof is a change to a building that already exists, so it is a
@@ -534,6 +560,8 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     get wave() { return wave; },
     /** Draw our ground only where 2045 changes it: see setGroundMasked. */
     setGroundMasked,
+    /** Use today's base map again once the measured fallback is ready. */
+    setGroundDirect,
     /**
      * Over photogrammetry, our whole town is hidden except one thing: the
      * ring's 2045 meadow roof, laid over the real building. Overlaying our own
