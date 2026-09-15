@@ -737,3 +737,20 @@ So phase 12 step 4 is done for light and colour: the keyed switch now puts
 buildings, ground, planting and the meadow roof within a fraction of a stop,
 and a hundredth or two of saturation, of the photograph around them.
 
+
+---
+
+## Decided, 15 Sep 2026: the 2045 model plan
+
+The switch barely changed the map: 2% to 21% of the ground in frame changes
+strongly, with 93 new buildings where the scheme has about 1,100 homes. Dex
+set the direction: a stark contrast in buildings, trees and sustainable
+features, visualised first with generated target boards, with the meadow roof
+as the standard.
+
+The plan is [phase-12-2045-model.md](phase-12-2045-model.md), M0 to M7.
+Decided: shots at 250 to 450 m (today stays the photograph), scheme-true
+density, solar canopies over GCHQ's car parks, three board variants per frame.
+It folds in the scheme's live site (goldenvalleyuk.com) and the HBD and
+Grimshaw renders held in `inspiration/golden-valley/`, as words and numbers
+unless Dex clears sending them to a generator.
