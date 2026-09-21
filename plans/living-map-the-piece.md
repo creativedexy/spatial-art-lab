@@ -754,3 +754,8 @@ density, solar canopies over GCHQ's car parks, three board variants per frame.
 It folds in the scheme's live site (goldenvalleyuk.com) and the HBD and
 Grimshaw renders held in `inspiration/golden-valley/`, as words and numbers
 unless Dex clears sending them to a generator.
+
+**21 Sep:** the scheme's renders are cleared as generator references; Grimshaw's
+style is out; the 2045 architecture aims at design excellence and realism
+beyond the scheme's corporate buildings, held to built precedents. See the
+design direction in [phase-12-2045-model.md](phase-12-2045-model.md).

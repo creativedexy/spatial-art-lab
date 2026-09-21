@@ -1,6 +1,6 @@
 # Phase 12, second half: the 2045 model, made stark
 
-*Decided 15 Sep 2026. Phase: Define, moving into Develop.*
+*Decided 15 Sep 2026; design direction set 21 Sep. Phase: Define, moving into Develop.*
 
 The map is the product, and the switch between today and 2045 is the whole
 argument. Today the switch barely changes anything. This plan makes it stark
@@ -25,66 +25,94 @@ of ground in frame (sky excluded) whose 8 px blocks differ by more than 30 of
 | Panels and glasshouses | 524 m | 11% |
 | The homes | 700 m | 21% |
 
-| Surface | Now | Scheme / references |
+| Surface | Now | Scheme |
 |---|---|---|
 | Homes | 70 gabled boxes on 15 ha | 1,000+ low-carbon homes (goldenvalleyuk.com), about 1,100 in the SPD |
 | Campus | 20 blocks of 38 × 17 m, about 58,000 m² | 1M+ sq ft (about 93,000 m²); named buildings IDEA, ROUTER, INPUT, OUTPUT |
-| Roofs | one flat tint per family | meadow roofs (IDEA's runs to the ground), PV, planted terraces |
+| Roofs | one flat tint per family | meadow roofs, PV, planted terraces |
 | Trees | 6,234 of one shape, reads as stipple, 0.51 stops flat | veteran oaks, woodland courtyards, avenues, orchards |
 | Agrivoltaics | painted into the ground texture | panel rows with height, shadow and glint |
 | Glasshouses | 3 pale boxes | glass volumes |
-| Water | a colour class | SuDS ponds and wetland edges that reflect sky |
+| Water | a colour class | SuDS channels, ponds and wetland edges that reflect sky |
 | Shadow | 2045 casts none onto the photograph | everything new casts onto the tiles |
 
 ---
 
-## Decisions (Dex, 15 Sep)
+## Decisions (Dex)
 
-1. **Shots at 250 to 450 m** to the look point. Today stays Google's
-   photograph (above the melt line: tiles off below 140 m focus, back on at
-   165 m). The meadow roof's closeness comes from a narrower lens, not from
-   moving inside the melt line.
-2. **Density is scheme-true**: about 1,100 homes and 93,000 m²+ of campus in
-   the box. The boards decide character, not count. The press figure of 3,700
-   homes is the wider West Cheltenham allocation and is not ours.
-3. **GCHQ's car parks get solar canopies.** The cars stay; the roofs change.
-4. **Three board variants per frame plus one kit sheet**, about 16 images,
-   all free Codex.
+1. **Shots at 250 to 450 m** to the look point (15 Sep). Today stays Google's
+   photograph, above the melt line (tiles off below 140 m focus, back on at
+   165 m). The meadow roof's closeness comes from a narrower lens.
+2. **Programme is scheme-true** (15 Sep): about 1,100 homes and 93,000 m²+ of
+   campus in the box; IDEA, ROUTER, INPUT and OUTPUT as named buildings. The
+   press figure of 3,700 homes is the wider West Cheltenham allocation.
+3. **GCHQ's car parks get solar canopies** (15 Sep). The cars stay; the roofs
+   change.
+4. **Three board variants per frame plus one kit sheet** (15 Sep), about 16
+   images, all free Codex.
+5. **The scheme's renders may go into the generator** (21 Sep). The project
+   is non-commercial and private, so the images from goldenvalleyuk.com and
+   HBD are cleared as Codex references. Still never shipped.
+6. **Not Grimshaw's style, and more adventurous than the scheme** (21 Sep).
+   The scheme's architects are corporate. Our 2045 aims at design excellence
+   and realism. The scheme gives us *what and where*: counts, siting, named
+   buildings. The architecture, the landscape and the energy are ours, set by
+   the direction below.
+
+---
+
+## Design direction: excellence and realism
+
+**Two tests for every board and every model change.**
+
+- **Realism.** It must look built and photographed, not rendered. Every move
+  below has a built precedent. There are no fantasy towers, no forests on
+  balconies, and nothing that only works in a CGI.
+- **Excellence.** It must hold up next to the best built work of its type
+  in the UK and northern Europe, and not read as an office park.
+
+The dial from measured to adventurous is decided by picking boards: each
+frame gets one **measured**, one **bold** and one **adventurous** variant.
+
+| Pillar | The move | Built precedents (named in prompts, not copied) |
+|---|---|---|
+| Homes | Dense, low-rise and high-quality: Passivhaus terraces with steep roofs, cohousing around shared gardens, 4 to 6 storey mass-timber apartment blocks. Whole roofs of PV on the terraces, meadow on the flat roofs. From the air: rhythm, pitch and texture. | Goldsmith Street, Norwich (Mikhail Riches, Stirling Prize 2019); Marmalade Lane, Cambridge; Solarsiedlung, Freiburg (Rolf Disch) |
+| Campus | Mass timber and glass around courtyards, with **one landmark that does something**: IDEA's walkable meadow roof running to the ground. Roofs are the facade from the air: PV sawn to the sun, planted terraces. | Sara Kulturhus, Skellefteå (White Arkitekter); Powerhouse Brattørkaia, Trondheim (Snøhetta); IDEA's meadow roof from the scheme |
+| Water | Open stormwater channels and rain gardens along streets, feeding ponds and the wet meadow. They read from the air as silver lines that reflect the sky. | Augustenborg, Malmö; Tåsinge Plads, Copenhagen |
+| Energy | Vertical bifacial PV rows over grazed pasture: fences of glass that read at 400 m, with the crop visible between. Solar canopies over GCHQ's car parks. Glasshouses on the campus's waste heat. | Next2Sun vertical agrivoltaics (Germany); solar carports; Westland glasshouses (NL) |
+| Trees | Native mixes at 2045 maturity: retained veteran oaks, woodland courtyards, street avenues, orchard rows. No monoculture grid. | Accordia, Cambridge (landscape-led density) |
+
+Heights stay believable next to GCHQ: 7 storeys at most (OUTPUT's height in
+the scheme), and IDEA is the only landmark.
 
 ---
 
 ## The references we already hold, and what each is for
 
-Two kinds of existing imagery feed this plan.
+**Theirs, from the scheme** (`inspiration/golden-valley/`), cleared for
+generator input on 21 Sep. We take **siting and programme** from them, not
+their architecture.
 
-**Theirs: the scheme's live site, HBD and Grimshaw.** These are held in
-`inspiration/golden-valley/` under its README: third-party copyright,
-private reference, never shipped, and **not sent to any generator without
-Dex's yes** (Codex image generation sends its inputs off this machine). The
-default use is that we look, then write down words and numbers. The boards
-then get those words and numbers, not their pixels.
-
-**Ours: approved renders and photographs.** We can use these freely.
-
-| Reference | What we take from it | Phase |
+| Reference | What we take | Phase |
 |---|---|---|
-| `official/aerial-03.jpg` (live site: photomontage over a real aerial) | Where the masses sit relative to GCHQ, the A40 and the field grain. Render our 2045 from the overlay camera in its README and compare massing, internal only. | M0, M3, M7 |
-| `grimshaw/…n26…` (masterplan aerial over the real landscape) | Residential parcels, green corridors, the edge against the fields | M0, M3 |
-| `official/aerial.jpg` = `hbd/Aerial-5` (IDEA) | The signature: a meadow roof that runs to the ground, PV on the flat roofs, sett paths cutting through meadow. Our NCIC model is this building. | M2 kit, M4 |
-| `hbd/Arrival-1`, `hbd/GV_02` (OUTPUT, 7 levels), `GV_03` | Pale stone with vertical fins, planted terraces, glazed ground floor. This settles the "facade stone reads warm" fault: sample it, don't guess. | M3, M4 |
-| `official/courtyard.jpg` = `hbd/Courtyard-2` | Woodland courtyard planting under a retained veteran oak; dark banded brick as the counterpoint material | M5 |
-| `grimshaw/…n39, n43, n41` (streets) | Residential typology: sawtooth-roof terraces, 3 to 4 storey balconied blocks, mews. Sawtooth roofs are a silhouette that reads from the air. | M3, M4 |
-| `grimshaw/…n38` (wetland) | Homes backing onto SuDS and wet meadow, reed margins | M5, M6 |
-| `grimshaw/…n34` (park) | Blocks around a wildflower park; roof planting | M3, M5 |
-| `official/cheltenham-hills-photo.jpg` (real photograph) | Haze, horizon and the Severn Vale, the ground truth for how far things read | M1, M7 |
-| goldenvalleyuk.com text | Programme and phasing: IDEA and ROUTER (2028, ROUTER two storeys), INPUT and OUTPUT (2029, OUTPUT 7 levels), residential 2029 to 2033, a second transport hub, a Future Industry Quarter by 2035, IDEA targeting 5.5-star NABERS. 2045 is every phase complete. | M0, M3, place copy |
-| Our five place photographs (`generate/*/out/*-photo`) | Approved look: the meadow roof is the standard for every board. They were generated from plates of the *old* model, so M3 moves ground under them; M7 re-plates or retires each one. | M2, M7 |
-| Our `vision/frame1…5` | Light and life targets; frame 5 belongs to arrival | M2, 13 |
-| Our `generate/close-2045/facade-study.png`, `campus-ncic`, `gchq-meadow` plates | The close-range starting renders for the kit sheet | M2 |
+| `official/aerial-03.jpg` (live site: a photomontage over a real aerial) | Where the masses sit relative to GCHQ, the A40 and the field grain. Codex gets it with our render for placement. It also gives a private massing check from the overlay camera in its README. | M0, M2, M3, M7 |
+| `official/aerial.jpg` = `hbd/Aerial-5` (IDEA) | The one piece of their architecture we keep: the meadow roof running to the ground. It is the scheme's own landmark and our NCIC model is this building. | M2 kit, M4 |
+| `official/courtyard.jpg`, `hbd/Arrival-1`, `hbd/GV_02` | Scale and programme only: OUTPUT at seven levels, courtyard proportions, retained oaks. Their facades are the corporate baseline we are aiming past. | M3 |
+| `grimshaw/…n26…` (masterplan aerial) | Parcel layout only: where residential sits and where the corridors run. **Not its style.** | M0, M3 |
+| `official/cheltenham-hills-photo.jpg` (a real photograph) | Haze, horizon, Severn Vale: how far things actually read | M1, M7 |
+| goldenvalleyuk.com text | Programme and phasing: IDEA and ROUTER (2028, ROUTER two storeys), INPUT and OUTPUT (2029, OUTPUT 7 levels), residential 2029 to 2033, a second transport hub, a Future Industry Quarter by 2035. 2045 is every phase complete. | M0, M3, place copy |
+
+**Ours**, free to use.
+
+| Reference | What we take | Phase |
+|---|---|---|
+| The five place photographs (`generate/*/out/*-photo`) | The approved look. The meadow roof is the standard for light, planting and realism. They came from plates of the *old* model; M7 re-plates or retires each one. | M2, M7 |
+| `vision/frame1…5` | Light and life; frame 5 belongs to arrival | M2, 13 |
+| `generate/close-2045/` plates (facade study, campus-ncic, gchq-meadow) | Starting renders for the kit sheet | M2 |
 | Storyboard pairs (`board-graded/`) | The baseline every M step is measured against | all |
 
-Cut from the references: `hbd/GV_04` (an interior, not seen from the air) and
-the parked Meshy GLBs.
+Not used: the Grimshaw street, park and wetland illustrations (style
+excluded), `hbd/GV_04` (an interior), and the parked Meshy GLBs.
 
 ---
 
@@ -96,11 +124,11 @@ merges; Dex approves the boards and the frames. Nothing spends money.
 ### M0: the contrast ledger *(Define, half a day)*
 
 - For each shot, name three visible changes: one building, one tree and one
-  sustainable feature.
+  sustainable feature. Draw them from the design direction.
 - Pin the programme from the live site and the SPD, and name the four campus
-  buildings in the model.
-- Read the layout off `aerial-03` and Grimshaw's `n26`: where the campus,
-  residential parcels and corridors sit.
+  buildings.
+- Read the layout off `aerial-03` and `n26`: the campus, the residential
+  parcels and the corridors.
 - Baseline the contrast numbers (above) and a stranger test: shown a pair for
   5 s, can someone name three differences?
 
@@ -123,32 +151,37 @@ floor of 35% "changes strongly" per shot.
 
 ### M2: target boards *(Develop, 1 to 2 days)*
 
-- For each frame, render our own model keyless (never Google tiles) and pass it
-  to Codex. The references are the meadow roof photograph plus a written spec
-  from the table above. Three variants per frame.
+- For each frame, a keyless render of our own model (never Google tiles) goes
+  to Codex with:
+  - the meadow roof photograph, for light and realism
+  - the scheme's aerial, for siting
+  - a written brief from the design direction, naming its precedents
+- Three variants per frame: measured, bold, adventurous.
 - A kit sheet of six close studies:
   - IDEA's meadow roof
-  - an OUTPUT-type finned block
-  - a sawtooth terrace street
-  - an agrivoltaic row
-  - a SuDS or wetland edge
+  - a mass-timber campus block
+  - a Passivhaus terrace street with PV roofs
+  - vertical agrivoltaics over pasture
+  - a stormwater street and pond
   - the tree palette
-- Reject any board that invents a layout we can't model: boards sit on our
-  streets.
+- Reject any board that invents a layout we can't model, or that fails either
+  test.
 - From each approved board, write a spec file: counts, roof mix %, sampled
-  colours, tree forms and heights.
+  colours, materials, tree forms and heights.
 
 **Done when** each frame has one approved board plus its spec, and the kit
 sheet is approved.
 
 ### M3: density and massing *(Develop, 2 to 3 days)*
 
-- Extend `scripts/golden_valley_2045.py` to about 1,100 homes on the 22° grid.
-  Mix sawtooth terraces, mews and 3 to 4 storey balconied blocks, with gardens
-  and street trees in the plan.
-- Campus as perimeter courtyard blocks to 93,000 m²+. IDEA, ROUTER (two
-  storeys), INPUT and OUTPUT (seven levels) are named buildings. Add a local
-  centre, a school and the second transport hub.
+- Extend `scripts/golden_valley_2045.py` to about 1,100 homes on the 22° grid:
+  - steep-roofed Passivhaus terraces
+  - cohousing courts
+  - 4 to 6 storey timber blocks
+  - gardens and street trees in the plan
+- Campus as timber courtyard blocks to 93,000 m²+. IDEA, ROUTER (two storeys),
+  INPUT and OUTPUT (seven levels) are named buildings. Add a local centre, a
+  school and the second transport hub.
 - Build it as rules, not hand placement, so phase 15's second site inherits
   it. Instanced throughout.
 - Internal check: our 2045 rendered from the `aerial-03` overlay camera, masses
@@ -158,15 +191,17 @@ sheet is approved.
 its board, and the budget holds: +1.5 MB gz or less, 60 fps on a laptop, 30 on
 a phone.
 
-### M4: roofs and shadow *(Develop, 2 days)*
+### M4: roofs, materials and shadow *(Develop, 2 days)*
 
 - A roof programme from the board specs:
-  - meadow roofs (the GCHQ shader, generalised; IDEA's runs to the ground)
-  - PV with a sun glint
+  - PV roofs on the terraces
+  - meadow on the flat roofs (the GCHQ shader generalised; IDEA's runs to the
+    ground)
+  - PV sawn to the sun on the campus
   - planted terraces
-  - sawtooth silhouettes
   - solar canopies over GCHQ's car parks
-- Facade stone is sampled from `Arrival-1` / `GV_02` into `KEYED_GRADE`.
+- A material palette from the approved boards: brick, timber and glass,
+  sampled into `KEYED_GRADE`. This replaces the warm authored stone.
 - 2045 buildings and trees cast shadows onto the photograph, with the sun from
   `MEASURED_SUN`.
 
@@ -176,18 +211,19 @@ the roof mix matches the boards.
 
 ### M5: trees and ground *(Develop, 2 days)*
 
-- Four or five canopy forms at 2045 maturity, including retained veteran oaks.
+- Four or five native canopy forms at 2045 maturity, including retained
+  veteran oaks.
 - Woodland courtyards and clumped belts, street avenues, orchard rows.
-- Hedges get volume, land-cover edges go soft, and wet meadow gets water that
-  reflects the sky environment.
+- Hedges get volume, land-cover edges go soft, and the wet meadow and
+  stormwater channels get water that reflects the sky environment.
 
 **Done when** the canopy probe closes the 0.51-stop gap and trees read as
 volume in the stranger test.
 
 ### M6: sustainable features as objects *(Develop, 2 days)*
 
-- Agrivoltaic rows as instanced geometry, glasshouses as glass volumes, SuDS
-  ponds and swales, ROUTER's cycle greenway.
+- Vertical agrivoltaic rows as instanced geometry, glasshouses as glass
+  volumes, stormwater channels and ponds, ROUTER's cycle greenway.
 - Only what reads from the chosen frames; the rest goes to arrival.
 
 **Done when** every ledger feature is visible in its frame, and its place copy
@@ -208,7 +244,7 @@ pushed.
 ```mermaid
 flowchart LR
     M0[M0 ledger] --> M1[M1 reframe] --> M2[M2 boards] --> M3[M3 massing]
-    M3 --> M4[M4 roofs + shadow]
+    M3 --> M4[M4 roofs + materials + shadow]
     M2 --> M5[M5 trees + ground]
     M3 --> M6[M6 features]
     M4 --> M7[M7 lock]
@@ -221,6 +257,7 @@ flowchart LR
 
 ## Cut
 
+- Grimshaw's illustration style and typologies, and office-park facades.
 - Facade detail past 250 m: the bay grid is enough; roofs and shadow carry it.
 - Bespoke buildings beyond GCHQ and the four named campus buildings; no Meshy
   revival.
