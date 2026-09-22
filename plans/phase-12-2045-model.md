@@ -416,3 +416,26 @@ Valley SPD; `inspiration/golden-valley/README.md`.
   trees and the M4 ownership discard unchanged. The compact row file is
   6.1 KB raw and 2.1 KB gzipped; the regenerated future payload is 13.0 KB
   smaller gzipped overall, comfortably inside the 300 KB growth limit.
+
+## M6b, keyed-map polish
+
+- Replaced the black PV reading with one shared low-roughness glass response
+  for agrivoltaic panels, home and campus roof PV, and GCHQ canopies. It keeps
+  a `#17242E` body, catches the keyed sky around `#3A4A57`, carries a restrained
+  `#91A4AB` sun glint, and supplies a stronger sky tint when no environment map
+  exists. Agrivoltaic rows now have a separate light top-edge instance while
+  retaining their 80 mm depth, 11 m centres and visible pasture gaps.
+- Traced the remaining cyan field patches to M5's five-tap class/colour
+  softening: water and wetland neighbours contributed to an agrivoltaic,
+  pasture or orchard centre, and the filtered wetland weight then admitted the
+  procedural pools. Hydro colour taps are now isolated at hydro boundaries;
+  pool and silver ownership use the exact centre class, so only genuine water
+  and wetland pixels can receive that response.
+- Corrected the M6 keyed probe shift in `KEYED_GRADE`, not in the authored
+  palette: ground saturation moves from `0.68` to `0.50` after measuring
+  `+0.12`, and GCHQ meadow saturation from `0.52` to `0.25` after measuring
+  `+0.16`. Ground and meadow exposure, the M6 palette and all building grades
+  remain unchanged pending the next live keyed probe.
+- Preserved every existing `onBeforeCompile` stage and its program-cache key
+  when layering PV glass, life/weather and 2045 growth patches; the measured
+  sun direction is an explicitly declared shader uniform in every PV program.

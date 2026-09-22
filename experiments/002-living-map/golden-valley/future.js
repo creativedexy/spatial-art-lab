@@ -22,8 +22,8 @@
 import * as THREE from 'three';
 import { applyLife, lifeTime } from './life.js';
 import { loadClassTexture, treeScale, treeTint } from './landcover.js';
-import { facadeChunk } from './facades.js';
-import { MEASURED_SUN } from './look.js';
+import { facadeChunk, PV_GLASS } from './facades.js';
+import { MEASURED_SUN, SUN_DIRECTION, sunFrom } from './look.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 export const futureMeta = await (await fetch(url('gv-2045-meta.json'))).json();
@@ -63,11 +63,17 @@ const groundProbeMask = { value: 0 };
  * after each change, as the lighting was. The keyless map is not graded.
  */
 export const KEYED_GRADE = {
-  ground: { saturation: 0.68, exposure: 0.74 },
+  // M6's new solid field palette measured +0.12 saturation on the keyed map;
+  // the M4/M5 value was effectively neutral. The probe's earlier response to
+  // this control puts the next pass at 0.50. Exposure is unchanged.
+  ground: { saturation: 0.50, exposure: 0.74 },
   // M5's first keyed render measured -0.10 saturation and -0.28 stops against
   // photographed canopy. 0.47 restores the lost colour; 1.41 is 1.16 * 2^0.28.
   trees: { saturation: 0.47, exposure: 1.41 },
-  meadow: { saturation: 0.52, exposure: 0.55 },   // M4: textured meadow measured +0.15 sat at 0.80 (22 Sep)
+  // The M6 roof measured +0.16 against its photographed-field proxy. The
+  // previous 0.80 -> 0.52 probe step moved that delta by 0.165, so 0.25 is
+  // the measured next pass rather than an arbitrary palette edit.
+  meadow: { saturation: 0.25, exposure: 0.55 },
   // M4 starts each authored material about 0.4 stops below the former pale
   // boxes in the keyed build. These are deliberately palette compensation,
   // not a second light: probe_light.py remains the authority on the live map.
@@ -80,6 +86,9 @@ export const KEYED_GRADE = {
   canopy: { saturation: 0.85, exposure: 0.10, roofExposure: 1.00 },
 };
 const groundGrade = { saturation: { value: 1 }, exposure: { value: 1 } };
+const pvSunDirection = { value: sunFrom(
+  MEASURED_SUN.azimuth, MEASURED_SUN.elevation,
+) };
 
 /** Desaturate a colour toward its own luminance, then scale it. In place. */
 function gradeColour(c, { saturation, exposure }) {
@@ -124,14 +133,41 @@ const NOISE = /* glsl */`
  * would arrive fully built with no front at all.
  */
 function share(material, patch, life = {}) {
+  const existing = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
   applyLife(material, life);
-  const previous = material.onBeforeCompile;
-  material.onBeforeCompile = (shader) => {
-    if (previous) previous(shader);
+  const lifePatch = material.onBeforeCompile;
+  material.onBeforeCompile = (shader, ...args) => {
+    if (existing) existing.call(material, shader, ...args);
+    if (lifePatch) lifePatch.call(material, shader, ...args);
     Object.assign(shader.uniforms, uniforms);
     patch(shader);
   };
-  material.customProgramCacheKey = () => `future:${patch.name}`;
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : material.type}:future:${patch.name}`;
+  material.needsUpdate = true;
+  return material;
+}
+
+/** Add the shared low-roughness PV glass response without losing any patch. */
+function pvGlassMaterial(material, key) {
+  const previous = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.onBeforeCompile = (shader, ...args) => {
+    if (previous) previous.call(material, shader, ...args);
+    shader.uniforms.uPvSunDirection = pvSunDirection;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${PV_GLASS}`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        {
+          float pvRough = roughnessFactor;
+          diffuseColor.rgb = fPvGlass(normal, 0.0, 0.0, pvRough);
+          roughnessFactor = pvRough;
+          metalnessFactor = 0.05;
+        }`);
+  };
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : material.type}:pv-glass:${key}`;
   material.needsUpdate = true;
   return material;
 }
@@ -342,11 +378,41 @@ export function blendGround(
       .replace('#include <alphatest_fragment>',
         `#include <alphatest_fragment>
          vec2 detailStep = uGroundTexel * 3.5;
-         vec4 futureTexel = texture2D(uFutureMap, vMapUv) * 0.36
-           + texture2D(uFutureMap, vMapUv + vec2(detailStep.x, 0.0)) * 0.16
-           + texture2D(uFutureMap, vMapUv - vec2(detailStep.x, 0.0)) * 0.16
-           + texture2D(uFutureMap, vMapUv + vec2(0.0, detailStep.y)) * 0.16
-           + texture2D(uFutureMap, vMapUv - vec2(0.0, detailStep.y)) * 0.16;
+         float fc = texture2D(uFutureClass, vMapUv).r;
+         vec4 fa = vec4(
+           texture2D(uFutureClass, vMapUv + vec2(detailStep.x, 0.0)).r,
+           texture2D(uFutureClass, vMapUv - vec2(detailStep.x, 0.0)).r,
+           texture2D(uFutureClass, vMapUv + vec2(0.0, detailStep.y)).r,
+           texture2D(uFutureClass, vMapUv - vec2(0.0, detailStep.y)).r);
+
+         // Keep the seven-metre colour softening between land classes, but
+         // never average water/wetland colour into ordinary fields (or vice
+         // versa). That cross-hydro average was the cyan seen between the PV
+         // rows even where the centre pixel was genuine agrivoltaic pasture.
+         float hydroCentre = min(1.0,
+           gvClassEqual(fc, ${groundClass.water})
+           + gvClassEqual(fc, ${groundClass.wetland}));
+         vec4 hydroAround = vec4(
+           min(1.0, gvClassEqual(fa.x, ${groundClass.water})
+                  + gvClassEqual(fa.x, ${groundClass.wetland})),
+           min(1.0, gvClassEqual(fa.y, ${groundClass.water})
+                  + gvClassEqual(fa.y, ${groundClass.wetland})),
+           min(1.0, gvClassEqual(fa.z, ${groundClass.water})
+                  + gvClassEqual(fa.z, ${groundClass.wetland})),
+           min(1.0, gvClassEqual(fa.w, ${groundClass.water})
+                  + gvClassEqual(fa.w, ${groundClass.wetland})));
+         vec4 keepAround = vec4(1.0) - step(vec4(0.5),
+           abs(hydroAround - vec4(hydroCentre)));
+         vec4 futureTexel = texture2D(uFutureMap, vMapUv) * 0.36;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv + vec2(detailStep.x, 0.0)) * 0.16 * keepAround.x;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv - vec2(detailStep.x, 0.0)) * 0.16 * keepAround.y;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv + vec2(0.0, detailStep.y)) * 0.16 * keepAround.z;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv - vec2(0.0, detailStep.y)) * 0.16 * keepAround.w;
+         futureTexel /= 0.36 + dot(keepAround, vec4(0.16));
          float futureMix = futureAt(vFutureWorld);
          if (uDirectGround > 0.5) {
            diffuseColor.rgb = futureTexel.rgb;
@@ -360,12 +426,6 @@ export function blendGround(
          // Class samples share the colour filter's radius. The class image
          // itself stays lossless and nearest-filtered; averaging membership,
          // not numeric indices, is what makes a real boundary transition.
-         float fc = texture2D(uFutureClass, vMapUv).r;
-         vec4 fa = vec4(
-           texture2D(uFutureClass, vMapUv + vec2(detailStep.x, 0.0)).r,
-           texture2D(uFutureClass, vMapUv - vec2(detailStep.x, 0.0)).r,
-           texture2D(uFutureClass, vMapUv + vec2(0.0, detailStep.y)).r,
-           texture2D(uFutureClass, vMapUv - vec2(0.0, detailStep.y)).r);
          float grass = gvClassWeight(${groundClass.grass}, fc, fa) * futureMix;
          float meadow = (gvClassWeight(${groundClass.meadow}, fc, fa)
                        + gvClassWeight(${groundClass.future_meadow}, fc, fa))
@@ -400,9 +460,14 @@ export function blendGround(
          // MeshStandardMaterial's low-roughness specular response below.
          float wetNoise = fNoise(vFutureWorld.xz / 21.0) * 0.68
                         + fNoise(vFutureWorld.xz / 8.0 + 31.0) * 0.32;
-         float pools = smoothstep(0.68, 0.79, wetNoise) * wetland;
+         // Hydro ownership is centre-texel exact. Filtered membership is fine
+         // for vegetation texture, but made a real water or wetland neighbour
+         // turn pasture, orchard and agrivoltaic centres silver/teal.
+         float wetlandOwner = gvClassEqual(fc, ${groundClass.wetland})
+                            * futureMix;
+         float pools = smoothstep(0.68, 0.79, wetNoise) * wetlandOwner;
          float futureWater = min(1.0,
-           gvClassWeight(${groundClass.water}, fc, fa) + pools);
+           gvClassEqual(fc, ${groundClass.water}) + pools);
          float todayWater = gvClassEqual(texture2D(uTodayClass, vMapUv).r,
                                          ${groundClass.water});
          gvWaterAmount = mix(todayWater, futureWater, futureMix);
@@ -864,6 +929,7 @@ function riseMaterial(family) {
   // and the buildings would arrive fully built with no front at all.
   const facade = facadeChunk(family);
   share(m, function future(shader) {
+    if (facade?.pv) shader.uniforms.uPvSunDirection = pvSunDirection;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
                `#include <common>\n${RISE}\n${NOISE}${facade ? `\n${facade.vertex}` : ''}`)
@@ -936,6 +1002,7 @@ async function addAgrivoltaics(group, groundAt) {
   const along = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
   const panelMatrices = [];
   const railMatrices = [];
+  const topEdgeMatrices = [];
   const postMatrices = [];
   const object = new THREE.Object3D();
   const yaw = new THREE.Quaternion().setFromAxisAngle(
@@ -959,10 +1026,11 @@ async function addAgrivoltaics(group, groundAt) {
     const slope = Math.atan2(y1 - y0, length);
     panelMatrices.push(matrix(x, ground + rows.panelBottomMetres, z,
                               length, rows.panelHeightMetres, 0.08, slope));
-    for (const lift of [rows.panelBottomMetres - 0.03,
-                        rows.panelBottomMetres + rows.panelHeightMetres - 0.03]) {
-      railMatrices.push(matrix(x, ground + lift, z, length, 0.06, 0.12, slope));
-    }
+    railMatrices.push(matrix(x, ground + rows.panelBottomMetres - 0.03, z,
+                             length, 0.06, 0.12, slope));
+    topEdgeMatrices.push(matrix(
+      x, ground + rows.panelBottomMetres + rows.panelHeightMetres - 0.03, z,
+      length, 0.06, 0.12, slope));
     const posts = Math.max(2, Math.ceil(length / 7.0) + 1);
     for (let i = 0; i < posts; i++) {
       const t = posts === 1 ? 0.0 : i / (posts - 1) - 0.5;
@@ -979,11 +1047,19 @@ async function addAgrivoltaics(group, groundAt) {
     geometry.translate(0, 0.5, 0);
     return geometry;
   };
-  const pv = new THREE.MeshStandardMaterial({
-    color: 0x17242e, roughness: 0.18, metalness: 0.16,
-  });
+  const pv = pvGlassMaterial(new THREE.MeshPhysicalMaterial({
+    color: 0x17242e,
+    roughness: 0.14,
+    metalness: 0.05,
+    clearcoat: 0.72,
+    clearcoatRoughness: 0.10,
+    envMapIntensity: 1.20,
+  }), 'agrivoltaic');
   const edge = new THREE.MeshStandardMaterial({
-    color: 0x91a4ab, roughness: 0.42, metalness: 0.58,
+    color: 0x665747, roughness: 0.52, metalness: 0.34,
+  });
+  const topEdge = new THREE.MeshStandardMaterial({
+    color: 0x91a4ab, roughness: 0.28, metalness: 0.42,
   });
   const postMaterial = new THREE.MeshStandardMaterial({
     color: 0x665747, roughness: 0.62, metalness: 0.28,
@@ -993,6 +1069,8 @@ async function addAgrivoltaics(group, groundAt) {
   pvGroup.add(
     riseInstances(unit(), pv, panelMatrices, 'future:agrivoltaic:panels'),
     riseInstances(unit(), edge, railMatrices, 'future:agrivoltaic:frames'),
+    riseInstances(unit(), topEdge, topEdgeMatrices,
+                  'future:agrivoltaic:top-edges'),
     riseInstances(unit(), postMaterial, postMatrices, 'future:agrivoltaic:posts'),
   );
   group.add(pvGroup);
@@ -1024,6 +1102,9 @@ ${GROW_BODY}`);
 export async function addFuture(scene, renderer, {
   groundAt, unitTree, treeKinds, directGround = false,
 }) {
+  pvSunDirection.value.copy(directGround
+    ? sunFrom(MEASURED_SUN.azimuth, MEASURED_SUN.elevation)
+    : SUN_DIRECTION);
   const group = new THREE.Group();
   group.name = 'future';
 
