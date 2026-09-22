@@ -1,0 +1,102 @@
+[
+  {
+    "id": "gchq",
+    "pillar": "GCHQ",
+    "pos": [
+      0,
+      110,
+      230
+    ],
+    "above": 67,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "cyber-central",
+    "pillar": "Cyber Central",
+    "pos": [
+      -760,
+      209.6,
+      430
+    ],
+    "above": 175,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "campus-courtyards",
+    "pillar": "The courtyards",
+    "pos": [
+      -380,
+      225.7,
+      60
+    ],
+    "above": 190,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "panels-and-glasshouses",
+    "pillar": "Panels and glasshouses",
+    "pos": [
+      -720,
+      240.8,
+      -520
+    ],
+    "above": 210,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "gchq-meadow",
+    "pillar": "The meadow roof",
+    "pos": [
+      20,
+      125,
+      170
+    ],
+    "above": 79,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  }
+]

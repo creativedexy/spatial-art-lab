@@ -14,6 +14,7 @@ repository's — the repository has the models in it.
 
   python3 scripts/test_public_build.py
 """
+import json
 import re
 import argparse
 import http.server
@@ -172,8 +173,12 @@ def main():
     check("the campus keeps its extrusions instead",
           state["blocks"].get("campus") is True,
           ", ".join(f"{k}={v}" for k, v in state["blocks"].items()))
-    check("every place is still on the map", state["markers"] == 5,
-          f"{state['markers']} markers, {state['hotspots']} hotspots")
+    # Counted from places.json rather than written here: phase 13 added three
+    # arrivals, and a number typed into a test is a number that goes stale.
+    want = len(json.loads((ROOT / "experiments" / "002-living-map" / "golden-valley"
+                           / "places.json").read_text())["places"])
+    check("every place is still on the map", state["markers"] == want,
+          f"{state['markers']} markers of {want}, {state['hotspots']} hotspots")
     check("2045 still arrives", wave == 1, f"wave {wave}")
     check(f"first load is under {BUDGET_MB:.0f} MB (a floor — see the comment)",
           bytes_in / 1048576 < BUDGET_MB, f"{bytes_in / 1048576:.2f} MB")

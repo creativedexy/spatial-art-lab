@@ -1,0 +1,907 @@
+Reading prompt from stdin...
+OpenAI Codex v0.153.4
+--------
+workdir: /Users/user/Projects/3D Design
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0c910-7b8a-73d1-9679-7e908af5ab7d
+--------
+user
+Use the built-in image_gen tool. Use case: sketch-to-render of a proposed place, Golden Valley, west Cheltenham, in 2045.
+
+INPUT 1 is the geometry master: a render of our own 3D model from the exact camera. Preserve its camera, horizon, terrain, the positions, footprints and heights of every building block, the streets, the tree belts and orchards, the fields and the existing town, within about 15 px at 1280x720. Do not invent new blocks, move blocks, or add towers. The existing town beyond the site stays an ordinary existing English town (red and buff brick, slate and clay tile roofs) exactly where the plate puts it.
+INPUT 2 is the approved look: a real-looking aerial photograph of GCHQ with a wildflower meadow roof. Match its photographic realism, late-summer afternoon sun, colour, haze and level of detail. It is the standard.
+INPUT 3 (if present) is the scheme's own aerial photomontage of this site: use it only for how the scheme sits in the real landscape, not for its architecture.
+INPUT 4 (if present) is the scheme's IDEA building: take only its idea of a meadow roof running to the ground.
+
+Design direction (excellence and realism, never corporate office park, never illustration). Everything must look built and photographed; every move has a built precedent: homes like Goldsmith Street Norwich (steep-roofed Passivhaus terraces), Marmalade Lane Cambridge (cohousing round shared gardens) and Solarsiedlung Freiburg (whole roofs of PV); campus like Sara Kulturhus Skellefteå and Powerhouse Brattørkaia Trondheim (mass timber and glass, roofs of PV sawn to the sun and meadow); water like Augustenborg Malmö (open stormwater channels and rain gardens reading as silver lines); energy like Next2Sun vertical bifacial PV over grazed pasture and solar carports; trees as native mixes at maturity (veteran oaks, woodland courtyards, avenues, orchards). Seven storeys maximum. No text, labels, logos or watermark. People visible at true scale on streets, paths and roofs; cars where cars park.
+
+Make THREE images from the same plate, same camera, same layout, differing only in how far the design goes:
+ - meadow-a-measured.png: the best of current UK practice, restrained palette, calm.
+ - meadow-a-bold.png: stronger material identity and more of every sustainable move (more PV, more meadow roof, more tree mass, water visible).
+ - meadow-a-adventurous.png: the edge of design excellence that is still buildable and photographable: expressive timber structure, walkable roofs, water and planting as the dominant moves, energy as landscape.
+Save them at 1280x720 (resize the whole frame only, no crop, no warping, no retouching outside image_gen) in experiments/002-living-map/generate/m2/boards/. One generation per variant plus at most one correction pass each if geometry drifts more than about 15 px. Then write experiments/002-living-map/generate/m2/boards/meadow-a-notes.md: the prompts verbatim, passes made, and a short honest inspection per variant (geometry drift you can see, realism, anything that reads as CGI or corporate).
+
+THIS FRAME: GCHQ from 340 m to the south-west.
+What 2045 shows here: GCHQ's ring roof as a textured wildflower meadow with concentric mown paths and people on them; solar canopies (blue-black PV planes on slim posts) over the car parks with the cars visible beneath and between them; tree avenues along the car park edges. Everything else stays as today.
+
+codex
+I’m using the image-generation skill because this is a controlled plate-to-photoreal render task. I’ll inspect its exact workflow first, then generate the three variants from the geometry plate with the two visual references, check geometry/realism, and only use correction passes where needed.
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/user/.codex/skills/.system/imagegen/SKILL.md" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for image generation, editing, and transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for or confirms the CLI/API/model path. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- For transparent images, ask built-in `image_gen` for a transparent background and preserve the generated alpha.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`; ask the user first unless they explicitly requested `gpt-image-1.5`.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including transparent-output requests; fallback CLI only if explicitly requested or confirmed.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, ask built-in `image_gen` for a transparent background and preserve the generated alpha channel.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Ask built-in `image_gen` for actual transparency.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+Style/medium: <photo/illustration/3D/etc>
+Composition/framing: <wide/close/top-down; placement>
+Lighting/mood: <lighting + mood>
+Color palette: <palette notes>
+Materials/textures: <surface details>
+Text (verbatim): "<exact text>"
+Constraints: <must keep/must avoid>
+Avoid: <negative constraints>
+```
+
+Notes:
+- `Asset type` and `Input images` are prompt scaffolding, not dedicated CLI flags.
+- `Scene/backdrop` refers to the visual setting. It is not the same as the fallback CLI `background` parameter, which controls output transparency behavior.
+- Fallback-only execution notes such as `Quality:`, `Input fidelity:`, masks, output format, and output paths belong in the CLI path only. Do not treat them as built-in `image_gen` tool arguments.
+
+Augmentation rules:
+- Keep it short.
+- Add only the details needed to improve the prompt materially.
+- For edits, explicitly list invariants (`change only X; keep Y unchanged`).
+- If any critical detail is missing and blocks success, ask a question; otherwise proceed.
+
+## Examples
+
+### Generation example (hero image)
+```text
+Use case: product-mockup
+Asset type: landing page hero
+Primary request: a minimal hero image of a ceramic coffee mug
+Style/medium: clean product photography
+Composition/framing: wide composition with usable negative space for page copy if needed
+Lighting/mood: soft studio lighting
+Constraints: no logos, no text, no watermark
+```
+
+### Edit example (invariants)
+```text
+Use case: precise-object-edit
+Asset type: product photo background replacement
+Primary request: replace only the background with a warm sunset gradient
+Constraints: change only the background; keep the product and its edges unchanged; no text; no watermark
+```
+
+## Prompting best practices
+- Structure prompt as scene/backdrop -> subject -> details -> constraints.
+- Include intended use (ad, UI mock, infographic) to set the mode and polish level.
+- Use camera/composition language for photorealism.
+- Only use SVG/vector stand-ins when the user explicitly asked for vector output or a non-image placeholder.
+- Quote exact text and specify typography + placement.
+- For tricky words, spell them letter-by-letter and require verbatim rendering.
+- For multi-image inputs, reference images by index and describe how they should be used.
+- For edits, repeat invariants every iteration to reduce drift.
+- Iterate with single-change follow-ups.
+- If the prompt is generic, add only the extra detail that will materially help.
+- If the prompt is already detailed, normalize it instead of expanding it.
+- For CLI fallback only, see `references/cli.md` and `references/image-api.md` for model, `quality`, `input_fidelity`, masks, output format, and output-path guidance.
+- For transparent images, ask built-in `image_gen` for actual transparency and preserve its alpha.
+
+More principles shared by both modes: `references/prompting.md`.
+Copy/paste specs shared by both modes: `references/sample-prompts.md`.
+
+
+codex
+The brief is already specific, so I’m treating Image 1 as the edit target, Image 2 as the realism/look reference, and Image 3 only as site-context reference. The key invariant is that the only visible 2045 changes are the GCHQ roof, car-park canopies, and edge avenues; all other geometry and town fabric must stay locked.
+exec
+/bin/zsh -lc 'find experiments/002-living-map/generate/m2/boards -maxdepth 1 -type f -print 2>/dev/null | sort' in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+experiments/002-living-map/generate/m2/boards/campus-b.log
+experiments/002-living-map/generate/m2/boards/homes-a.log
+experiments/002-living-map/generate/m2/boards/meadow-a.log
+
+codex
+I’m starting the measured version first. Its restraint will make it the geometry-control baseline: modest meadow texture, sparse roof users, regular solar canopies, and young-to-maturing avenue trees, with no change to any building or road geometry.
+codex
+The measured first pass is convincingly photographic, but the model rebuilt too much of the distant landscape and sharpened/reshaped several foreground blocks beyond the ~15 px tolerance. I’m using its one permitted correction pass to pull the composition back to the master plate while retaining the successful material realism.
+codex
+The correction improved the master’s broad composition but still exceeds the strict tolerance in the hills, town fabric, and some block silhouettes; I’ll record that honestly and use the corrected image as the measured deliverable, since its pass budget is exhausted. Next is the bold version, changing intensity—not layout.
+codex
+The bold pass has the right sustainability hierarchy—meadow, PV, tree mass, and visible water—but again substitutes a detailed mountain/field background and changes foreground silhouettes. I’m spending its correction pass solely on geometry recovery, keeping the stronger landscape treatment.
+codex
+The bold correction preserves the bold design language but the generator still cannot hold the plate to 15 px; the distant terrain and ancillary profiles remain substantially re-authored. I’ll document that limitation rather than overstate precision. The adventurous variant now pushes only the permitted elements—roof experience, planting, water, and energy landscape.
+codex
+The adventurous pass is strong as a believable regenerative landscape, but it also adds too much water and timber treatment beyond the plate and shifts geometry. Its correction pass will reduce water to narrow existing margins, restore all block profiles, and retain only the permitted expressive material cues.
+codex
+All three final variants are selected after one correction pass each. I’m now doing only the requested whole-frame resize to 1280×720, placing them in the boards folder, then I’ll verify dimensions and write the verbatim prompt/pass/inspection record. No pixel retouching or cropping will be applied.
+exec
+/bin/zsh -lc "mkdir -p 'experiments/002-living-map/generate/m2/boards'
+sips -z 720 1280 '/Users/user/.codex/generated_images/01a0c910-7b8a-73d1-9679-7e908af5ab7d/exec-39b75349-1e2f-441d-aa37-48e1f3f1c827.png' --out 'experiments/002-living-map/generate/m2/boards/meadow-a-measured.png'
+sips -z 720 1280 '/Users/user/.codex/generated_images/01a0c910-7b8a-73d1-9679-7e908af5ab7d/exec-c55f75cd-a2ee-4fd2-9a34-02dd06782867.png' --out 'experiments/002-living-map/generate/m2/boards/meadow-a-bold.png'
+sips -z 720 1280 '/Users/user/.codex/generated_images/01a0c910-7b8a-73d1-9679-7e908af5ab7d/exec-a2ee7fab-c30e-4c7f-9097-0f4e6c720ff1.png' --out 'experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png'
+sips -g pixelWidth -g pixelHeight 'experiments/002-living-map/generate/m2/boards/meadow-a-measured.png' 'experiments/002-living-map/generate/m2/boards/meadow-a-bold.png' 'experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png'" in /Users/user/Projects/3D Design
+ succeeded in 381ms:
+/Users/user/.codex/generated_images/01a0c910-7b8a-73d1-9679-7e908af5ab7d/exec-39b75349-1e2f-441d-aa37-48e1f3f1c827.png
+  /Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/meadow-a-measured.png
+/Users/user/.codex/generated_images/01a0c910-7b8a-73d1-9679-7e908af5ab7d/exec-c55f75cd-a2ee-4fd2-9a34-02dd06782867.png
+  /Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/meadow-a-bold.png
+/Users/user/.codex/generated_images/01a0c910-7b8a-73d1-9679-7e908af5ab7d/exec-a2ee7fab-c30e-4c7f-9097-0f4e6c720ff1.png
+  /Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/meadow-a-measured.png
+  pixelWidth: 1280
+  pixelHeight: 720
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/meadow-a-bold.png
+  pixelWidth: 1280
+  pixelHeight: 720
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png
+  pixelWidth: 1280
+  pixelHeight: 720
+
+apply patch
+patch: completed
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+diff --git a/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..2d6a6c9a777c52ed60618e867d17e48f1ef1f7a4
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+@@ -0,0 +1,130 @@
++# Meadow A — image-generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was the geometry master/edit target, Image 2 the approved photographic look, and Image 3 context-only. Each variant received one initial generation and one geometry-correction pass. The selected correction-pass outputs were resized as a whole frame to 1280×720 with no crop or retouching.
++
++## Measured
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, measured variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the measured version: the best of current UK practice, restrained, calm, and already built.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, individual building positions, footprints, rooflines and heights, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the existing GCHQ ring roof as a natural, textured late-summer wildflower meadow with muted grasses and small yellow, white and purple flowers; retain the roof's exact annular footprint, exact outer and inner edges, and existing concentric path geometry. Make the concentric mown paths physically believable and place only a few tiny people walking on them at true aerial scale. The ring facade remains the same height and footprint, now believable glass and warm restrained masonry/metal detailing. Keep the open central courtyard exactly the same size and position, with mature but plausible planting. (2) Over the car parks already shown in Image 1, turn the existing black canopy planes into orderly blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; show ordinary parked cars visibly beneath and between them. Do not extend canopies onto roads, buildings or landscape. (3) Add restrained native deciduous tree avenues only along existing car-park edges, aligned with the plate, without obscuring the road layout.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; no glossy masterplan look.
++Lighting/mood: calm warm late-summer afternoon, sun direction and long shadows consistent across the whole frame, pale blue slightly hazy sky.
++Color palette: restrained greens, straw meadow gold, muted brick, grey slate, clay tile, blue-black PV.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People visible only at true scale on existing paths and roof paths; cars only where cars park. No new blocks, no towers, no changed roads, no new paths beyond the existing concentric roof paths, no architectural redesign of surrounding buildings.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the measured 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform much more literally to Image 1 while retaining Image 2's successful photographic materials, meadow roof, solar canopies, cars, tiny people and late-summer realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first photoreal measured pass to correct; Image 3 remains the approved photographic look reference; Image 4 remains context-only and must not replace the plate landscape.
++Correction target: Reconstruct the image on Image 1's exact camera and silhouettes. Match Image 1's horizon line and broad smooth hill silhouette, town density, woodland edge, road and car-park curves, GCHQ ring outer edge and central opening, and every foreground ancillary building outline within about 15 pixels. In particular restore the exact low faceted roof shapes and footprints of the three foreground buildings, restore the exact pale rectangular service building behind the ring, preserve the plate's ring size and placement, and keep the car-park canopy rows on the plate's exact black-plane locations. Do not import the detailed mountain skyline or altered foreground block shapes from Image 2.
++Keep only these measured 2045 changes: restrained textured wildflower meadow across the exact annular ring roof; existing concentric mown roof paths with a few tiny true-scale people; blue-black PV canopies on slim posts exactly over the plate's existing car-park canopy planes with cars visible beneath and between; restrained native deciduous avenues along existing car-park edges. Everything else remains as Image 1, photorealised rather than redesigned.
++Photographic standard: Retain Image 2 and Image 3's convincing high-end aerial-photo finish, warm late-summer afternoon light, atmospheric haze, realistic English town materials, natural vegetation, believable glass, masonry, cars and people. Keep the existing town ordinary red/buff brick with slate and clay tile pitched roofs. Natural imperfection, calm restrained palette.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, canopy rows or altered heights. Do not enlarge or move the courtyard opening. Do not turn ancillary blocks into new architecture. Seven storeys maximum but all heights remain the plate heights.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, fantasy architecture, extra rings, distorted courtyard, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the correction recovers the plate's broad ring placement, courtyard relationship, service block, car-park arcs and three foreground masses better than the first pass, but the requested ~15 px tolerance is not met. The distant hill profile, town grain, tree belt, ring outline and several ancillary roof silhouettes are visibly re-authored; the foreground road/canopy pattern also differs locally.
++- Realism: strong aerial-photo light, material detail, roof planting, cars and solar canopy legibility. The restraint is credible for current UK practice.
++- CGI/corporate read: substantially reduced; the scene is still unusually clean and evenly maintained, and repeated canopy/house/tree rhythms occasionally betray generation.
++
++## Bold
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, bold variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the bold version: stronger material identity and visibly more of every sustainable move, while remaining completely buildable and preserving the plate layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the exact GCHQ annular roof as a richly textured late-summer wildflower meadow, more abundant and biodiverse than the measured version, with legible grasses and drifts of small yellow, white and purple flowers; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths believable and walkable with a modest number of tiny people at true aerial scale. Keep the ring's exact height and footprint; give its facade a robust identity of warm brick, dark metal and clear high-performance glazing without changing its massing. Keep the central courtyard opening exactly fixed, with denser native planting but no geometry change. (2) Over the car parks already shown in Image 1, turn the existing black planes into high-coverage blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; retain ordinary cars visibly beneath and between them. Do not create any additional canopy rows. (3) Strengthen native deciduous tree avenues only along existing car-park edges, with more continuous tree mass but roads and parking geometry still legible. (4) Make existing drainage margins and swales read subtly as a few narrow silver-blue rain-garden lines beside existing car-park edges only; do not add or reroute roads, paths, ponds or earthworks.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; emphatic sustainability but never a glossy masterplan.
++Lighting/mood: warm late-summer afternoon, sun direction and shadows consistent across the entire frame, pale blue slightly hazy sky.
++Color palette: deeper native greens, meadow straw and flower colour, warm brick, charcoal metal, grey slate, clay tile, blue-black PV, restrained silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows or architecture outside the three permitted interventions.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the bold 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform literally to Image 1 while retaining Image 2's successful bold wildflower meadow, strong PV presence, native tree mass, narrow visible rain-garden lines, cars, tiny people and convincing photo realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first bold photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the GCHQ ring outer and inner outlines, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low faceted foreground block footprints and roof shapes, the exact pale rectangular service building behind the ring, the exact ring size and position, and the exact canopy rows from Image 1. Reject Image 2's imported mountain detail, altered building profiles, extra drainage alignments and changed car-park pattern.
++Keep only these bold 2045 changes: richer biodiverse late-summer wildflower planting across the exact annular roof; the plate's exact concentric mown paths with modest tiny true-scale people; warm brick, dark metal and believable glazing on the unchanged ring facade; blue-black PV canopies on slim posts exactly occupying the plate's existing black canopy planes with cars visible below; stronger but aligned native tree avenues along existing car-park edges; only a few narrow silver-blue rain-garden lines within existing landscape margins, never changing geometry.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photo finish, warm late-summer afternoon light, atmospheric haze, real English town materials, natural vegetation and believable scale. The background town stays ordinary red/buff brick with slate and clay tile roofs in Image 1's locations.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, ponds, canopy rows or altered heights. No moved or enlarged courtyard opening. No redesign of ancillary buildings. Seven storeys maximum and all heights remain those in Image 1.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the broad camera and spatial hierarchy resemble the master, but the ~15 px tolerance is not met. The generated mountain ridge, fields and town grain depart substantially; the ring, courtyard opening, ancillary blocks, parking rows and local road edges also show visible drift. The correction did not materially solve the plate-registration problem.
++- Realism: excellent late-summer aerial finish. The denser flower roof, PV field, avenue planting, cars and faint drainage lines read as built and photographable.
++- CGI/corporate read: natural texture and weathering reduce the corporate-office-park feel. Repetition in roofs, PV rows and tree crowns, plus the highly composed cleanliness, can still read as an architectural visualisation.
++
++## Adventurous
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, adventurous variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the adventurous version: the edge of design excellence that is still buildable and photographable, with expressive timber detail, walkable roof landscape, water and planting dominant, and energy infrastructure reading as landscape—without changing any massing or layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Make the exact annular GCHQ roof an immersive, deeply textured wildflower meadow landscape with mature grasses, pollinator drifts and seasonally varied yellow, white and purple flowering; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths clearly walkable, with small rest points integrated into the planting and a lively but true-scale scattering of tiny people. Keep ring height and footprint unchanged. Express the existing facade with believable exposed mass-timber mullions and soffit accents, warm brick and high-performance glass, with no added volumes, fins, bridges or towers. Keep the courtyard opening exactly fixed; make its planting layered and woodland-like while preserving its footprint. (2) Turn only the existing car-park black planes into an energetic landscape of blue-black PV canopies on elegant slim timber/steel posts, following every plate position, extent, angle and row spacing exactly; retain cars visible beneath and between. Do not add canopy rows. (3) Make mature native tree avenues and woodland-edge planting visually dominant only along existing car-park edges, without hiding road geometry. (4) Make open stormwater treatment unmistakable but precise: narrow linked silver-blue channels and rain gardens within existing planted car-park margins, reflecting the sky, never creating new roads, paths, ponds or landform. (5) Let planting, shade, water and solar energy form one coherent public landscape, visibly maintained and genuinely buildable.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable timber, glass, brick, vegetation, cars, water and tiny people. Existing town beyond the site must remain an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Rich and ambitious but naturally weathered, used and imperfect—never a render.
++Lighting/mood: warm late-summer afternoon, consistent sun direction and long shadows across the whole frame, pale blue slightly hazy sky, small realistic water glints.
++Color palette: layered native greens, straw and tawny meadow, controlled flower colour, warm timber and brick, charcoal metal, grey slate, clay tile, blue-black PV, silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows, bridges, pavilions or altered architecture outside the permitted material expression.
++Avoid: corporate office park, speculative masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversaturated green, giant people, excessive furniture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the adventurous 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry, built fabric and framing conform literally to Image 1 while retaining an adventurous but buildable hierarchy of walkable meadow roof, expressive timber detail on the unchanged ring facade, mature native planting, exact-location PV canopies, and narrow stormwater channels.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first adventurous photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the ring outer edge and courtyard opening, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low grey faceted foreground block footprints, roof shapes, heights and plain restrained facades; remove Image 2's timber recladding and added public paths from those ancillary blocks. Restore the exact pale rectangular service building behind the ring. Restore the exact ring size, placement and opening. Remove all ponds and broad streams invented in Image 2; water may appear only as a few narrow silver-blue linear rain gardens inside existing planted car-park margins. Restore canopy rows to only Image 1's black-plane positions.
++Keep only these adventurous 2045 changes: immersive biodiverse late-summer wildflower meadow on the exact annular roof; the plate's exact concentric walkable paths with tiny true-scale people and very small integrated rest points; subtle exposed mass-timber mullion and soffit expression only on the unchanged ring facade, with warm brick and glass; layered woodland planting in the fixed courtyard; blue-black PV canopies on slim posts exactly matching existing black canopy planes with cars visible beneath; mature native avenues along existing parking edges; narrow reflective rain-garden channels confined to existing margins.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photograph finish, warm late-summer afternoon light, atmospheric haze, realistic materials, vegetation, cars, water and human scale. The existing town remains ordinary English red/buff brick with slate and clay tile roofs in Image 1's exact locations. Ambitious but weathered, maintained and real.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, pedestrian paths, ponds, bridges, pavilions, canopy rows or altered heights. No altered ancillary architecture. Seven storeys maximum and every building retains its plate height.
++Avoid: corporate office park, glossy masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversized water bodies, oversaturated green, giant people, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: this correction most clearly returns the foreground mass hierarchy and strips out the first pass's excessive water and ancillary timber redesign, but it still misses the ~15 px requirement. The ring/opening geometry, town pattern, hill silhouette, roads, parking and individual building profiles visibly differ from the master.
++- Realism: the final has the strongest photographic roof meadow and a convincing balance of timber/glass detail, mature trees, roof users, parked cars and blue-black PV. Water is restrained to small glimpses rather than broad invented ponds.
++- CGI/corporate read: generally believable at presentation scale, though the uniformly picturesque light, perfect planting condition and repeated canopy/tree rhythms retain an architectural-visualisation quality. It avoids a generic office-park character better than the other two.
++
++## Overall geometry caveat
++
++The built-in generative edit produced credible photoreal architectural images but did not behave as a pixel-registered renderer. Despite explicit geometry locks and one correction pass per variant, none of the three finals holds all master-plate elements within about 15 px. They should be treated as visual-design studies, not accurate photomontage overlays.
+
+diff --git a/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..2d6a6c9a777c52ed60618e867d17e48f1ef1f7a4
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+@@ -0,0 +1,130 @@
++# Meadow A — image-generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was the geometry master/edit target, Image 2 the approved photographic look, and Image 3 context-only. Each variant received one initial generation and one geometry-correction pass. The selected correction-pass outputs were resized as a whole frame to 1280×720 with no crop or retouching.
++
++## Measured
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, measured variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the measured version: the best of current UK practice, restrained, calm, and already built.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, individual building positions, footprints, rooflines and heights, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the existing GCHQ ring roof as a natural, textured late-summer wildflower meadow with muted grasses and small yellow, white and purple flowers; retain the roof's exact annular footprint, exact outer and inner edges, and existing concentric path geometry. Make the concentric mown paths physically believable and place only a few tiny people walking on them at true aerial scale. The ring facade remains the same height and footprint, now believable glass and warm restrained masonry/metal detailing. Keep the open central courtyard exactly the same size and position, with mature but plausible planting. (2) Over the car parks already shown in Image 1, turn the existing black canopy planes into orderly blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; show ordinary parked cars visibly beneath and between them. Do not extend canopies onto roads, buildings or landscape. (3) Add restrained native deciduous tree avenues only along existing car-park edges, aligned with the plate, without obscuring the road layout.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; no glossy masterplan look.
++Lighting/mood: calm warm late-summer afternoon, sun direction and long shadows consistent across the whole frame, pale blue slightly hazy sky.
++Color palette: restrained greens, straw meadow gold, muted brick, grey slate, clay tile, blue-black PV.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People visible only at true scale on existing paths and roof paths; cars only where cars park. No new blocks, no towers, no changed roads, no new paths beyond the existing concentric roof paths, no architectural redesign of surrounding buildings.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the measured 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform much more literally to Image 1 while retaining Image 2's successful photographic materials, meadow roof, solar canopies, cars, tiny people and late-summer realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first photoreal measured pass to correct; Image 3 remains the approved photographic look reference; Image 4 remains context-only and must not replace the plate landscape.
++Correction target: Reconstruct the image on Image 1's exact camera and silhouettes. Match Image 1's horizon line and broad smooth hill silhouette, town density, woodland edge, road and car-park curves, GCHQ ring outer edge and central opening, and every foreground ancillary building outline within about 15 pixels. In particular restore the exact low faceted roof shapes and footprints of the three foreground buildings, restore the exact pale rectangular service building behind the ring, preserve the plate's ring size and placement, and keep the car-park canopy rows on the plate's exact black-plane locations. Do not import the detailed mountain skyline or altered foreground block shapes from Image 2.
++Keep only these measured 2045 changes: restrained textured wildflower meadow across the exact annular ring roof; existing concentric mown roof paths with a few tiny true-scale people; blue-black PV canopies on slim posts exactly over the plate's existing car-park canopy planes with cars visible beneath and between; restrained native deciduous avenues along existing car-park edges. Everything else remains as Image 1, photorealised rather than redesigned.
++Photographic standard: Retain Image 2 and Image 3's convincing high-end aerial-photo finish, warm late-summer afternoon light, atmospheric haze, realistic English town materials, natural vegetation, believable glass, masonry, cars and people. Keep the existing town ordinary red/buff brick with slate and clay tile pitched roofs. Natural imperfection, calm restrained palette.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, canopy rows or altered heights. Do not enlarge or move the courtyard opening. Do not turn ancillary blocks into new architecture. Seven storeys maximum but all heights remain the plate heights.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, fantasy architecture, extra rings, distorted courtyard, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the correction recovers the plate's broad ring placement, courtyard relationship, service block, car-park arcs and three foreground masses better than the first pass, but the requested ~15 px tolerance is not met. The distant hill profile, town grain, tree belt, ring outline and several ancillary roof silhouettes are visibly re-authored; the foreground road/canopy pattern also differs locally.
++- Realism: strong aerial-photo light, material detail, roof planting, cars and solar canopy legibility. The restraint is credible for current UK practice.
++- CGI/corporate read: substantially reduced; the scene is still unusually clean and evenly maintained, and repeated canopy/house/tree rhythms occasionally betray generation.
++
++## Bold
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, bold variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the bold version: stronger material identity and visibly more of every sustainable move, while remaining completely buildable and preserving the plate layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the exact GCHQ annular roof as a richly textured late-summer wildflower meadow, more abundant and biodiverse than the measured version, with legible grasses and drifts of small yellow, white and purple flowers; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths believable and walkable with a modest number of tiny people at true aerial scale. Keep the ring's exact height and footprint; give its facade a robust identity of warm brick, dark metal and clear high-performance glazing without changing its massing. Keep the central courtyard opening exactly fixed, with denser native planting but no geometry change. (2) Over the car parks already shown in Image 1, turn the existing black planes into high-coverage blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; retain ordinary cars visibly beneath and between them. Do not create any additional canopy rows. (3) Strengthen native deciduous tree avenues only along existing car-park edges, with more continuous tree mass but roads and parking geometry still legible. (4) Make existing drainage margins and swales read subtly as a few narrow silver-blue rain-garden lines beside existing car-park edges only; do not add or reroute roads, paths, ponds or earthworks.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; emphatic sustainability but never a glossy masterplan.
++Lighting/mood: warm late-summer afternoon, sun direction and shadows consistent across the entire frame, pale blue slightly hazy sky.
++Color palette: deeper native greens, meadow straw and flower colour, warm brick, charcoal metal, grey slate, clay tile, blue-black PV, restrained silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows or architecture outside the three permitted interventions.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the bold 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform literally to Image 1 while retaining Image 2's successful bold wildflower meadow, strong PV presence, native tree mass, narrow visible rain-garden lines, cars, tiny people and convincing photo realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first bold photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the GCHQ ring outer and inner outlines, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low faceted foreground block footprints and roof shapes, the exact pale rectangular service building behind the ring, the exact ring size and position, and the exact canopy rows from Image 1. Reject Image 2's imported mountain detail, altered building profiles, extra drainage alignments and changed car-park pattern.
++Keep only these bold 2045 changes: richer biodiverse late-summer wildflower planting across the exact annular roof; the plate's exact concentric mown paths with modest tiny true-scale people; warm brick, dark metal and believable glazing on the unchanged ring facade; blue-black PV canopies on slim posts exactly occupying the plate's existing black canopy planes with cars visible below; stronger but aligned native tree avenues along existing car-park edges; only a few narrow silver-blue rain-garden lines within existing landscape margins, never changing geometry.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photo finish, warm late-summer afternoon light, atmospheric haze, real English town materials, natural vegetation and believable scale. The background town stays ordinary red/buff brick with slate and clay tile roofs in Image 1's locations.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, ponds, canopy rows or altered heights. No moved or enlarged courtyard opening. No redesign of ancillary buildings. Seven storeys maximum and all heights remain those in Image 1.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the broad camera and spatial hierarchy resemble the master, but the ~15 px tolerance is not met. The generated mountain ridge, fields and town grain depart substantially; the ring, courtyard opening, ancillary blocks, parking rows and local road edges also show visible drift. The correction did not materially solve the plate-registration problem.
++- Realism: excellent late-summer aerial finish. The denser flower roof, PV field, avenue planting, cars and faint drainage lines read as built and photographable.
++- CGI/corporate read: natural texture and weathering reduce the corporate-office-park feel. Repetition in roofs, PV rows and tree crowns, plus the highly composed cleanliness, can still read as an architectural visualisation.
++
++## Adventurous
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, adventurous variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the adventurous version: the edge of design excellence that is still buildable and photographable, with expressive timber detail, walkable roof landscape, water and planting dominant, and energy infrastructure reading as landscape—without changing any massing or layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Make the exact annular GCHQ roof an immersive, deeply textured wildflower meadow landscape with mature grasses, pollinator drifts and seasonally varied yellow, white and purple flowering; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths clearly walkable, with small rest points integrated into the planting and a lively but true-scale scattering of tiny people. Keep ring height and footprint unchanged. Express the existing facade with believable exposed mass-timber mullions and soffit accents, warm brick and high-performance glass, with no added volumes, fins, bridges or towers. Keep the courtyard opening exactly fixed; make its planting layered and woodland-like while preserving its footprint. (2) Turn only the existing car-park black planes into an energetic landscape of blue-black PV canopies on elegant slim timber/steel posts, following every plate position, extent, angle and row spacing exactly; retain cars visible beneath and between. Do not add canopy rows. (3) Make mature native tree avenues and woodland-edge planting visually dominant only along existing car-park edges, without hiding road geometry. (4) Make open stormwater treatment unmistakable but precise: narrow linked silver-blue channels and rain gardens within existing planted car-park margins, reflecting the sky, never creating new roads, paths, ponds or landform. (5) Let planting, shade, water and solar energy form one coherent public landscape, visibly maintained and genuinely buildable.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable timber, glass, brick, vegetation, cars, water and tiny people. Existing town beyond the site must remain an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Rich and ambitious but naturally weathered, used and imperfect—never a render.
++Lighting/mood: warm late-summer afternoon, consistent sun direction and long shadows across the whole frame, pale blue slightly hazy sky, small realistic water glints.
++Color palette: layered native greens, straw and tawny meadow, controlled flower colour, warm timber and brick, charcoal metal, grey slate, clay tile, blue-black PV, silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows, bridges, pavilions or altered architecture outside the permitted material expression.
++Avoid: corporate office park, speculative masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversaturated green, giant people, excessive furniture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the adventurous 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry, built fabric and framing conform literally to Image 1 while retaining an adventurous but buildable hierarchy of walkable meadow roof, expressive timber detail on the unchanged ring facade, mature native planting, exact-location PV canopies, and narrow stormwater channels.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first adventurous photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the ring outer edge and courtyard opening, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low grey faceted foreground block footprints, roof shapes, heights and plain restrained facades; remove Image 2's timber recladding and added public paths from those ancillary blocks. Restore the exact pale rectangular service building behind the ring. Restore the exact ring size, placement and opening. Remove all ponds and broad streams invented in Image 2; water may appear only as a few narrow silver-blue linear rain gardens inside existing planted car-park margins. Restore canopy rows to only Image 1's black-plane positions.
++Keep only these adventurous 2045 changes: immersive biodiverse late-summer wildflower meadow on the exact annular roof; the plate's exact concentric walkable paths with tiny true-scale people and very small integrated rest points; subtle exposed mass-timber mullion and soffit expression only on the unchanged ring facade, with warm brick and glass; layered woodland planting in the fixed courtyard; blue-black PV canopies on slim posts exactly matching existing black canopy planes with cars visible beneath; mature native avenues along existing parking edges; narrow reflective rain-garden channels confined to existing margins.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photograph finish, warm late-summer afternoon light, atmospheric haze, realistic materials, vegetation, cars, water and human scale. The existing town remains ordinary English red/buff brick with slate and clay tile roofs in Image 1's exact locations. Ambitious but weathered, maintained and real.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, pedestrian paths, ponds, bridges, pavilions, canopy rows or altered heights. No altered ancillary architecture. Seven storeys maximum and every building retains its plate height.
++Avoid: corporate office park, glossy masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversized water bodies, oversaturated green, giant people, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: this correction most clearly returns the foreground mass hierarchy and strips out the first pass's excessive water and ancillary timber redesign, but it still misses the ~15 px requirement. The ring/opening geometry, town pattern, hill silhouette, roads, parking and individual building profiles visibly differ from the master.
++- Realism: the final has the strongest photographic roof meadow and a convincing balance of timber/glass detail, mature trees, roof users, parked cars and blue-black PV. Water is restrained to small glimpses rather than broad invented ponds.
++- CGI/corporate read: generally believable at presentation scale, though the uniformly picturesque light, perfect planting condition and repeated canopy/tree rhythms retain an architectural-visualisation quality. It avoids a generic office-park character better than the other two.
++
++## Overall geometry caveat
++
++The built-in generative edit produced credible photoreal architectural images but did not behave as a pixel-registered renderer. Despite explicit geometry locks and one correction pass per variant, none of the three finals holds all master-plate elements within about 15 px. They should be treated as visual-design studies, not accurate photomontage overlays.
+
+codex
+The image-generation skill’s output was visually strong but not pixel-registered, so the notes explicitly flag that none of the variants satisfies the 15 px geometry target even after correction. I’m doing a final artifact check now: file presence, dimensions, image readability, and notes completeness.
+exec
+/bin/zsh -lc "wc -l 'experiments/002-living-map/generate/m2/boards/meadow-a-notes.md'
+ls -lh 'experiments/002-living-map/generate/m2/boards/meadow-a-measured.png' 'experiments/002-living-map/generate/m2/boards/meadow-a-bold.png' 'experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png' 'experiments/002-living-map/generate/m2/boards/meadow-a-notes.md'
+git status --short -- 'experiments/002-living-map/generate/m2/boards'" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+     130 experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+-rw-r--r--@ 1 user  staff   1.9M Sep 22 13:32 experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png
+-rw-r--r--@ 1 user  staff   1.9M Sep 22 13:32 experiments/002-living-map/generate/m2/boards/meadow-a-bold.png
+-rw-r--r--@ 1 user  staff   1.9M Sep 22 13:32 experiments/002-living-map/generate/m2/boards/meadow-a-measured.png
+-rw-r--r--@ 1 user  staff    25K Sep 22 13:35 experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+?? experiments/002-living-map/generate/m2/boards/
+
+diff --git a/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..2d6a6c9a777c52ed60618e867d17e48f1ef1f7a4
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+@@ -0,0 +1,130 @@
++# Meadow A — image-generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was the geometry master/edit target, Image 2 the approved photographic look, and Image 3 context-only. Each variant received one initial generation and one geometry-correction pass. The selected correction-pass outputs were resized as a whole frame to 1280×720 with no crop or retouching.
++
++## Measured
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, measured variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the measured version: the best of current UK practice, restrained, calm, and already built.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, individual building positions, footprints, rooflines and heights, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the existing GCHQ ring roof as a natural, textured late-summer wildflower meadow with muted grasses and small yellow, white and purple flowers; retain the roof's exact annular footprint, exact outer and inner edges, and existing concentric path geometry. Make the concentric mown paths physically believable and place only a few tiny people walking on them at true aerial scale. The ring facade remains the same height and footprint, now believable glass and warm restrained masonry/metal detailing. Keep the open central courtyard exactly the same size and position, with mature but plausible planting. (2) Over the car parks already shown in Image 1, turn the existing black canopy planes into orderly blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; show ordinary parked cars visibly beneath and between them. Do not extend canopies onto roads, buildings or landscape. (3) Add restrained native deciduous tree avenues only along existing car-park edges, aligned with the plate, without obscuring the road layout.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; no glossy masterplan look.
++Lighting/mood: calm warm late-summer afternoon, sun direction and long shadows consistent across the whole frame, pale blue slightly hazy sky.
++Color palette: restrained greens, straw meadow gold, muted brick, grey slate, clay tile, blue-black PV.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People visible only at true scale on existing paths and roof paths; cars only where cars park. No new blocks, no towers, no changed roads, no new paths beyond the existing concentric roof paths, no architectural redesign of surrounding buildings.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the measured 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform much more literally to Image 1 while retaining Image 2's successful photographic materials, meadow roof, solar canopies, cars, tiny people and late-summer realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first photoreal measured pass to correct; Image 3 remains the approved photographic look reference; Image 4 remains context-only and must not replace the plate landscape.
++Correction target: Reconstruct the image on Image 1's exact camera and silhouettes. Match Image 1's horizon line and broad smooth hill silhouette, town density, woodland edge, road and car-park curves, GCHQ ring outer edge and central opening, and every foreground ancillary building outline within about 15 pixels. In particular restore the exact low faceted roof shapes and footprints of the three foreground buildings, restore the exact pale rectangular service building behind the ring, preserve the plate's ring size and placement, and keep the car-park canopy rows on the plate's exact black-plane locations. Do not import the detailed mountain skyline or altered foreground block shapes from Image 2.
++Keep only these measured 2045 changes: restrained textured wildflower meadow across the exact annular ring roof; existing concentric mown roof paths with a few tiny true-scale people; blue-black PV canopies on slim posts exactly over the plate's existing car-park canopy planes with cars visible beneath and between; restrained native deciduous avenues along existing car-park edges. Everything else remains as Image 1, photorealised rather than redesigned.
++Photographic standard: Retain Image 2 and Image 3's convincing high-end aerial-photo finish, warm late-summer afternoon light, atmospheric haze, realistic English town materials, natural vegetation, believable glass, masonry, cars and people. Keep the existing town ordinary red/buff brick with slate and clay tile pitched roofs. Natural imperfection, calm restrained palette.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, canopy rows or altered heights. Do not enlarge or move the courtyard opening. Do not turn ancillary blocks into new architecture. Seven storeys maximum but all heights remain the plate heights.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, fantasy architecture, extra rings, distorted courtyard, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the correction recovers the plate's broad ring placement, courtyard relationship, service block, car-park arcs and three foreground masses better than the first pass, but the requested ~15 px tolerance is not met. The distant hill profile, town grain, tree belt, ring outline and several ancillary roof silhouettes are visibly re-authored; the foreground road/canopy pattern also differs locally.
++- Realism: strong aerial-photo light, material detail, roof planting, cars and solar canopy legibility. The restraint is credible for current UK practice.
++- CGI/corporate read: substantially reduced; the scene is still unusually clean and evenly maintained, and repeated canopy/house/tree rhythms occasionally betray generation.
++
++## Bold
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, bold variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the bold version: stronger material identity and visibly more of every sustainable move, while remaining completely buildable and preserving the plate layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the exact GCHQ annular roof as a richly textured late-summer wildflower meadow, more abundant and biodiverse than the measured version, with legible grasses and drifts of small yellow, white and purple flowers; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths believable and walkable with a modest number of tiny people at true aerial scale. Keep the ring's exact height and footprint; give its facade a robust identity of warm brick, dark metal and clear high-performance glazing without changing its massing. Keep the central courtyard opening exactly fixed, with denser native planting but no geometry change. (2) Over the car parks already shown in Image 1, turn the existing black planes into high-coverage blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; retain ordinary cars visibly beneath and between them. Do not create any additional canopy rows. (3) Strengthen native deciduous tree avenues only along existing car-park edges, with more continuous tree mass but roads and parking geometry still legible. (4) Make existing drainage margins and swales read subtly as a few narrow silver-blue rain-garden lines beside existing car-park edges only; do not add or reroute roads, paths, ponds or earthworks.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; emphatic sustainability but never a glossy masterplan.
++Lighting/mood: warm late-summer afternoon, sun direction and shadows consistent across the entire frame, pale blue slightly hazy sky.
++Color palette: deeper native greens, meadow straw and flower colour, warm brick, charcoal metal, grey slate, clay tile, blue-black PV, restrained silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows or architecture outside the three permitted interventions.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the bold 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform literally to Image 1 while retaining Image 2's successful bold wildflower meadow, strong PV presence, native tree mass, narrow visible rain-garden lines, cars, tiny people and convincing photo realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first bold photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the GCHQ ring outer and inner outlines, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low faceted foreground block footprints and roof shapes, the exact pale rectangular service building behind the ring, the exact ring size and position, and the exact canopy rows from Image 1. Reject Image 2's imported mountain detail, altered building profiles, extra drainage alignments and changed car-park pattern.
++Keep only these bold 2045 changes: richer biodiverse late-summer wildflower planting across the exact annular roof; the plate's exact concentric mown paths with modest tiny true-scale people; warm brick, dark metal and believable glazing on the unchanged ring facade; blue-black PV canopies on slim posts exactly occupying the plate's existing black canopy planes with cars visible below; stronger but aligned native tree avenues along existing car-park edges; only a few narrow silver-blue rain-garden lines within existing landscape margins, never changing geometry.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photo finish, warm late-summer afternoon light, atmospheric haze, real English town materials, natural vegetation and believable scale. The background town stays ordinary red/buff brick with slate and clay tile roofs in Image 1's locations.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, ponds, canopy rows or altered heights. No moved or enlarged courtyard opening. No redesign of ancillary buildings. Seven storeys maximum and all heights remain those in Image 1.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the broad camera and spatial hierarchy resemble the master, but the ~15 px tolerance is not met. The generated mountain ridge, fields and town grain depart substantially; the ring, courtyard opening, ancillary blocks, parking rows and local road edges also show visible drift. The correction did not materially solve the plate-registration problem.
++- Realism: excellent late-summer aerial finish. The denser flower roof, PV field, avenue planting, cars and faint drainage lines read as built and photographable.
++- CGI/corporate read: natural texture and weathering reduce the corporate-office-park feel. Repetition in roofs, PV rows and tree crowns, plus the highly composed cleanliness, can still read as an architectural visualisation.
++
++## Adventurous
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, adventurous variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the adventurous version: the edge of design excellence that is still buildable and photographable, with expressive timber detail, walkable roof landscape, water and planting dominant, and energy infrastructure reading as landscape—without changing any massing or layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Make the exact annular GCHQ roof an immersive, deeply textured wildflower meadow landscape with mature grasses, pollinator drifts and seasonally varied yellow, white and purple flowering; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths clearly walkable, with small rest points integrated into the planting and a lively but true-scale scattering of tiny people. Keep ring height and footprint unchanged. Express the existing facade with believable exposed mass-timber mullions and soffit accents, warm brick and high-performance glass, with no added volumes, fins, bridges or towers. Keep the courtyard opening exactly fixed; make its planting layered and woodland-like while preserving its footprint. (2) Turn only the existing car-park black planes into an energetic landscape of blue-black PV canopies on elegant slim timber/steel posts, following every plate position, extent, angle and row spacing exactly; retain cars visible beneath and between. Do not add canopy rows. (3) Make mature native tree avenues and woodland-edge planting visually dominant only along existing car-park edges, without hiding road geometry. (4) Make open stormwater treatment unmistakable but precise: narrow linked silver-blue channels and rain gardens within existing planted car-park margins, reflecting the sky, never creating new roads, paths, ponds or landform. (5) Let planting, shade, water and solar energy form one coherent public landscape, visibly maintained and genuinely buildable.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable timber, glass, brick, vegetation, cars, water and tiny people. Existing town beyond the site must remain an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Rich and ambitious but naturally weathered, used and imperfect—never a render.
++Lighting/mood: warm late-summer afternoon, consistent sun direction and long shadows across the whole frame, pale blue slightly hazy sky, small realistic water glints.
++Color palette: layered native greens, straw and tawny meadow, controlled flower colour, warm timber and brick, charcoal metal, grey slate, clay tile, blue-black PV, silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows, bridges, pavilions or altered architecture outside the permitted material expression.
++Avoid: corporate office park, speculative masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversaturated green, giant people, excessive furniture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the adventurous 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry, built fabric and framing conform literally to Image 1 while retaining an adventurous but buildable hierarchy of walkable meadow roof, expressive timber detail on the unchanged ring facade, mature native planting, exact-location PV canopies, and narrow stormwater channels.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first adventurous photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the ring outer edge and courtyard opening, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low grey faceted foreground block footprints, roof shapes, heights and plain restrained facades; remove Image 2's timber recladding and added public paths from those ancillary blocks. Restore the exact pale rectangular service building behind the ring. Restore the exact ring size, placement and opening. Remove all ponds and broad streams invented in Image 2; water may appear only as a few narrow silver-blue linear rain gardens inside existing planted car-park margins. Restore canopy rows to only Image 1's black-plane positions.
++Keep only these adventurous 2045 changes: immersive biodiverse late-summer wildflower meadow on the exact annular roof; the plate's exact concentric walkable paths with tiny true-scale people and very small integrated rest points; subtle exposed mass-timber mullion and soffit expression only on the unchanged ring facade, with warm brick and glass; layered woodland planting in the fixed courtyard; blue-black PV canopies on slim posts exactly matching existing black canopy planes with cars visible beneath; mature native avenues along existing parking edges; narrow reflective rain-garden channels confined to existing margins.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photograph finish, warm late-summer afternoon light, atmospheric haze, realistic materials, vegetation, cars, water and human scale. The existing town remains ordinary English red/buff brick with slate and clay tile roofs in Image 1's exact locations. Ambitious but weathered, maintained and real.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, pedestrian paths, ponds, bridges, pavilions, canopy rows or altered heights. No altered ancillary architecture. Seven storeys maximum and every building retains its plate height.
++Avoid: corporate office park, glossy masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversized water bodies, oversaturated green, giant people, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: this correction most clearly returns the foreground mass hierarchy and strips out the first pass's excessive water and ancillary timber redesign, but it still misses the ~15 px requirement. The ring/opening geometry, town pattern, hill silhouette, roads, parking and individual building profiles visibly differ from the master.
++- Realism: the final has the strongest photographic roof meadow and a convincing balance of timber/glass detail, mature trees, roof users, parked cars and blue-black PV. Water is restrained to small glimpses rather than broad invented ponds.
++- CGI/corporate read: generally believable at presentation scale, though the uniformly picturesque light, perfect planting condition and repeated canopy/tree rhythms retain an architectural-visualisation quality. It avoids a generic office-park character better than the other two.
++
++## Overall geometry caveat
++
++The built-in generative edit produced credible photoreal architectural images but did not behave as a pixel-registered renderer. Despite explicit geometry locks and one correction pass per variant, none of the three finals holds all master-plate elements within about 15 px. They should be treated as visual-design studies, not accurate photomontage overlays.
+
+codex
+Created and verified all requested 1280×720 outputs using built-in `image_gen`:
+
+- [Measured PNG](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-measured.png)
+- [Bold PNG](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-bold.png)
+- [Adventurous PNG](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png)
+- [Prompts and inspection notes](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md)
+
+Each variant used one generation plus one correction pass. The notes honestly record that, despite correction, the generative outputs remain outside the requested ~15 px geometry tolerance—particularly in the distant terrain, town grain, parking layout, and some building silhouettes. They are strong photoreal design studies, but not pixel-registered photomontages.
+diff --git a/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..2d6a6c9a777c52ed60618e867d17e48f1ef1f7a4
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+@@ -0,0 +1,130 @@
++# Meadow A — image-generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was the geometry master/edit target, Image 2 the approved photographic look, and Image 3 context-only. Each variant received one initial generation and one geometry-correction pass. The selected correction-pass outputs were resized as a whole frame to 1280×720 with no crop or retouching.
++
++## Measured
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, measured variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the measured version: the best of current UK practice, restrained, calm, and already built.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, individual building positions, footprints, rooflines and heights, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the existing GCHQ ring roof as a natural, textured late-summer wildflower meadow with muted grasses and small yellow, white and purple flowers; retain the roof's exact annular footprint, exact outer and inner edges, and existing concentric path geometry. Make the concentric mown paths physically believable and place only a few tiny people walking on them at true aerial scale. The ring facade remains the same height and footprint, now believable glass and warm restrained masonry/metal detailing. Keep the open central courtyard exactly the same size and position, with mature but plausible planting. (2) Over the car parks already shown in Image 1, turn the existing black canopy planes into orderly blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; show ordinary parked cars visibly beneath and between them. Do not extend canopies onto roads, buildings or landscape. (3) Add restrained native deciduous tree avenues only along existing car-park edges, aligned with the plate, without obscuring the road layout.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; no glossy masterplan look.
++Lighting/mood: calm warm late-summer afternoon, sun direction and long shadows consistent across the whole frame, pale blue slightly hazy sky.
++Color palette: restrained greens, straw meadow gold, muted brick, grey slate, clay tile, blue-black PV.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People visible only at true scale on existing paths and roof paths; cars only where cars park. No new blocks, no towers, no changed roads, no new paths beyond the existing concentric roof paths, no architectural redesign of surrounding buildings.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the measured 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform much more literally to Image 1 while retaining Image 2's successful photographic materials, meadow roof, solar canopies, cars, tiny people and late-summer realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first photoreal measured pass to correct; Image 3 remains the approved photographic look reference; Image 4 remains context-only and must not replace the plate landscape.
++Correction target: Reconstruct the image on Image 1's exact camera and silhouettes. Match Image 1's horizon line and broad smooth hill silhouette, town density, woodland edge, road and car-park curves, GCHQ ring outer edge and central opening, and every foreground ancillary building outline within about 15 pixels. In particular restore the exact low faceted roof shapes and footprints of the three foreground buildings, restore the exact pale rectangular service building behind the ring, preserve the plate's ring size and placement, and keep the car-park canopy rows on the plate's exact black-plane locations. Do not import the detailed mountain skyline or altered foreground block shapes from Image 2.
++Keep only these measured 2045 changes: restrained textured wildflower meadow across the exact annular ring roof; existing concentric mown roof paths with a few tiny true-scale people; blue-black PV canopies on slim posts exactly over the plate's existing car-park canopy planes with cars visible beneath and between; restrained native deciduous avenues along existing car-park edges. Everything else remains as Image 1, photorealised rather than redesigned.
++Photographic standard: Retain Image 2 and Image 3's convincing high-end aerial-photo finish, warm late-summer afternoon light, atmospheric haze, realistic English town materials, natural vegetation, believable glass, masonry, cars and people. Keep the existing town ordinary red/buff brick with slate and clay tile pitched roofs. Natural imperfection, calm restrained palette.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, canopy rows or altered heights. Do not enlarge or move the courtyard opening. Do not turn ancillary blocks into new architecture. Seven storeys maximum but all heights remain the plate heights.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, fantasy architecture, extra rings, distorted courtyard, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the correction recovers the plate's broad ring placement, courtyard relationship, service block, car-park arcs and three foreground masses better than the first pass, but the requested ~15 px tolerance is not met. The distant hill profile, town grain, tree belt, ring outline and several ancillary roof silhouettes are visibly re-authored; the foreground road/canopy pattern also differs locally.
++- Realism: strong aerial-photo light, material detail, roof planting, cars and solar canopy legibility. The restraint is credible for current UK practice.
++- CGI/corporate read: substantially reduced; the scene is still unusually clean and evenly maintained, and repeated canopy/house/tree rhythms occasionally betray generation.
++
++## Bold
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, bold variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the bold version: stronger material identity and visibly more of every sustainable move, while remaining completely buildable and preserving the plate layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Render the exact GCHQ annular roof as a richly textured late-summer wildflower meadow, more abundant and biodiverse than the measured version, with legible grasses and drifts of small yellow, white and purple flowers; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths believable and walkable with a modest number of tiny people at true aerial scale. Keep the ring's exact height and footprint; give its facade a robust identity of warm brick, dark metal and clear high-performance glazing without changing its massing. Keep the central courtyard opening exactly fixed, with denser native planting but no geometry change. (2) Over the car parks already shown in Image 1, turn the existing black planes into high-coverage blue-black photovoltaic solar canopies on slim posts, using the plate's exact canopy positions, extents, angles and row spacing; retain ordinary cars visibly beneath and between them. Do not create any additional canopy rows. (3) Strengthen native deciduous tree avenues only along existing car-park edges, with more continuous tree mass but roads and parking geometry still legible. (4) Make existing drainage margins and swales read subtly as a few narrow silver-blue rain-garden lines beside existing car-park edges only; do not add or reroute roads, paths, ponds or earthworks.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable glazing, masonry, vegetation, cars and tiny people. Existing town beyond the site must read as an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Natural variation and imperfection; emphatic sustainability but never a glossy masterplan.
++Lighting/mood: warm late-summer afternoon, sun direction and shadows consistent across the entire frame, pale blue slightly hazy sky.
++Color palette: deeper native greens, meadow straw and flower colour, warm brick, charcoal metal, grey slate, clay tile, blue-black PV, restrained silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no building height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows or architecture outside the three permitted interventions.
++Avoid: corporate office park, speculative masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the bold 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry and framing conform literally to Image 1 while retaining Image 2's successful bold wildflower meadow, strong PV presence, native tree mass, narrow visible rain-garden lines, cars, tiny people and convincing photo realism.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first bold photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the GCHQ ring outer and inner outlines, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low faceted foreground block footprints and roof shapes, the exact pale rectangular service building behind the ring, the exact ring size and position, and the exact canopy rows from Image 1. Reject Image 2's imported mountain detail, altered building profiles, extra drainage alignments and changed car-park pattern.
++Keep only these bold 2045 changes: richer biodiverse late-summer wildflower planting across the exact annular roof; the plate's exact concentric mown paths with modest tiny true-scale people; warm brick, dark metal and believable glazing on the unchanged ring facade; blue-black PV canopies on slim posts exactly occupying the plate's existing black canopy planes with cars visible below; stronger but aligned native tree avenues along existing car-park edges; only a few narrow silver-blue rain-garden lines within existing landscape margins, never changing geometry.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photo finish, warm late-summer afternoon light, atmospheric haze, real English town materials, natural vegetation and believable scale. The background town stays ordinary red/buff brick with slate and clay tile roofs in Image 1's locations.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, paths, ponds, canopy rows or altered heights. No moved or enlarged courtyard opening. No redesign of ancillary buildings. Seven storeys maximum and all heights remain those in Image 1.
++Avoid: corporate office park, glossy masterplan, illustration, painterly surfaces, low-poly CGI, oversaturated green, fantasy architecture, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: the broad camera and spatial hierarchy resemble the master, but the ~15 px tolerance is not met. The generated mountain ridge, fields and town grain depart substantially; the ring, courtyard opening, ancillary blocks, parking rows and local road edges also show visible drift. The correction did not materially solve the plate-registration problem.
++- Realism: excellent late-summer aerial finish. The denser flower roof, PV field, avenue planting, cars and faint drainage lines read as built and photographable.
++- CGI/corporate read: natural texture and weathering reduce the corporate-office-park feel. Repetition in roofs, PV rows and tree crowns, plus the highly composed cleanliness, can still read as an architectural visualisation.
++
++## Adventurous
++
++### Initial prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: 2045 architectural aerial photomontage, adventurous variant
++Primary request: Convert Image 1 into a convincing real aerial photograph of GCHQ at Golden Valley, west Cheltenham, viewed from 340 m to the south-west. This is the adventurous version: the edge of design excellence that is still buildable and photographable, with expressive timber detail, walkable roof landscape, water and planting dominant, and energy infrastructure reading as landscape—without changing any massing or layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic realism, late-summer light, colour, haze, material detail, wildflower roof and human-scale reference; Image 3 is only a broad reference for how this site sits in the real west-Cheltenham landscape, never a source of replacement geometry or architecture.
++Geometry lock: Preserve Image 1's exact 1280x720 whole-frame composition, camera, lens, viewpoint, horizon, terrain silhouette, road alignments, car-park extents, tree belts, every building position, footprint, roofline and height, the GCHQ ring outline and courtyard opening, and the existing town, within about 15 pixels. Do not crop, warp, zoom, rotate, reframe, move or invent any structure. The pale rectangular service building behind the ring and all foreground ancillary blocks remain exactly where they are. Keep all distant hills and existing neighbourhoods in their plate locations.
++Change only these 2045 elements: (1) Make the exact annular GCHQ roof an immersive, deeply textured wildflower meadow landscape with mature grasses, pollinator drifts and seasonally varied yellow, white and purple flowering; retain the roof's exact outer and inner edges and all existing concentric path geometry. Make the paths clearly walkable, with small rest points integrated into the planting and a lively but true-scale scattering of tiny people. Keep ring height and footprint unchanged. Express the existing facade with believable exposed mass-timber mullions and soffit accents, warm brick and high-performance glass, with no added volumes, fins, bridges or towers. Keep the courtyard opening exactly fixed; make its planting layered and woodland-like while preserving its footprint. (2) Turn only the existing car-park black planes into an energetic landscape of blue-black PV canopies on elegant slim timber/steel posts, following every plate position, extent, angle and row spacing exactly; retain cars visible beneath and between. Do not add canopy rows. (3) Make mature native tree avenues and woodland-edge planting visually dominant only along existing car-park edges, without hiding road geometry. (4) Make open stormwater treatment unmistakable but precise: narrow linked silver-blue channels and rain gardens within existing planted car-park margins, reflecting the sky, never creating new roads, paths, ponds or landform. (5) Let planting, shade, water and solar energy form one coherent public landscape, visibly maintained and genuinely buildable.
++Photographic standard: Match Image 2's high-end real aerial photography, late-summer afternoon sunlight, soft atmospheric haze, natural aerial depth, crisp foreground detail, believable timber, glass, brick, vegetation, cars, water and tiny people. Existing town beyond the site must remain an ordinary established English town of red and buff brick houses with slate and clay tile pitched roofs, precisely where Image 1 puts it. Rich and ambitious but naturally weathered, used and imperfect—never a render.
++Lighting/mood: warm late-summer afternoon, consistent sun direction and long shadows across the whole frame, pale blue slightly hazy sky, small realistic water glints.
++Color palette: layered native greens, straw and tawny meadow, controlled flower colour, warm timber and brick, charcoal metal, grey slate, clay tile, blue-black PV, silver-blue water.
++Constraints: Everything must look built and photographed. Seven storeys maximum, though no height may change from Image 1. People at true scale only on existing paths and roof paths; cars only where cars park. No new blocks, towers, roads, paths, canopy rows, bridges, pavilions or altered architecture outside the permitted material expression.
++Avoid: corporate office park, speculative masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversaturated green, giant people, excessive furniture, extra rings, distorted courtyard, enlarged roof opening, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: geometry correction pass for the adventurous 2045 architectural aerial photomontage
++Primary request: Correct Image 2 so its geometry, built fabric and framing conform literally to Image 1 while retaining an adventurous but buildable hierarchy of walkable meadow roof, expressive timber detail on the unchanged ring facade, mature native planting, exact-location PV canopies, and narrow stormwater channels.
++Input images: Image 1 is the absolute pixel-layout and geometry master; Image 2 is the first adventurous photoreal pass to correct; Image 3 is the approved photographic finish; Image 4 is context-only and must not replace the plate landscape.
++Correction target: Rebuild on Image 1's exact camera and silhouettes. Match Image 1's smooth horizon and hills, existing-town placement and density, woodland edge, every road and car-park curve, every black canopy-plane location, the ring outer edge and courtyard opening, and every foreground ancillary building outline within about 15 pixels. Restore the exact three low grey faceted foreground block footprints, roof shapes, heights and plain restrained facades; remove Image 2's timber recladding and added public paths from those ancillary blocks. Restore the exact pale rectangular service building behind the ring. Restore the exact ring size, placement and opening. Remove all ponds and broad streams invented in Image 2; water may appear only as a few narrow silver-blue linear rain gardens inside existing planted car-park margins. Restore canopy rows to only Image 1's black-plane positions.
++Keep only these adventurous 2045 changes: immersive biodiverse late-summer wildflower meadow on the exact annular roof; the plate's exact concentric walkable paths with tiny true-scale people and very small integrated rest points; subtle exposed mass-timber mullion and soffit expression only on the unchanged ring facade, with warm brick and glass; layered woodland planting in the fixed courtyard; blue-black PV canopies on slim posts exactly matching existing black canopy planes with cars visible beneath; mature native avenues along existing parking edges; narrow reflective rain-garden channels confined to existing margins.
++Photographic standard: Retain Image 2 and Image 3's high-end real aerial-photograph finish, warm late-summer afternoon light, atmospheric haze, realistic materials, vegetation, cars, water and human scale. The existing town remains ordinary English red/buff brick with slate and clay tile roofs in Image 1's exact locations. Ambitious but weathered, maintained and real.
++Hard invariants: Same full 16:9 frame as Image 1. No crop, zoom, warp, rotation or reframing. No new buildings, towers, roads, pedestrian paths, ponds, bridges, pavilions, canopy rows or altered heights. No altered ancillary architecture. Seven storeys maximum and every building retains its plate height.
++Avoid: corporate office park, glossy masterplan, eco-fantasy, illustration, painterly surfaces, low-poly CGI, oversized water bodies, oversaturated green, giant people, extra rings, invented skyline, text, labels, logos, watermark.
++Output: one full-frame 1280x720 landscape image, same frame as Image 1.
++```
++
++### Passes and inspection
++
++- Passes: initial generation + one geometry correction; correction selected.
++- Geometry: this correction most clearly returns the foreground mass hierarchy and strips out the first pass's excessive water and ancillary timber redesign, but it still misses the ~15 px requirement. The ring/opening geometry, town pattern, hill silhouette, roads, parking and individual building profiles visibly differ from the master.
++- Realism: the final has the strongest photographic roof meadow and a convincing balance of timber/glass detail, mature trees, roof users, parked cars and blue-black PV. Water is restrained to small glimpses rather than broad invented ponds.
++- CGI/corporate read: generally believable at presentation scale, though the uniformly picturesque light, perfect planting condition and repeated canopy/tree rhythms retain an architectural-visualisation quality. It avoids a generic office-park character better than the other two.
++
++## Overall geometry caveat
++
++The built-in generative edit produced credible photoreal architectural images but did not behave as a pixel-registered renderer. Despite explicit geometry locks and one correction pass per variant, none of the three finals holds all master-plate elements within about 15 px. They should be treated as visual-design studies, not accurate photomontage overlays.
+
+tokens used
+62,511
+Created and verified all requested 1280×720 outputs using built-in `image_gen`:
+
+- [Measured PNG](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-measured.png)
+- [Bold PNG](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-bold.png)
+- [Adventurous PNG](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png)
+- [Prompts and inspection notes](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/meadow-a-notes.md)
+
+Each variant used one generation plus one correction pass. The notes honestly record that, despite correction, the generative outputs remain outside the requested ~15 px geometry tolerance—particularly in the distant terrain, town grain, parking layout, and some building silhouettes. They are strong photoreal design studies, but not pixel-registered photomontages.

@@ -61,6 +61,10 @@ SIDECARS = {
     "campus-courtyards": "generate/golden-valley-2045/b-the-campus.json",
     "panels-and-glasshouses": "generate/golden-valley-2045/c-panels-and-glasshouses.json",
     "gchq-meadow": "generate/close-2045/gchq-meadow.json",
+    # Phase 13, the arrivals: the same contract at 1.6 m off the ground.
+    "the-street": "generate/arrival/final/the-street.json",
+    "the-court": "generate/arrival/final/the-court.json",
+    "among-the-panels": "generate/arrival/final/among-the-panels.json",
 }
 
 

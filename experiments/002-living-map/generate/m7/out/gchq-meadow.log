@@ -1,0 +1,945 @@
+Reading prompt from stdin...
+OpenAI Codex v0.153.4
+--------
+workdir: /Users/user/Projects/3D Design
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0ca5f-064c-7c60-aeb0-b90744e85ad3
+--------
+user
+Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
+
+INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
+INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
+INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
+
+Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
+
+Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/gchq-meadow-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
+
+THIS PLACE: The meadow roof (2045). Camera [20, 125, 170] looking at [123, 62.597, 64].
+What the place copy says, so the photograph must show it: The most recognisable building in Gloucestershire, re-roofed. 3.6 hectares of south-facing ring, 20 m up, turned over to wildflower meadow — the largest piece of open land in the box that nobody has to buy, and 100 m from the new campus. The survey found it before anyone proposed it: it came out of the open-land pass as parcel 5, which is how a rule-built scheme is supposed to work.
+
+codex
+I’m using the `imagegen` skill because this is a sketch-to-render remake. I’ll first inspect the supplied geometry plate and old approved photograph, locate the target board if it exists in the project, then generate once and use a single correction pass only if the geometry visibly drifts.
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/user/.codex/skills/.system/imagegen/SKILL.md" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for image generation, editing, and transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for or confirms the CLI/API/model path. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- For transparent images, ask built-in `image_gen` for a transparent background and preserve the generated alpha.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`; ask the user first unless they explicitly requested `gpt-image-1.5`.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including transparent-output requests; fallback CLI only if explicitly requested or confirmed.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, ask built-in `image_gen` for a transparent background and preserve the generated alpha channel.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Ask built-in `image_gen` for actual transparency.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+Style/medium: <photo/illustration/3D/etc>
+Composition/framing: <wide/close/top-down; placement>
+Lighting/mood: <lighting + mood>
+Color palette: <palette notes>
+Materials/textures: <surface details>
+Text (verbatim): "<exact text>"
+Constraints: <must keep/must avoid>
+Avoid: <negative constraints>
+```
+
+Notes:
+- `Asset type` and `Input images` are prompt scaffolding, not dedicated CLI flags.
+- `Scene/backdrop` refers to the visual setting. It is not the same as the fallback CLI `background` parameter, which controls output transparency behavior.
+- Fallback-only execution notes such as `Quality:`, `Input fidelity:`, masks, output format, and output paths belong in the CLI path only. Do not treat them as built-in `image_gen` tool arguments.
+
+Augmentation rules:
+- Keep it short.
+- Add only the details needed to improve the prompt materially.
+- For edits, explicitly list invariants (`change only X; keep Y unchanged`).
+- If any critical detail is missing and blocks success, ask a question; otherwise proceed.
+
+## Examples
+
+### Generation example (hero image)
+```text
+Use case: product-mockup
+Asset type: landing page hero
+Primary request: a minimal hero image of a ceramic coffee mug
+Style/medium: clean product photography
+Composition/framing: wide composition with usable negative space for page copy if needed
+Lighting/mood: soft studio lighting
+Constraints: no logos, no text, no watermark
+```
+
+### Edit example (invariants)
+```text
+Use case: precise-object-edit
+Asset type: product photo background replacement
+Primary request: replace only the background with a warm sunset gradient
+Constraints: change only the background; keep the product and its edges unchanged; no text; no watermark
+```
+
+## Prompting best practices
+- Structure prompt as scene/backdrop -> subject -> details -> constraints.
+- Include intended use (ad, UI mock, infographic) to set the mode and polish level.
+- Use camera/composition language for photorealism.
+- Only use SVG/vector stand-ins when the user explicitly asked for vector output or a non-image placeholder.
+- Quote exact text and specify typography + placement.
+- For tricky words, spell them letter-by-letter and require verbatim rendering.
+- For multi-image inputs, reference images by index and describe how they should be used.
+- For edits, repeat invariants every iteration to reduce drift.
+- Iterate with single-change follow-ups.
+- If the prompt is generic, add only the extra detail that will materially help.
+- If the prompt is already detailed, normalize it instead of expanding it.
+- For CLI fallback only, see `references/cli.md` and `references/image-api.md` for model, `quality`, `input_fidelity`, masks, output format, and output-path guidance.
+- For transparent images, ask built-in `image_gen` for actual transparency and preserve its alpha.
+
+More principles shared by both modes: `references/prompting.md`.
+Copy/paste specs shared by both modes: `references/sample-prompts.md`.
+
+
+exec
+/bin/zsh -lc "rg --files experiments/002-living-map | rg -i '(board|target|mood|character|precedent|approved|\\.png"'$|'"\\.jpg"'$|'"\\.jpeg"'$)'"' | sed -n '1,240p'" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+experiments/002-living-map/descent/frames/gv-doughnut-landing-frameB.png
+experiments/002-living-map/descent/frames/gv-doughnut-aerial-frameA.png
+experiments/002-living-map/generate/reference/aerial-high.png
+experiments/002-living-map/generate/reference/aerial-hub.png
+experiments/002-living-map/generate/reference/travelling-the-circular.png
+experiments/002-living-map/generate/reference/golden-valley-site.png
+experiments/002-living-map/generate/phase-8/phone-2031.png
+experiments/002-living-map/generate/phase-8/wide-figures.png
+experiments/002-living-map/generate/phase-8/phone-2026.png
+experiments/002-living-map/generate/phase-8/phone-2036.png
+experiments/002-living-map/generate/phase-8/phone-2045.png
+experiments/002-living-map/generate/phase-8/phone-2041.png
+experiments/002-living-map/generate/phase-8/wide-2041.png
+experiments/002-living-map/generate/phase-8/phone-figures.png
+experiments/002-living-map/generate/phase-8/wide-2045.png
+experiments/002-living-map/generate/phase-8/wide-2036.png
+experiments/002-living-map/generate/phase-8/wide-2026.png
+experiments/002-living-map/generate/phase-8/wide-2031.png
+experiments/002-living-map/generate/cheltenham-circular-footpath/a-start.png
+experiments/002-living-map/generate/cheltenham-circular-footpath/b-end.png
+experiments/002-living-map/generate/cheltenham-circular-footpath/out/b-end-photo.png
+experiments/002-living-map/generate/cheltenham-circular-footpath/out/a-start-photo.png
+experiments/002-living-map/generate/cheltenham-circular-footpath/out/contact-plate-vs-photo.jpg
+experiments/002-living-map/generate/m2/plates/homes-a-today.png
+experiments/002-living-map/generate/m2/plates/meadow-a-today.png
+experiments/002-living-map/generate/m2/plates/contact-sheet.jpg
+experiments/002-living-map/generate/m2/plates/panels-b-today.png
+experiments/002-living-map/generate/m2/plates/meadow-a-2045.png
+experiments/002-living-map/generate/m2/plates/homes-a-2045.png
+experiments/002-living-map/generate/m2/plates/scheme-a-today.png
+experiments/002-living-map/generate/m2/plates/campus-b-2045.png
+experiments/002-living-map/generate/m2/plates/scheme-a-2045.png
+experiments/002-living-map/generate/m2/plates/campus-b-today.png
+experiments/002-living-map/generate/m2/plates/panels-b-2045.png
+experiments/002-living-map/generate/m2/boards/scheme-a-measured.png
+experiments/002-living-map/generate/m2/boards/panels-b-bold.png
+experiments/002-living-map/generate/m2/boards/panels-b.log
+experiments/002-living-map/generate/m2/boards/campus-b-measured.png
+experiments/002-living-map/generate/m2/boards/kit-sheet.log
+experiments/002-living-map/generate/m2/boards/campus-b.log
+experiments/002-living-map/generate/m2/boards/meadow-a.log
+experiments/002-living-map/generate/m2/boards/scheme-a-bold.png
+experiments/002-living-map/generate/m2/boards/scheme-a.log
+experiments/002-living-map/generate/m2/boards/homes-a.log
+experiments/002-living-map/generate/m2/boards/meadow-a-notes.md
+experiments/002-living-map/generate/m2/boards/campus-b-bold.png
+experiments/002-living-map/generate/m2/boards/homes-a-bold.png
+experiments/002-living-map/generate/m2/boards/homes-a-adventurous.png
+experiments/002-living-map/generate/m2/boards/campus-b-notes.md
+experiments/002-living-map/generate/m2/boards/meadow-a-bold.png
+experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png
+experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png
+experiments/002-living-map/generate/m2/boards/panels-b-measured.png
+experiments/002-living-map/generate/m2/boards/homes-a-measured.png
+experiments/002-living-map/generate/m2/boards/homes-a-notes.md
+experiments/002-living-map/generate/m2/boards/campus-b-adventurous.png
+experiments/002-living-map/generate/m2/boards/meadow-a-measured.png
+experiments/002-living-map/generate/m2/boards/panels-b-notes.md
+experiments/002-living-map/generate/m2/boards/kit-sheet.png
+experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+experiments/002-living-map/generate/m2/boards/kit-sheet-notes.md
+experiments/002-living-map/generate/m2/boards/panels-b-adventurous.png
+experiments/002-living-map/generate/m2/run_boards.sh
+experiments/002-living-map/generate/gchq/plate.png
+experiments/002-living-map/generate/gchq/out/gchq-photo.png
+experiments/002-living-map/generate/gchq/out/contact-plate-vs-photo.jpg
+experiments/002-living-map/generate/close-2045/campus-ncic.png
+experiments/002-living-map/generate/close-2045/campus-cluster.png
+experiments/002-living-map/generate/close-2045/facade-study.png
+experiments/002-living-map/generate/close-2045/ncic-flank.png
+experiments/002-living-map/generate/close-2045/ncic.png
+experiments/002-living-map/generate/close-2045/gchq-meadow.png
+experiments/002-living-map/generate/close-2045/out/campus-ncic-photo.png
+experiments/002-living-map/generate/close-2045/out/gchq-meadow-photo.png
+experiments/002-living-map/generate/phase-11/shots-phone.png
+experiments/002-living-map/generate/phase-11/contact-sheet.png
+experiments/002-living-map/generate/phase-11/shots-wide.png
+experiments/002-living-map/generate/phase-11/contact-round2.png
+experiments/002-living-map/generate/phase-11/horizon-check.png
+experiments/002-living-map/generate/m7/plates/campus-courtyards-2045.png
+experiments/002-living-map/generate/m7/plates/gchq-meadow-today.png
+experiments/002-living-map/generate/m7/plates/contact-sheet.jpg
+experiments/002-living-map/generate/m7/plates/panels-and-glasshouses-2045.png
+experiments/002-living-map/generate/m7/plates/gchq-meadow-2045.png
+experiments/002-living-map/generate/m7/plates/gchq-today.png
+experiments/002-living-map/generate/m7/plates/cyber-central-today.png
+experiments/002-living-map/generate/m7/plates/campus-courtyards-today.png
+experiments/002-living-map/generate/m7/plates/cyber-central-2045.png
+experiments/002-living-map/generate/m7/plates/panels-and-glasshouses-today.png
+experiments/002-living-map/generate/m7/plates/gchq-2045.png
+experiments/002-living-map/generate/m3a/plan.png
+experiments/002-living-map/generate/m3a/plan-before.png
+experiments/002-living-map/generate/golden-valley-2045/b-the-campus.png
+experiments/002-living-map/generate/golden-valley-2045/a-cyber-central.png
+experiments/002-living-map/generate/golden-valley-2045/out/a-cyber-central-photo.png
+experiments/002-living-map/generate/golden-valley-2045/out/c-panels-and-glasshouses-photo.png
+experiments/002-living-map/generate/golden-valley-2045/out/contact-sheet.png
+experiments/002-living-map/generate/golden-valley-2045/out/b-the-campus-photo.png
+experiments/002-living-map/generate/golden-valley-2045/c-panels-and-glasshouses.png
+experiments/002-living-map/generate/m6/shots/campus-b-2045.png
+experiments/002-living-map/generate/m6/shots/homes-a-today.png
+experiments/002-living-map/generate/m6/shots/meadow-a-today.png
+experiments/002-living-map/generate/m6/shots/panels-b-today.png
+experiments/002-living-map/generate/m6/shots/meadow-a-2045.png
+experiments/002-living-map/generate/m6/shots/homes-a-2045.png
+experiments/002-living-map/generate/m6/shots/scheme-a-today.png
+experiments/002-living-map/generate/m6/shots/scheme-a-2045.png
+experiments/002-living-map/generate/m6/shots/campus-b-today.png
+experiments/002-living-map/generate/m6/shots/panels-b-2045.png
+experiments/002-living-map/vision/wave-2045-arrived.png
+experiments/002-living-map/vision/wave-front.png
+experiments/002-living-map/vision/frame4-site-built.png
+experiments/002-living-map/vision/frame3-site-today.png
+experiments/002-living-map/vision/frame5-arrival.png
+experiments/002-living-map/vision/frame1-aerial.png
+experiments/002-living-map/vision/open-land-parcels.png
+experiments/002-living-map/vision/open-land.png
+experiments/002-living-map/vision/wave-2045.png
+experiments/002-living-map/vision/frame2-descent.png
+experiments/002-living-map/terrain/cheltenham-heightmap.png
+experiments/002-living-map/passes/out/gv-site-metric.png
+experiments/002-living-map/passes/out/aerial-depth.png
+experiments/002-living-map/passes/out/gv-site-beauty.png
+experiments/002-living-map/passes/out/approach-normal.png
+experiments/002-living-map/passes/out/aerial-normal.png
+experiments/002-living-map/passes/out/gv-site-depth.png
+experiments/002-living-map/passes/out/aerial-mask.png
+experiments/002-living-map/generate/m6b/scheme-a-2045.png
+experiments/002-living-map/generate/m6b/campus-b-today.png
+experiments/002-living-map/generate/m6b/panels-b-2045.png
+experiments/002-living-map/generate/m6b/scheme-a-today.png
+experiments/002-living-map/generate/m6b/campus-b-2045.png
+experiments/002-living-map/passes/out/gv-site-mask.png
+experiments/002-living-map/generate/m6b/homes-a-2045.png
+experiments/002-living-map/generate/m6b/meadow-a-2045.png
+experiments/002-living-map/ladder/rung6-aerial-depth-disparity.jpg
+experiments/002-living-map/ladder/rung2-aerial-depth.jpg
+experiments/002-living-map/ladder/rung5-aerial-depth-refit.jpg
+experiments/002-living-map/generate/m6b/homes-a-today.png
+experiments/002-living-map/generate/m6b/meadow-a-today.png
+experiments/002-living-map/generate/m6b/panels-b-today.png
+experiments/002-living-map/ladder/rung1-BEFORE-dark-roof.jpg
+experiments/002-living-map/ladder/rung2-BEFORE-linear-depth.jpg
+experiments/002-living-map/ladder/rung1-aerial-beauty.jpg
+experiments/002-living-map/passes/out/gv-site-normal.png
+experiments/002-living-map/passes/out/aerial-metric.png
+experiments/002-living-map/passes/out/approach-beauty.png
+experiments/002-living-map/ladder/frames/rung3-approach-beauty-2.png
+experiments/002-living-map/passes/out/approach-metric.png
+experiments/002-living-map/meshy/src/b1-campus-front-left.png
+experiments/002-living-map/ladder/frames/rung3-approach-beauty-3.png
+experiments/002-living-map/ladder/frames/rung3-approach-beauty-1.png
+experiments/002-living-map/ladder/frames/rung4-aerial-beauty-1.png
+experiments/002-living-map/ladder/frames/rung4-aerial-beauty-3.png
+experiments/002-living-map/ladder/frames/rung4-aerial-beauty-2.png
+experiments/002-living-map/vision/v1-pre-session-L/frame3-site-today.png
+experiments/002-living-map/vision/v1-pre-session-L/frame1-aerial.png
+experiments/002-living-map/vision/v1-pre-session-L/frame4-site-built.png
+experiments/002-living-map/passes/out/aerial-beauty.png
+experiments/002-living-map/passes/out/approach-mask.png
+experiments/002-living-map/passes/out/approach-depth.png
+experiments/002-living-map/passes/out/aerial-depth-disparity.png
+experiments/002-living-map/passes/out/aerial-depth-refit.png
+experiments/002-living-map/meshy/src/b2-campus-back-right.png
+experiments/002-living-map/meshy/src/a1-ncic-low-end.png
+experiments/002-living-map/meshy/src/a2-ncic-high-end.png
+experiments/002-living-map/vision/v1-pre-session-L/frame2-descent.png
+experiments/002-living-map/vision/v1-pre-session-L/frame5-arrival.png
+
+codex
+I found the project’s adventurous meadow target board and will use it as Input 3. The generation prompt will explicitly rank the references: geometry and camera from the new model plate, photographic treatment from the old approved image, and materials/character from the target board.
+codex
+The first pass is photorealistic, but it drifts materially from the plate: the ring is enlarged and lowered, the central void shifts, the distant horizon rises, and the roof meadow obscures some of the model’s concentric/radial organization. I’m using the allowed correction pass to pull the entire scene back onto the geometry master while retaining the successful material and lighting treatment.
+exec
+/bin/zsh -lc "identify -format '%f %wx%h\\n' /Users/user/.codex/generated_images/01a0ca5f-064c-7c60-aeb0-b90744e85ad3/exec-681d5dea-1e79-41d2-aa37-ce7fe265a34f.png /Users/user/.codex/generated_images/01a0ca5f-064c-7c60-aeb0-b90744e85ad3/exec-8c581fee-34db-4bc1-8491-b1708551d57b.png && mkdir -p experiments/002-living-map/generate/m7/out && git status --short -- experiments/002-living-map/generate/m7/out" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+exec-681d5dea-1e79-41d2-aa37-ce7fe265a34f.png 1672x941
+exec-8c581fee-34db-4bc1-8491-b1708551d57b.png 1672x941
+?? experiments/002-living-map/generate/m7/out/
+
+exec
+/bin/zsh -lc "magick /Users/user/.codex/generated_images/01a0ca5f-064c-7c60-aeb0-b90744e85ad3/exec-8c581fee-34db-4bc1-8491-b1708551d57b.png -resize 1280x720\\"'! experiments/002-living-map/generate/m7/out/gchq-meadow-photo.png && identify -format '"'%f %wx%h %[colorspace]\\n' experiments/002-living-map/generate/m7/out/gchq-meadow-photo.png" in /Users/user/Projects/3D Design
+ succeeded in 59ms:
+gchq-meadow-photo.png 1280x720 sRGB
+
+codex
+The correction now restores the ring’s key screen bounds and central opening closely, and the output has been resized as a whole frame to exactly 1280×720. I’m recording both prompts verbatim and an honest QA note, including the remaining background and texture drift rather than overstating precision.
+apply patch
+patch: completed
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+diff --git a/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..51df988a0705dc53705240b1dae5d4515650d81e
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+@@ -0,0 +1,77 @@
++# GCHQ meadow roof (2045) — generation notes
++
++## Output
++
++- Final image: `gchq-meadow-photo.png`
++- Final dimensions: 1280 × 720 px, sRGB
++- Method: built-in image generation, `sketch-to-render`
++- Passes used: 2 (one initial generation and one correction pass)
++- Final selection: pass 2
++- Final sizing: the complete generated frame (1672 × 941) was resized directly to 1280 × 720. No crop, extension, or content-aware warp was used. The source and target aspect ratios differ by less than 0.06% because of integer pixel dimensions.
++
++## Input roles
++
++1. `../plates/gchq-meadow-2045.png` — absolute geometry and camera master.
++2. `../../close-2045/out/gchq-meadow-photo.png` — old approved photograph, used only for photographic look, light, colour, haze, and detail level.
++3. `../../m2/boards/meadow-a-adventurous.png` — approved adventurous target board, used only for materials and character.
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved architectural place photograph, final project image at exactly 1280×720, landscape 16:9.
++Primary request: REMAKE the approved place photograph so it agrees with the current 3D model. Transform the geometry master into a highly realistic late-summer aerial architectural photograph. This is GCHQ's meadow roof in 2045: the most recognisable building in Gloucestershire, re-roofed; 3.6 hectares of south-facing ring, 20 m up, turned over to species-rich wildflower meadow—the largest piece of open land in the box that nobody has to buy, 100 m from the new campus. It must read as an extraordinary but credible built place, based on real built precedents, not a corporate office park and not an illustration.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY MASTER and camera master: the current 3D model render from camera [20, 125, 170] looking at [123, 62.597, 64]. Follow Image 1 for every visible object's position, silhouette, footprint, height, scale, perspective, horizon, occlusion, field boundary, road, building, tree belt, orchard row, solar row, canopy and open stormwater channel. Keep the geometry within approximately 15 pixels at 1280×720. Do not substitute, simplify, invent, relocate, enlarge or erase site elements. Preserve the giant circular ring roof, its central circular courtyard opening, the near-right wedge/entrance projection, outer wall profile, and exact framing.
++- Image 2 is the OLD approved photograph at this exact camera. Use Image 2 ONLY for photographic look, natural light, colour, atmospheric haze, believable detail density, camera realism and late-summer afternoon sun. Its layout is obsolete: DO NOT copy its roads, parking, buildings, vegetation layout, roof paths, facade design, or any other geometry.
++- Image 3 is the approved adventurous target board for this site. Use it ONLY for material language and character: buff brick, honey-toned structural timber, fine PV glass, rich meadow roofs, ecologically mature planting, elegant restrained detailing. Do not copy its camera or layout.
++Scene/backdrop: Exact Image 1 site layout. Across the middle and distance retain the dense new neighbourhood shown in Image 1—about 1,100 homes expressed as compact terraces and mid-rise timber blocks, not detached suburban sprawl. Retain the campus courtyard blocks. Retain the long vertical bifacial solar rows over pasture, the solar canopies over GCHQ car parks, mature orchard rows and woodland belts, and visible open stormwater channels exactly where the geometry master places them. Keep the distant hills and horizon profile exactly aligned to Image 1.
++Subject: The dominant huge circular GCHQ ring fills the lower and central frame exactly as in Image 1. Its 3.6-hectare roof is a continuous, credible, slightly weathered late-summer wildflower meadow with fine low species—grasses, seed heads and small yellow, white and muted purple flowers—following the model's concentric maintenance bands and radial seams without adding new broad paths. The central opening remains the exact same size and shape, with its existing trees and lawn in their model positions. Give the outer and inner elevations believable glazing, buff brick and honey timber while preserving every edge and height from Image 1. The roof must visibly feel 20 m above ground.
++Style/medium: Photorealistic high-resolution aerial/drone architectural photography; physically plausible materials, reflections, glazing depth, drainage, weathering, vegetation variation and atmospheric perspective. Built-precedent character informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun. Documentary realism, not a glossy corporate visualization.
++Composition/framing: Pixel-faithful to Image 1. Same camera pose, focal length, perspective, horizon height and full-frame composition. Whole-frame 1280×720; no crop, no warp, no reframing. The ring roof outer perimeter, courtyard opening, near-right projection, background woodland and every major row/block must land in the same position as Image 1.
++Lighting/mood: Match Image 2's warm late-summer afternoon sun direction, soft blue sky, modest scattered cloud, gentle atmospheric haze, natural contrast and believable shadows. Preserve geometric legibility in shadow.
++Color palette: Warm buff brick, honey timber, dark charcoal PV glass, meadow olive/green/gold with restrained wildflower colour, natural British late-summer landscape, soft blue sky.
++Materials/textures: Highly credible fine meadow planting, low parapets and roof-edge drainage, realistic glass mullions, buff masonry, honey timber, dark bifacial PV modules, asphalt, gravel, pasture, orchards and mature mixed woodland. Detail must stay subordinate to the geometry master.
++People and vehicles: Sparse, true-to-scale people and vehicles only where physically plausible; never oversized; no crowds. Do not let parked cars overwrite solar rows, planting, drainage or boundaries.
++Text (verbatim): ""
++Constraints: Geometry fidelity overrides beauty and overrides Images 2 and 3. Follow Image 1, never the old photograph, for what is where. Maintain all Image 1 silhouettes and alignments within about 15 px at 1280×720. Preserve the exact central void, roof width, circular outline, front wall, near-right wedge, roads, solar arrays, housing masses, woodland belt and distant terrain. Natural photographic detail may be added only inside these fixed shapes. No crop or warp.
++Avoid: old Image 2 layout; detached-house suburb replacing the model's new terraces and timber blocks; missing or shifted solar arrays; invented buildings; changed circular proportions; enlarged courtyard; extra roof paths; roof terraces; railings dominating the roof; corporate office-park styling; futuristic forms; illustration; painterly texture; obvious CGI; miniature/tilt-shift look; dramatic cinematic grading; excessive saturation; fake bokeh; distorted roads; floating trees; malformed cars; giant people; signage; labels; logos; text; watermark.
++```
++
++### Pass 1 inspection
++
++The first pass had a strong photographic finish, credible meadow planting, and successful buff-brick/honey-timber glazing. It was not accepted because the ring was enlarged and lowered in frame, the courtyard and horizon shifted, and the roof planting obscured too much of the model's concentric and radial organization. Background geometry also became more generic than the master.
++
++## Pass 2 correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: corrected final architectural place photograph, exactly 1280×720, landscape 16:9.
++Primary request: CORRECTION PASS ONLY. Rebuild the first-pass photograph onto the exact geometry, camera and full-frame composition of Image 1. Preserve the photorealistic late-summer material treatment of Image 2, but correct all geometry drift. The finished photograph must match Image 1's pixel layout within approximately 15 px at 1280×720.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY AND CAMERA MASTER. It overrides everything. Trace its major silhouettes and screen positions exactly.
++- Image 2 is the first generated pass. Retain only its successful photographic realism, meadow texture, glazing, buff brick/honey timber character, sunlight, haze and detail quality. Do not retain its framing or geometry drift.
++Required geometry corrections:
++1. Zoom out and restore the exact Image 1 framing. The circular ring must occupy exactly the same screen area as Image 1: outer roof left edge near x=181, right edge near x=1208, top edge near y=206, bottom/front edge near y=709 at 1280×720.
++2. Restore the central courtyard opening to Image 1: same horizontally oval screen shape, left edge near x=484, right edge near x=883, top near y=258, bottom near y=402. Do not shift or enlarge it.
++3. Restore the distant horizon and hills to Image 1: sky is only the narrow upper strip; hill skyline remains near y=0–34. Do not use the taller mountain/horizon composition from Image 2.
++4. Restore the roof's modeled concentric maintenance bands and radial seams exactly where visible in Image 1. Meadow planting is low and fine so these bands remain legible; no invented broad diagonal paths.
++5. Restore the exact outer wall height and near-right wedge/entrance projection silhouette from Image 1. The near facade is mostly dark/glazed and shaded at this camera, not an oversized bright multi-storey curtain wall.
++6. Restore every background object to Image 1: woodland belt shape; pale rectangular service building upper right; long vertical bifacial solar rows behind and to both sides; left solar-canopy rows; roads; open land; houses and blocks. Do not replace this model layout with the first pass's invented landscape.
++7. Preserve the exact Image 1 camera [20, 125, 170] looking at [123, 62.597, 64], perspective, horizon height, occlusions and full uncropped frame.
++Scene/content: GCHQ meadow roof in 2045, 3.6 hectares of south-facing ring 20 m above ground, credible species-rich late-summer wildflower meadow. Exact Image 1 neighbourhood and infrastructure, including the dense new settlement, campus courtyard blocks, bifacial solar rows over pasture, solar car-park canopies, orchards, woodland belts and open stormwater channels. Materials: buff brick, honey timber, dark PV glass and ecologically mature planting, built-precedent realism informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun.
++Style/medium: Natural high-resolution drone architectural photography; documentary realism; physically plausible materials, scale, reflections, weathering, vegetation variation and atmospheric perspective.
++Lighting/mood: Keep Image 2's warm late-summer afternoon light, soft blue sky, modest cloud, natural colour and gentle haze, but conform shadows to Image 1 geometry.
++People and vehicles: Sparse and true scale only.
++Text (verbatim): ""
++Constraints: Change the first pass's geometry and framing to match Image 1; retain its photographic finish. Geometry fidelity overrides attractiveness. Whole-frame 1280×720, no crop, no warp, no reframing. Preserve every major edge and object position from Image 1 within about 15 px.
++Avoid: enlarged ring; low or shifted building; enlarged/shifted courtyard; tall mountain sky; old-photo layout; invented buildings; missing solar rows; lost roof bands; new roof paths; corporate office park; futuristic design; illustration; obvious CGI; tilt-shift; cinematic grading; excessive saturation; malformed cars; oversized people; signage; labels; logos; text; watermark.
++```
++
++### Final inspection
++
++The correction substantially improves the match to the geometry plate. The outer ring's left, right, and top extents, central opening, near-right projection, service block, woodland belt, and principal solar-row fields are close to their master positions. The ring and courtyard retain the intended scale relationship, the foreground facade is dark and subordinate, and the meadow reads clearly as a continuous elevated landscape. Lighting and material character are convincingly photographic and consistent with the reference set.
++
++Visible drift remains. The distant hill skyline is taller and more articulated than the very shallow master horizon. Fine-grain background housing is interpreted as generic low-rise suburban fabric rather than reliably preserving every terrace/timber-block footprint, and some small roads, field edges, orchard trees, drainage lines, and solar-row endpoints cannot honestly be claimed to be within 15 px. The courtyard tree count and exact positions are also interpreted rather than traced. On the roof, the concentric bands are retained but read as mown meadow lines; several radial divisions are softer or slightly shifted.
++
++Elements that can still read as CGI on close inspection include the unusually even repetition of distant houses and trees, the high-density/over-crisp flower pattern, some simplified solar structures, and a few softened or ambiguous tiny vehicles. No text, logo, or watermark is visible.
+
+diff --git a/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..51df988a0705dc53705240b1dae5d4515650d81e
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+@@ -0,0 +1,77 @@
++# GCHQ meadow roof (2045) — generation notes
++
++## Output
++
++- Final image: `gchq-meadow-photo.png`
++- Final dimensions: 1280 × 720 px, sRGB
++- Method: built-in image generation, `sketch-to-render`
++- Passes used: 2 (one initial generation and one correction pass)
++- Final selection: pass 2
++- Final sizing: the complete generated frame (1672 × 941) was resized directly to 1280 × 720. No crop, extension, or content-aware warp was used. The source and target aspect ratios differ by less than 0.06% because of integer pixel dimensions.
++
++## Input roles
++
++1. `../plates/gchq-meadow-2045.png` — absolute geometry and camera master.
++2. `../../close-2045/out/gchq-meadow-photo.png` — old approved photograph, used only for photographic look, light, colour, haze, and detail level.
++3. `../../m2/boards/meadow-a-adventurous.png` — approved adventurous target board, used only for materials and character.
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved architectural place photograph, final project image at exactly 1280×720, landscape 16:9.
++Primary request: REMAKE the approved place photograph so it agrees with the current 3D model. Transform the geometry master into a highly realistic late-summer aerial architectural photograph. This is GCHQ's meadow roof in 2045: the most recognisable building in Gloucestershire, re-roofed; 3.6 hectares of south-facing ring, 20 m up, turned over to species-rich wildflower meadow—the largest piece of open land in the box that nobody has to buy, 100 m from the new campus. It must read as an extraordinary but credible built place, based on real built precedents, not a corporate office park and not an illustration.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY MASTER and camera master: the current 3D model render from camera [20, 125, 170] looking at [123, 62.597, 64]. Follow Image 1 for every visible object's position, silhouette, footprint, height, scale, perspective, horizon, occlusion, field boundary, road, building, tree belt, orchard row, solar row, canopy and open stormwater channel. Keep the geometry within approximately 15 pixels at 1280×720. Do not substitute, simplify, invent, relocate, enlarge or erase site elements. Preserve the giant circular ring roof, its central circular courtyard opening, the near-right wedge/entrance projection, outer wall profile, and exact framing.
++- Image 2 is the OLD approved photograph at this exact camera. Use Image 2 ONLY for photographic look, natural light, colour, atmospheric haze, believable detail density, camera realism and late-summer afternoon sun. Its layout is obsolete: DO NOT copy its roads, parking, buildings, vegetation layout, roof paths, facade design, or any other geometry.
++- Image 3 is the approved adventurous target board for this site. Use it ONLY for material language and character: buff brick, honey-toned structural timber, fine PV glass, rich meadow roofs, ecologically mature planting, elegant restrained detailing. Do not copy its camera or layout.
++Scene/backdrop: Exact Image 1 site layout. Across the middle and distance retain the dense new neighbourhood shown in Image 1—about 1,100 homes expressed as compact terraces and mid-rise timber blocks, not detached suburban sprawl. Retain the campus courtyard blocks. Retain the long vertical bifacial solar rows over pasture, the solar canopies over GCHQ car parks, mature orchard rows and woodland belts, and visible open stormwater channels exactly where the geometry master places them. Keep the distant hills and horizon profile exactly aligned to Image 1.
++Subject: The dominant huge circular GCHQ ring fills the lower and central frame exactly as in Image 1. Its 3.6-hectare roof is a continuous, credible, slightly weathered late-summer wildflower meadow with fine low species—grasses, seed heads and small yellow, white and muted purple flowers—following the model's concentric maintenance bands and radial seams without adding new broad paths. The central opening remains the exact same size and shape, with its existing trees and lawn in their model positions. Give the outer and inner elevations believable glazing, buff brick and honey timber while preserving every edge and height from Image 1. The roof must visibly feel 20 m above ground.
++Style/medium: Photorealistic high-resolution aerial/drone architectural photography; physically plausible materials, reflections, glazing depth, drainage, weathering, vegetation variation and atmospheric perspective. Built-precedent character informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun. Documentary realism, not a glossy corporate visualization.
++Composition/framing: Pixel-faithful to Image 1. Same camera pose, focal length, perspective, horizon height and full-frame composition. Whole-frame 1280×720; no crop, no warp, no reframing. The ring roof outer perimeter, courtyard opening, near-right projection, background woodland and every major row/block must land in the same position as Image 1.
++Lighting/mood: Match Image 2's warm late-summer afternoon sun direction, soft blue sky, modest scattered cloud, gentle atmospheric haze, natural contrast and believable shadows. Preserve geometric legibility in shadow.
++Color palette: Warm buff brick, honey timber, dark charcoal PV glass, meadow olive/green/gold with restrained wildflower colour, natural British late-summer landscape, soft blue sky.
++Materials/textures: Highly credible fine meadow planting, low parapets and roof-edge drainage, realistic glass mullions, buff masonry, honey timber, dark bifacial PV modules, asphalt, gravel, pasture, orchards and mature mixed woodland. Detail must stay subordinate to the geometry master.
++People and vehicles: Sparse, true-to-scale people and vehicles only where physically plausible; never oversized; no crowds. Do not let parked cars overwrite solar rows, planting, drainage or boundaries.
++Text (verbatim): ""
++Constraints: Geometry fidelity overrides beauty and overrides Images 2 and 3. Follow Image 1, never the old photograph, for what is where. Maintain all Image 1 silhouettes and alignments within about 15 px at 1280×720. Preserve the exact central void, roof width, circular outline, front wall, near-right wedge, roads, solar arrays, housing masses, woodland belt and distant terrain. Natural photographic detail may be added only inside these fixed shapes. No crop or warp.
++Avoid: old Image 2 layout; detached-house suburb replacing the model's new terraces and timber blocks; missing or shifted solar arrays; invented buildings; changed circular proportions; enlarged courtyard; extra roof paths; roof terraces; railings dominating the roof; corporate office-park styling; futuristic forms; illustration; painterly texture; obvious CGI; miniature/tilt-shift look; dramatic cinematic grading; excessive saturation; fake bokeh; distorted roads; floating trees; malformed cars; giant people; signage; labels; logos; text; watermark.
++```
++
++### Pass 1 inspection
++
++The first pass had a strong photographic finish, credible meadow planting, and successful buff-brick/honey-timber glazing. It was not accepted because the ring was enlarged and lowered in frame, the courtyard and horizon shifted, and the roof planting obscured too much of the model's concentric and radial organization. Background geometry also became more generic than the master.
++
++## Pass 2 correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: corrected final architectural place photograph, exactly 1280×720, landscape 16:9.
++Primary request: CORRECTION PASS ONLY. Rebuild the first-pass photograph onto the exact geometry, camera and full-frame composition of Image 1. Preserve the photorealistic late-summer material treatment of Image 2, but correct all geometry drift. The finished photograph must match Image 1's pixel layout within approximately 15 px at 1280×720.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY AND CAMERA MASTER. It overrides everything. Trace its major silhouettes and screen positions exactly.
++- Image 2 is the first generated pass. Retain only its successful photographic realism, meadow texture, glazing, buff brick/honey timber character, sunlight, haze and detail quality. Do not retain its framing or geometry drift.
++Required geometry corrections:
++1. Zoom out and restore the exact Image 1 framing. The circular ring must occupy exactly the same screen area as Image 1: outer roof left edge near x=181, right edge near x=1208, top edge near y=206, bottom/front edge near y=709 at 1280×720.
++2. Restore the central courtyard opening to Image 1: same horizontally oval screen shape, left edge near x=484, right edge near x=883, top near y=258, bottom near y=402. Do not shift or enlarge it.
++3. Restore the distant horizon and hills to Image 1: sky is only the narrow upper strip; hill skyline remains near y=0–34. Do not use the taller mountain/horizon composition from Image 2.
++4. Restore the roof's modeled concentric maintenance bands and radial seams exactly where visible in Image 1. Meadow planting is low and fine so these bands remain legible; no invented broad diagonal paths.
++5. Restore the exact outer wall height and near-right wedge/entrance projection silhouette from Image 1. The near facade is mostly dark/glazed and shaded at this camera, not an oversized bright multi-storey curtain wall.
++6. Restore every background object to Image 1: woodland belt shape; pale rectangular service building upper right; long vertical bifacial solar rows behind and to both sides; left solar-canopy rows; roads; open land; houses and blocks. Do not replace this model layout with the first pass's invented landscape.
++7. Preserve the exact Image 1 camera [20, 125, 170] looking at [123, 62.597, 64], perspective, horizon height, occlusions and full uncropped frame.
++Scene/content: GCHQ meadow roof in 2045, 3.6 hectares of south-facing ring 20 m above ground, credible species-rich late-summer wildflower meadow. Exact Image 1 neighbourhood and infrastructure, including the dense new settlement, campus courtyard blocks, bifacial solar rows over pasture, solar car-park canopies, orchards, woodland belts and open stormwater channels. Materials: buff brick, honey timber, dark PV glass and ecologically mature planting, built-precedent realism informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun.
++Style/medium: Natural high-resolution drone architectural photography; documentary realism; physically plausible materials, scale, reflections, weathering, vegetation variation and atmospheric perspective.
++Lighting/mood: Keep Image 2's warm late-summer afternoon light, soft blue sky, modest cloud, natural colour and gentle haze, but conform shadows to Image 1 geometry.
++People and vehicles: Sparse and true scale only.
++Text (verbatim): ""
++Constraints: Change the first pass's geometry and framing to match Image 1; retain its photographic finish. Geometry fidelity overrides attractiveness. Whole-frame 1280×720, no crop, no warp, no reframing. Preserve every major edge and object position from Image 1 within about 15 px.
++Avoid: enlarged ring; low or shifted building; enlarged/shifted courtyard; tall mountain sky; old-photo layout; invented buildings; missing solar rows; lost roof bands; new roof paths; corporate office park; futuristic design; illustration; obvious CGI; tilt-shift; cinematic grading; excessive saturation; malformed cars; oversized people; signage; labels; logos; text; watermark.
++```
++
++### Final inspection
++
++The correction substantially improves the match to the geometry plate. The outer ring's left, right, and top extents, central opening, near-right projection, service block, woodland belt, and principal solar-row fields are close to their master positions. The ring and courtyard retain the intended scale relationship, the foreground facade is dark and subordinate, and the meadow reads clearly as a continuous elevated landscape. Lighting and material character are convincingly photographic and consistent with the reference set.
++
++Visible drift remains. The distant hill skyline is taller and more articulated than the very shallow master horizon. Fine-grain background housing is interpreted as generic low-rise suburban fabric rather than reliably preserving every terrace/timber-block footprint, and some small roads, field edges, orchard trees, drainage lines, and solar-row endpoints cannot honestly be claimed to be within 15 px. The courtyard tree count and exact positions are also interpreted rather than traced. On the roof, the concentric bands are retained but read as mown meadow lines; several radial divisions are softer or slightly shifted.
++
++Elements that can still read as CGI on close inspection include the unusually even repetition of distant houses and trees, the high-density/over-crisp flower pattern, some simplified solar structures, and a few softened or ambiguous tiny vehicles. No text, logo, or watermark is visible.
+
+exec
+/bin/zsh -lc "ls -l experiments/002-living-map/generate/m7/out && wc -l experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md && sed -n '1,24p' experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md && git status --short -- experiments/002-living-map/generate/m7/out" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+total 12664
+-rw-r--r--@ 1 user  staff     9686 Sep 22 19:31 campus-courtyards-notes.md
+-rw-r--r--@ 1 user  staff  2158061 Sep 22 19:30 campus-courtyards-photo.png
+-rw-r--r--@ 1 user  staff    96069 Sep 22 19:32 campus-courtyards.log
+-rw-r--r--@ 1 user  staff    35594 Sep 22 19:32 cyber-central.log
+-rw-r--r--@ 1 user  staff    13031 Sep 22 19:32 gchq-meadow-notes.md
+-rw-r--r--@ 1 user  staff  1942286 Sep 22 19:31 gchq-meadow-photo.png
+-rw-r--r--@ 1 user  staff    58608 Sep 22 19:32 gchq-meadow.log
+-rw-r--r--@ 1 user  staff     8520 Sep 22 19:31 panels-and-glasshouses-notes.md
+-rw-r--r--@ 1 user  staff  1957215 Sep 22 19:29 panels-and-glasshouses-photo.png
+-rw-r--r--@ 1 user  staff    92743 Sep 22 19:31 panels-and-glasshouses.log
+      77 experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+# GCHQ meadow roof (2045) — generation notes
+
+## Output
+
+- Final image: `gchq-meadow-photo.png`
+- Final dimensions: 1280 × 720 px, sRGB
+- Method: built-in image generation, `sketch-to-render`
+- Passes used: 2 (one initial generation and one correction pass)
+- Final selection: pass 2
+- Final sizing: the complete generated frame (1672 × 941) was resized directly to 1280 × 720. No crop, extension, or content-aware warp was used. The source and target aspect ratios differ by less than 0.06% because of integer pixel dimensions.
+
+## Input roles
+
+1. `../plates/gchq-meadow-2045.png` — absolute geometry and camera master.
+2. `../../close-2045/out/gchq-meadow-photo.png` — old approved photograph, used only for photographic look, light, colour, haze, and detail level.
+3. `../../m2/boards/meadow-a-adventurous.png` — approved adventurous target board, used only for materials and character.
+
+## Pass 1 prompt (verbatim)
+
+```text
+Use case: sketch-to-render
+Asset type: approved architectural place photograph, final project image at exactly 1280×720, landscape 16:9.
+Primary request: REMAKE the approved place photograph so it agrees with the current 3D model. Transform the geometry master into a highly realistic late-summer aerial architectural photograph. This is GCHQ's meadow roof in 2045: the most recognisable building in Gloucestershire, re-roofed; 3.6 hectares of south-facing ring, 20 m up, turned over to species-rich wildflower meadow—the largest piece of open land in the box that nobody has to buy, 100 m from the new campus. It must read as an extraordinary but credible built place, based on real built precedents, not a corporate office park and not an illustration.
+Input images:
+?? experiments/002-living-map/generate/m7/out/
+
+diff --git a/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..51df988a0705dc53705240b1dae5d4515650d81e
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+@@ -0,0 +1,77 @@
++# GCHQ meadow roof (2045) — generation notes
++
++## Output
++
++- Final image: `gchq-meadow-photo.png`
++- Final dimensions: 1280 × 720 px, sRGB
++- Method: built-in image generation, `sketch-to-render`
++- Passes used: 2 (one initial generation and one correction pass)
++- Final selection: pass 2
++- Final sizing: the complete generated frame (1672 × 941) was resized directly to 1280 × 720. No crop, extension, or content-aware warp was used. The source and target aspect ratios differ by less than 0.06% because of integer pixel dimensions.
++
++## Input roles
++
++1. `../plates/gchq-meadow-2045.png` — absolute geometry and camera master.
++2. `../../close-2045/out/gchq-meadow-photo.png` — old approved photograph, used only for photographic look, light, colour, haze, and detail level.
++3. `../../m2/boards/meadow-a-adventurous.png` — approved adventurous target board, used only for materials and character.
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved architectural place photograph, final project image at exactly 1280×720, landscape 16:9.
++Primary request: REMAKE the approved place photograph so it agrees with the current 3D model. Transform the geometry master into a highly realistic late-summer aerial architectural photograph. This is GCHQ's meadow roof in 2045: the most recognisable building in Gloucestershire, re-roofed; 3.6 hectares of south-facing ring, 20 m up, turned over to species-rich wildflower meadow—the largest piece of open land in the box that nobody has to buy, 100 m from the new campus. It must read as an extraordinary but credible built place, based on real built precedents, not a corporate office park and not an illustration.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY MASTER and camera master: the current 3D model render from camera [20, 125, 170] looking at [123, 62.597, 64]. Follow Image 1 for every visible object's position, silhouette, footprint, height, scale, perspective, horizon, occlusion, field boundary, road, building, tree belt, orchard row, solar row, canopy and open stormwater channel. Keep the geometry within approximately 15 pixels at 1280×720. Do not substitute, simplify, invent, relocate, enlarge or erase site elements. Preserve the giant circular ring roof, its central circular courtyard opening, the near-right wedge/entrance projection, outer wall profile, and exact framing.
++- Image 2 is the OLD approved photograph at this exact camera. Use Image 2 ONLY for photographic look, natural light, colour, atmospheric haze, believable detail density, camera realism and late-summer afternoon sun. Its layout is obsolete: DO NOT copy its roads, parking, buildings, vegetation layout, roof paths, facade design, or any other geometry.
++- Image 3 is the approved adventurous target board for this site. Use it ONLY for material language and character: buff brick, honey-toned structural timber, fine PV glass, rich meadow roofs, ecologically mature planting, elegant restrained detailing. Do not copy its camera or layout.
++Scene/backdrop: Exact Image 1 site layout. Across the middle and distance retain the dense new neighbourhood shown in Image 1—about 1,100 homes expressed as compact terraces and mid-rise timber blocks, not detached suburban sprawl. Retain the campus courtyard blocks. Retain the long vertical bifacial solar rows over pasture, the solar canopies over GCHQ car parks, mature orchard rows and woodland belts, and visible open stormwater channels exactly where the geometry master places them. Keep the distant hills and horizon profile exactly aligned to Image 1.
++Subject: The dominant huge circular GCHQ ring fills the lower and central frame exactly as in Image 1. Its 3.6-hectare roof is a continuous, credible, slightly weathered late-summer wildflower meadow with fine low species—grasses, seed heads and small yellow, white and muted purple flowers—following the model's concentric maintenance bands and radial seams without adding new broad paths. The central opening remains the exact same size and shape, with its existing trees and lawn in their model positions. Give the outer and inner elevations believable glazing, buff brick and honey timber while preserving every edge and height from Image 1. The roof must visibly feel 20 m above ground.
++Style/medium: Photorealistic high-resolution aerial/drone architectural photography; physically plausible materials, reflections, glazing depth, drainage, weathering, vegetation variation and atmospheric perspective. Built-precedent character informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun. Documentary realism, not a glossy corporate visualization.
++Composition/framing: Pixel-faithful to Image 1. Same camera pose, focal length, perspective, horizon height and full-frame composition. Whole-frame 1280×720; no crop, no warp, no reframing. The ring roof outer perimeter, courtyard opening, near-right projection, background woodland and every major row/block must land in the same position as Image 1.
++Lighting/mood: Match Image 2's warm late-summer afternoon sun direction, soft blue sky, modest scattered cloud, gentle atmospheric haze, natural contrast and believable shadows. Preserve geometric legibility in shadow.
++Color palette: Warm buff brick, honey timber, dark charcoal PV glass, meadow olive/green/gold with restrained wildflower colour, natural British late-summer landscape, soft blue sky.
++Materials/textures: Highly credible fine meadow planting, low parapets and roof-edge drainage, realistic glass mullions, buff masonry, honey timber, dark bifacial PV modules, asphalt, gravel, pasture, orchards and mature mixed woodland. Detail must stay subordinate to the geometry master.
++People and vehicles: Sparse, true-to-scale people and vehicles only where physically plausible; never oversized; no crowds. Do not let parked cars overwrite solar rows, planting, drainage or boundaries.
++Text (verbatim): ""
++Constraints: Geometry fidelity overrides beauty and overrides Images 2 and 3. Follow Image 1, never the old photograph, for what is where. Maintain all Image 1 silhouettes and alignments within about 15 px at 1280×720. Preserve the exact central void, roof width, circular outline, front wall, near-right wedge, roads, solar arrays, housing masses, woodland belt and distant terrain. Natural photographic detail may be added only inside these fixed shapes. No crop or warp.
++Avoid: old Image 2 layout; detached-house suburb replacing the model's new terraces and timber blocks; missing or shifted solar arrays; invented buildings; changed circular proportions; enlarged courtyard; extra roof paths; roof terraces; railings dominating the roof; corporate office-park styling; futuristic forms; illustration; painterly texture; obvious CGI; miniature/tilt-shift look; dramatic cinematic grading; excessive saturation; fake bokeh; distorted roads; floating trees; malformed cars; giant people; signage; labels; logos; text; watermark.
++```
++
++### Pass 1 inspection
++
++The first pass had a strong photographic finish, credible meadow planting, and successful buff-brick/honey-timber glazing. It was not accepted because the ring was enlarged and lowered in frame, the courtyard and horizon shifted, and the roof planting obscured too much of the model's concentric and radial organization. Background geometry also became more generic than the master.
++
++## Pass 2 correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: corrected final architectural place photograph, exactly 1280×720, landscape 16:9.
++Primary request: CORRECTION PASS ONLY. Rebuild the first-pass photograph onto the exact geometry, camera and full-frame composition of Image 1. Preserve the photorealistic late-summer material treatment of Image 2, but correct all geometry drift. The finished photograph must match Image 1's pixel layout within approximately 15 px at 1280×720.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY AND CAMERA MASTER. It overrides everything. Trace its major silhouettes and screen positions exactly.
++- Image 2 is the first generated pass. Retain only its successful photographic realism, meadow texture, glazing, buff brick/honey timber character, sunlight, haze and detail quality. Do not retain its framing or geometry drift.
++Required geometry corrections:
++1. Zoom out and restore the exact Image 1 framing. The circular ring must occupy exactly the same screen area as Image 1: outer roof left edge near x=181, right edge near x=1208, top edge near y=206, bottom/front edge near y=709 at 1280×720.
++2. Restore the central courtyard opening to Image 1: same horizontally oval screen shape, left edge near x=484, right edge near x=883, top near y=258, bottom near y=402. Do not shift or enlarge it.
++3. Restore the distant horizon and hills to Image 1: sky is only the narrow upper strip; hill skyline remains near y=0–34. Do not use the taller mountain/horizon composition from Image 2.
++4. Restore the roof's modeled concentric maintenance bands and radial seams exactly where visible in Image 1. Meadow planting is low and fine so these bands remain legible; no invented broad diagonal paths.
++5. Restore the exact outer wall height and near-right wedge/entrance projection silhouette from Image 1. The near facade is mostly dark/glazed and shaded at this camera, not an oversized bright multi-storey curtain wall.
++6. Restore every background object to Image 1: woodland belt shape; pale rectangular service building upper right; long vertical bifacial solar rows behind and to both sides; left solar-canopy rows; roads; open land; houses and blocks. Do not replace this model layout with the first pass's invented landscape.
++7. Preserve the exact Image 1 camera [20, 125, 170] looking at [123, 62.597, 64], perspective, horizon height, occlusions and full uncropped frame.
++Scene/content: GCHQ meadow roof in 2045, 3.6 hectares of south-facing ring 20 m above ground, credible species-rich late-summer wildflower meadow. Exact Image 1 neighbourhood and infrastructure, including the dense new settlement, campus courtyard blocks, bifacial solar rows over pasture, solar car-park canopies, orchards, woodland belts and open stormwater channels. Materials: buff brick, honey timber, dark PV glass and ecologically mature planting, built-precedent realism informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun.
++Style/medium: Natural high-resolution drone architectural photography; documentary realism; physically plausible materials, scale, reflections, weathering, vegetation variation and atmospheric perspective.
++Lighting/mood: Keep Image 2's warm late-summer afternoon light, soft blue sky, modest cloud, natural colour and gentle haze, but conform shadows to Image 1 geometry.
++People and vehicles: Sparse and true scale only.
++Text (verbatim): ""
++Constraints: Change the first pass's geometry and framing to match Image 1; retain its photographic finish. Geometry fidelity overrides attractiveness. Whole-frame 1280×720, no crop, no warp, no reframing. Preserve every major edge and object position from Image 1 within about 15 px.
++Avoid: enlarged ring; low or shifted building; enlarged/shifted courtyard; tall mountain sky; old-photo layout; invented buildings; missing solar rows; lost roof bands; new roof paths; corporate office park; futuristic design; illustration; obvious CGI; tilt-shift; cinematic grading; excessive saturation; malformed cars; oversized people; signage; labels; logos; text; watermark.
++```
++
++### Final inspection
++
++The correction substantially improves the match to the geometry plate. The outer ring's left, right, and top extents, central opening, near-right projection, service block, woodland belt, and principal solar-row fields are close to their master positions. The ring and courtyard retain the intended scale relationship, the foreground facade is dark and subordinate, and the meadow reads clearly as a continuous elevated landscape. Lighting and material character are convincingly photographic and consistent with the reference set.
++
++Visible drift remains. The distant hill skyline is taller and more articulated than the very shallow master horizon. Fine-grain background housing is interpreted as generic low-rise suburban fabric rather than reliably preserving every terrace/timber-block footprint, and some small roads, field edges, orchard trees, drainage lines, and solar-row endpoints cannot honestly be claimed to be within 15 px. The courtyard tree count and exact positions are also interpreted rather than traced. On the roof, the concentric bands are retained but read as mown meadow lines; several radial divisions are softer or slightly shifted.
++
++Elements that can still read as CGI on close inspection include the unusually even repetition of distant houses and trees, the high-density/over-crisp flower pattern, some simplified solar structures, and a few softened or ambiguous tiny vehicles. No text, logo, or watermark is visible.
+
+diff --git a/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..51df988a0705dc53705240b1dae5d4515650d81e
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+@@ -0,0 +1,77 @@
++# GCHQ meadow roof (2045) — generation notes
++
++## Output
++
++- Final image: `gchq-meadow-photo.png`
++- Final dimensions: 1280 × 720 px, sRGB
++- Method: built-in image generation, `sketch-to-render`
++- Passes used: 2 (one initial generation and one correction pass)
++- Final selection: pass 2
++- Final sizing: the complete generated frame (1672 × 941) was resized directly to 1280 × 720. No crop, extension, or content-aware warp was used. The source and target aspect ratios differ by less than 0.06% because of integer pixel dimensions.
++
++## Input roles
++
++1. `../plates/gchq-meadow-2045.png` — absolute geometry and camera master.
++2. `../../close-2045/out/gchq-meadow-photo.png` — old approved photograph, used only for photographic look, light, colour, haze, and detail level.
++3. `../../m2/boards/meadow-a-adventurous.png` — approved adventurous target board, used only for materials and character.
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved architectural place photograph, final project image at exactly 1280×720, landscape 16:9.
++Primary request: REMAKE the approved place photograph so it agrees with the current 3D model. Transform the geometry master into a highly realistic late-summer aerial architectural photograph. This is GCHQ's meadow roof in 2045: the most recognisable building in Gloucestershire, re-roofed; 3.6 hectares of south-facing ring, 20 m up, turned over to species-rich wildflower meadow—the largest piece of open land in the box that nobody has to buy, 100 m from the new campus. It must read as an extraordinary but credible built place, based on real built precedents, not a corporate office park and not an illustration.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY MASTER and camera master: the current 3D model render from camera [20, 125, 170] looking at [123, 62.597, 64]. Follow Image 1 for every visible object's position, silhouette, footprint, height, scale, perspective, horizon, occlusion, field boundary, road, building, tree belt, orchard row, solar row, canopy and open stormwater channel. Keep the geometry within approximately 15 pixels at 1280×720. Do not substitute, simplify, invent, relocate, enlarge or erase site elements. Preserve the giant circular ring roof, its central circular courtyard opening, the near-right wedge/entrance projection, outer wall profile, and exact framing.
++- Image 2 is the OLD approved photograph at this exact camera. Use Image 2 ONLY for photographic look, natural light, colour, atmospheric haze, believable detail density, camera realism and late-summer afternoon sun. Its layout is obsolete: DO NOT copy its roads, parking, buildings, vegetation layout, roof paths, facade design, or any other geometry.
++- Image 3 is the approved adventurous target board for this site. Use it ONLY for material language and character: buff brick, honey-toned structural timber, fine PV glass, rich meadow roofs, ecologically mature planting, elegant restrained detailing. Do not copy its camera or layout.
++Scene/backdrop: Exact Image 1 site layout. Across the middle and distance retain the dense new neighbourhood shown in Image 1—about 1,100 homes expressed as compact terraces and mid-rise timber blocks, not detached suburban sprawl. Retain the campus courtyard blocks. Retain the long vertical bifacial solar rows over pasture, the solar canopies over GCHQ car parks, mature orchard rows and woodland belts, and visible open stormwater channels exactly where the geometry master places them. Keep the distant hills and horizon profile exactly aligned to Image 1.
++Subject: The dominant huge circular GCHQ ring fills the lower and central frame exactly as in Image 1. Its 3.6-hectare roof is a continuous, credible, slightly weathered late-summer wildflower meadow with fine low species—grasses, seed heads and small yellow, white and muted purple flowers—following the model's concentric maintenance bands and radial seams without adding new broad paths. The central opening remains the exact same size and shape, with its existing trees and lawn in their model positions. Give the outer and inner elevations believable glazing, buff brick and honey timber while preserving every edge and height from Image 1. The roof must visibly feel 20 m above ground.
++Style/medium: Photorealistic high-resolution aerial/drone architectural photography; physically plausible materials, reflections, glazing depth, drainage, weathering, vegetation variation and atmospheric perspective. Built-precedent character informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun. Documentary realism, not a glossy corporate visualization.
++Composition/framing: Pixel-faithful to Image 1. Same camera pose, focal length, perspective, horizon height and full-frame composition. Whole-frame 1280×720; no crop, no warp, no reframing. The ring roof outer perimeter, courtyard opening, near-right projection, background woodland and every major row/block must land in the same position as Image 1.
++Lighting/mood: Match Image 2's warm late-summer afternoon sun direction, soft blue sky, modest scattered cloud, gentle atmospheric haze, natural contrast and believable shadows. Preserve geometric legibility in shadow.
++Color palette: Warm buff brick, honey timber, dark charcoal PV glass, meadow olive/green/gold with restrained wildflower colour, natural British late-summer landscape, soft blue sky.
++Materials/textures: Highly credible fine meadow planting, low parapets and roof-edge drainage, realistic glass mullions, buff masonry, honey timber, dark bifacial PV modules, asphalt, gravel, pasture, orchards and mature mixed woodland. Detail must stay subordinate to the geometry master.
++People and vehicles: Sparse, true-to-scale people and vehicles only where physically plausible; never oversized; no crowds. Do not let parked cars overwrite solar rows, planting, drainage or boundaries.
++Text (verbatim): ""
++Constraints: Geometry fidelity overrides beauty and overrides Images 2 and 3. Follow Image 1, never the old photograph, for what is where. Maintain all Image 1 silhouettes and alignments within about 15 px at 1280×720. Preserve the exact central void, roof width, circular outline, front wall, near-right wedge, roads, solar arrays, housing masses, woodland belt and distant terrain. Natural photographic detail may be added only inside these fixed shapes. No crop or warp.
++Avoid: old Image 2 layout; detached-house suburb replacing the model's new terraces and timber blocks; missing or shifted solar arrays; invented buildings; changed circular proportions; enlarged courtyard; extra roof paths; roof terraces; railings dominating the roof; corporate office-park styling; futuristic forms; illustration; painterly texture; obvious CGI; miniature/tilt-shift look; dramatic cinematic grading; excessive saturation; fake bokeh; distorted roads; floating trees; malformed cars; giant people; signage; labels; logos; text; watermark.
++```
++
++### Pass 1 inspection
++
++The first pass had a strong photographic finish, credible meadow planting, and successful buff-brick/honey-timber glazing. It was not accepted because the ring was enlarged and lowered in frame, the courtyard and horizon shifted, and the roof planting obscured too much of the model's concentric and radial organization. Background geometry also became more generic than the master.
++
++## Pass 2 correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: corrected final architectural place photograph, exactly 1280×720, landscape 16:9.
++Primary request: CORRECTION PASS ONLY. Rebuild the first-pass photograph onto the exact geometry, camera and full-frame composition of Image 1. Preserve the photorealistic late-summer material treatment of Image 2, but correct all geometry drift. The finished photograph must match Image 1's pixel layout within approximately 15 px at 1280×720.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY AND CAMERA MASTER. It overrides everything. Trace its major silhouettes and screen positions exactly.
++- Image 2 is the first generated pass. Retain only its successful photographic realism, meadow texture, glazing, buff brick/honey timber character, sunlight, haze and detail quality. Do not retain its framing or geometry drift.
++Required geometry corrections:
++1. Zoom out and restore the exact Image 1 framing. The circular ring must occupy exactly the same screen area as Image 1: outer roof left edge near x=181, right edge near x=1208, top edge near y=206, bottom/front edge near y=709 at 1280×720.
++2. Restore the central courtyard opening to Image 1: same horizontally oval screen shape, left edge near x=484, right edge near x=883, top near y=258, bottom near y=402. Do not shift or enlarge it.
++3. Restore the distant horizon and hills to Image 1: sky is only the narrow upper strip; hill skyline remains near y=0–34. Do not use the taller mountain/horizon composition from Image 2.
++4. Restore the roof's modeled concentric maintenance bands and radial seams exactly where visible in Image 1. Meadow planting is low and fine so these bands remain legible; no invented broad diagonal paths.
++5. Restore the exact outer wall height and near-right wedge/entrance projection silhouette from Image 1. The near facade is mostly dark/glazed and shaded at this camera, not an oversized bright multi-storey curtain wall.
++6. Restore every background object to Image 1: woodland belt shape; pale rectangular service building upper right; long vertical bifacial solar rows behind and to both sides; left solar-canopy rows; roads; open land; houses and blocks. Do not replace this model layout with the first pass's invented landscape.
++7. Preserve the exact Image 1 camera [20, 125, 170] looking at [123, 62.597, 64], perspective, horizon height, occlusions and full uncropped frame.
++Scene/content: GCHQ meadow roof in 2045, 3.6 hectares of south-facing ring 20 m above ground, credible species-rich late-summer wildflower meadow. Exact Image 1 neighbourhood and infrastructure, including the dense new settlement, campus courtyard blocks, bifacial solar rows over pasture, solar car-park canopies, orchards, woodland belts and open stormwater channels. Materials: buff brick, honey timber, dark PV glass and ecologically mature planting, built-precedent realism informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun.
++Style/medium: Natural high-resolution drone architectural photography; documentary realism; physically plausible materials, scale, reflections, weathering, vegetation variation and atmospheric perspective.
++Lighting/mood: Keep Image 2's warm late-summer afternoon light, soft blue sky, modest cloud, natural colour and gentle haze, but conform shadows to Image 1 geometry.
++People and vehicles: Sparse and true scale only.
++Text (verbatim): ""
++Constraints: Change the first pass's geometry and framing to match Image 1; retain its photographic finish. Geometry fidelity overrides attractiveness. Whole-frame 1280×720, no crop, no warp, no reframing. Preserve every major edge and object position from Image 1 within about 15 px.
++Avoid: enlarged ring; low or shifted building; enlarged/shifted courtyard; tall mountain sky; old-photo layout; invented buildings; missing solar rows; lost roof bands; new roof paths; corporate office park; futuristic design; illustration; obvious CGI; tilt-shift; cinematic grading; excessive saturation; malformed cars; oversized people; signage; labels; logos; text; watermark.
++```
++
++### Final inspection
++
++The correction substantially improves the match to the geometry plate. The outer ring's left, right, and top extents, central opening, near-right projection, service block, woodland belt, and principal solar-row fields are close to their master positions. The ring and courtyard retain the intended scale relationship, the foreground facade is dark and subordinate, and the meadow reads clearly as a continuous elevated landscape. Lighting and material character are convincingly photographic and consistent with the reference set.
++
++Visible drift remains. The distant hill skyline is taller and more articulated than the very shallow master horizon. Fine-grain background housing is interpreted as generic low-rise suburban fabric rather than reliably preserving every terrace/timber-block footprint, and some small roads, field edges, orchard trees, drainage lines, and solar-row endpoints cannot honestly be claimed to be within 15 px. The courtyard tree count and exact positions are also interpreted rather than traced. On the roof, the concentric bands are retained but read as mown meadow lines; several radial divisions are softer or slightly shifted.
++
++Elements that can still read as CGI on close inspection include the unusually even repetition of distant houses and trees, the high-density/over-crisp flower pattern, some simplified solar structures, and a few softened or ambiguous tiny vehicles. No text, logo, or watermark is visible.
+
+codex
+Completed using the built-in image generator with one geometry-correction pass.
+
+- [Final 1280×720 photograph](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/gchq-meadow-photo.png>)
+- [Prompts, pass history, and honest inspection](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md>)
+
+The remaining visible drift and CGI-like details are documented in the notes.
+
+Skill used: [imagegen](</Users/user/.codex/skills/.system/imagegen/SKILL.md>).
+diff --git a/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..51df988a0705dc53705240b1dae5d4515650d81e
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md
+@@ -0,0 +1,77 @@
++# GCHQ meadow roof (2045) — generation notes
++
++## Output
++
++- Final image: `gchq-meadow-photo.png`
++- Final dimensions: 1280 × 720 px, sRGB
++- Method: built-in image generation, `sketch-to-render`
++- Passes used: 2 (one initial generation and one correction pass)
++- Final selection: pass 2
++- Final sizing: the complete generated frame (1672 × 941) was resized directly to 1280 × 720. No crop, extension, or content-aware warp was used. The source and target aspect ratios differ by less than 0.06% because of integer pixel dimensions.
++
++## Input roles
++
++1. `../plates/gchq-meadow-2045.png` — absolute geometry and camera master.
++2. `../../close-2045/out/gchq-meadow-photo.png` — old approved photograph, used only for photographic look, light, colour, haze, and detail level.
++3. `../../m2/boards/meadow-a-adventurous.png` — approved adventurous target board, used only for materials and character.
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved architectural place photograph, final project image at exactly 1280×720, landscape 16:9.
++Primary request: REMAKE the approved place photograph so it agrees with the current 3D model. Transform the geometry master into a highly realistic late-summer aerial architectural photograph. This is GCHQ's meadow roof in 2045: the most recognisable building in Gloucestershire, re-roofed; 3.6 hectares of south-facing ring, 20 m up, turned over to species-rich wildflower meadow—the largest piece of open land in the box that nobody has to buy, 100 m from the new campus. It must read as an extraordinary but credible built place, based on real built precedents, not a corporate office park and not an illustration.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY MASTER and camera master: the current 3D model render from camera [20, 125, 170] looking at [123, 62.597, 64]. Follow Image 1 for every visible object's position, silhouette, footprint, height, scale, perspective, horizon, occlusion, field boundary, road, building, tree belt, orchard row, solar row, canopy and open stormwater channel. Keep the geometry within approximately 15 pixels at 1280×720. Do not substitute, simplify, invent, relocate, enlarge or erase site elements. Preserve the giant circular ring roof, its central circular courtyard opening, the near-right wedge/entrance projection, outer wall profile, and exact framing.
++- Image 2 is the OLD approved photograph at this exact camera. Use Image 2 ONLY for photographic look, natural light, colour, atmospheric haze, believable detail density, camera realism and late-summer afternoon sun. Its layout is obsolete: DO NOT copy its roads, parking, buildings, vegetation layout, roof paths, facade design, or any other geometry.
++- Image 3 is the approved adventurous target board for this site. Use it ONLY for material language and character: buff brick, honey-toned structural timber, fine PV glass, rich meadow roofs, ecologically mature planting, elegant restrained detailing. Do not copy its camera or layout.
++Scene/backdrop: Exact Image 1 site layout. Across the middle and distance retain the dense new neighbourhood shown in Image 1—about 1,100 homes expressed as compact terraces and mid-rise timber blocks, not detached suburban sprawl. Retain the campus courtyard blocks. Retain the long vertical bifacial solar rows over pasture, the solar canopies over GCHQ car parks, mature orchard rows and woodland belts, and visible open stormwater channels exactly where the geometry master places them. Keep the distant hills and horizon profile exactly aligned to Image 1.
++Subject: The dominant huge circular GCHQ ring fills the lower and central frame exactly as in Image 1. Its 3.6-hectare roof is a continuous, credible, slightly weathered late-summer wildflower meadow with fine low species—grasses, seed heads and small yellow, white and muted purple flowers—following the model's concentric maintenance bands and radial seams without adding new broad paths. The central opening remains the exact same size and shape, with its existing trees and lawn in their model positions. Give the outer and inner elevations believable glazing, buff brick and honey timber while preserving every edge and height from Image 1. The roof must visibly feel 20 m above ground.
++Style/medium: Photorealistic high-resolution aerial/drone architectural photography; physically plausible materials, reflections, glazing depth, drainage, weathering, vegetation variation and atmospheric perspective. Built-precedent character informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun. Documentary realism, not a glossy corporate visualization.
++Composition/framing: Pixel-faithful to Image 1. Same camera pose, focal length, perspective, horizon height and full-frame composition. Whole-frame 1280×720; no crop, no warp, no reframing. The ring roof outer perimeter, courtyard opening, near-right projection, background woodland and every major row/block must land in the same position as Image 1.
++Lighting/mood: Match Image 2's warm late-summer afternoon sun direction, soft blue sky, modest scattered cloud, gentle atmospheric haze, natural contrast and believable shadows. Preserve geometric legibility in shadow.
++Color palette: Warm buff brick, honey timber, dark charcoal PV glass, meadow olive/green/gold with restrained wildflower colour, natural British late-summer landscape, soft blue sky.
++Materials/textures: Highly credible fine meadow planting, low parapets and roof-edge drainage, realistic glass mullions, buff masonry, honey timber, dark bifacial PV modules, asphalt, gravel, pasture, orchards and mature mixed woodland. Detail must stay subordinate to the geometry master.
++People and vehicles: Sparse, true-to-scale people and vehicles only where physically plausible; never oversized; no crowds. Do not let parked cars overwrite solar rows, planting, drainage or boundaries.
++Text (verbatim): ""
++Constraints: Geometry fidelity overrides beauty and overrides Images 2 and 3. Follow Image 1, never the old photograph, for what is where. Maintain all Image 1 silhouettes and alignments within about 15 px at 1280×720. Preserve the exact central void, roof width, circular outline, front wall, near-right wedge, roads, solar arrays, housing masses, woodland belt and distant terrain. Natural photographic detail may be added only inside these fixed shapes. No crop or warp.
++Avoid: old Image 2 layout; detached-house suburb replacing the model's new terraces and timber blocks; missing or shifted solar arrays; invented buildings; changed circular proportions; enlarged courtyard; extra roof paths; roof terraces; railings dominating the roof; corporate office-park styling; futuristic forms; illustration; painterly texture; obvious CGI; miniature/tilt-shift look; dramatic cinematic grading; excessive saturation; fake bokeh; distorted roads; floating trees; malformed cars; giant people; signage; labels; logos; text; watermark.
++```
++
++### Pass 1 inspection
++
++The first pass had a strong photographic finish, credible meadow planting, and successful buff-brick/honey-timber glazing. It was not accepted because the ring was enlarged and lowered in frame, the courtyard and horizon shifted, and the roof planting obscured too much of the model's concentric and radial organization. Background geometry also became more generic than the master.
++
++## Pass 2 correction prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: corrected final architectural place photograph, exactly 1280×720, landscape 16:9.
++Primary request: CORRECTION PASS ONLY. Rebuild the first-pass photograph onto the exact geometry, camera and full-frame composition of Image 1. Preserve the photorealistic late-summer material treatment of Image 2, but correct all geometry drift. The finished photograph must match Image 1's pixel layout within approximately 15 px at 1280×720.
++Input images:
++- Image 1 is the ABSOLUTE GEOMETRY AND CAMERA MASTER. It overrides everything. Trace its major silhouettes and screen positions exactly.
++- Image 2 is the first generated pass. Retain only its successful photographic realism, meadow texture, glazing, buff brick/honey timber character, sunlight, haze and detail quality. Do not retain its framing or geometry drift.
++Required geometry corrections:
++1. Zoom out and restore the exact Image 1 framing. The circular ring must occupy exactly the same screen area as Image 1: outer roof left edge near x=181, right edge near x=1208, top edge near y=206, bottom/front edge near y=709 at 1280×720.
++2. Restore the central courtyard opening to Image 1: same horizontally oval screen shape, left edge near x=484, right edge near x=883, top near y=258, bottom near y=402. Do not shift or enlarge it.
++3. Restore the distant horizon and hills to Image 1: sky is only the narrow upper strip; hill skyline remains near y=0–34. Do not use the taller mountain/horizon composition from Image 2.
++4. Restore the roof's modeled concentric maintenance bands and radial seams exactly where visible in Image 1. Meadow planting is low and fine so these bands remain legible; no invented broad diagonal paths.
++5. Restore the exact outer wall height and near-right wedge/entrance projection silhouette from Image 1. The near facade is mostly dark/glazed and shaded at this camera, not an oversized bright multi-storey curtain wall.
++6. Restore every background object to Image 1: woodland belt shape; pale rectangular service building upper right; long vertical bifacial solar rows behind and to both sides; left solar-canopy rows; roads; open land; houses and blocks. Do not replace this model layout with the first pass's invented landscape.
++7. Preserve the exact Image 1 camera [20, 125, 170] looking at [123, 62.597, 64], perspective, horizon height, occlusions and full uncropped frame.
++Scene/content: GCHQ meadow roof in 2045, 3.6 hectares of south-facing ring 20 m above ground, credible species-rich late-summer wildflower meadow. Exact Image 1 neighbourhood and infrastructure, including the dense new settlement, campus courtyard blocks, bifacial solar rows over pasture, solar car-park canopies, orchards, woodland belts and open stormwater channels. Materials: buff brick, honey timber, dark PV glass and ecologically mature planting, built-precedent realism informed by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattørkaia, Augustenborg and Next2Sun.
++Style/medium: Natural high-resolution drone architectural photography; documentary realism; physically plausible materials, scale, reflections, weathering, vegetation variation and atmospheric perspective.
++Lighting/mood: Keep Image 2's warm late-summer afternoon light, soft blue sky, modest cloud, natural colour and gentle haze, but conform shadows to Image 1 geometry.
++People and vehicles: Sparse and true scale only.
++Text (verbatim): ""
++Constraints: Change the first pass's geometry and framing to match Image 1; retain its photographic finish. Geometry fidelity overrides attractiveness. Whole-frame 1280×720, no crop, no warp, no reframing. Preserve every major edge and object position from Image 1 within about 15 px.
++Avoid: enlarged ring; low or shifted building; enlarged/shifted courtyard; tall mountain sky; old-photo layout; invented buildings; missing solar rows; lost roof bands; new roof paths; corporate office park; futuristic design; illustration; obvious CGI; tilt-shift; cinematic grading; excessive saturation; malformed cars; oversized people; signage; labels; logos; text; watermark.
++```
++
++### Final inspection
++
++The correction substantially improves the match to the geometry plate. The outer ring's left, right, and top extents, central opening, near-right projection, service block, woodland belt, and principal solar-row fields are close to their master positions. The ring and courtyard retain the intended scale relationship, the foreground facade is dark and subordinate, and the meadow reads clearly as a continuous elevated landscape. Lighting and material character are convincingly photographic and consistent with the reference set.
++
++Visible drift remains. The distant hill skyline is taller and more articulated than the very shallow master horizon. Fine-grain background housing is interpreted as generic low-rise suburban fabric rather than reliably preserving every terrace/timber-block footprint, and some small roads, field edges, orchard trees, drainage lines, and solar-row endpoints cannot honestly be claimed to be within 15 px. The courtyard tree count and exact positions are also interpreted rather than traced. On the roof, the concentric bands are retained but read as mown meadow lines; several radial divisions are softer or slightly shifted.
++
++Elements that can still read as CGI on close inspection include the unusually even repetition of distant houses and trees, the high-density/over-crisp flower pattern, some simplified solar structures, and a few softened or ambiguous tiny vehicles. No text, logo, or watermark is visible.
+
+tokens used
+38,669
+Completed using the built-in image generator with one geometry-correction pass.
+
+- [Final 1280×720 photograph](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/gchq-meadow-photo.png>)
+- [Prompts, pass history, and honest inspection](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/gchq-meadow-notes.md>)
+
+The remaining visible drift and CGI-like details are documented in the notes.
+
+Skill used: [imagegen](</Users/user/.codex/skills/.system/imagegen/SKILL.md>).
