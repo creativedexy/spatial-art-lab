@@ -980,10 +980,10 @@ def assert_canopy_clearance(canopies, buildings, heights, meta, clearance=3.0):
 def tree_record(x, z, height, kind, spread, rot=None):
     """The same 8-byte record gv-trees.bin uses. No Y: the map computes it.
 
-    `future.js` reads the last byte as spread/100 and scales X/Z by
-    `height * spread`. The broadleaf unit crown is about 0.71 units across,
-    so a 7 m orchard tree at spread=145 renders about 7.2 m across: neighbours
-    on the 7.5 m rows nearly touch without turning the orchard into a wall.
+    `future.js` reads the last byte as spread/100 and normally scales X/Z by
+    `height * spread`. Orchard kind 3 is the deliberate exception: its crown
+    is fixed to 85-95% of this generator's 7.5 m row spacing, so neighbours
+    nearly touch without losing the inter-row gap.
     """
     return (int(round(x * 10)), int(round(z * 10)),
             max(1, min(255, int(round(height / 0.25)))),

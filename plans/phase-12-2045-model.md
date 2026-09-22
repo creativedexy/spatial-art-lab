@@ -361,3 +361,9 @@ Valley SPD; `inspiration/golden-valley/README.md`.
   M5. Its apparent proxy shift came from the regressed ground mask changing
   which photographed fields formed the reference; restoring that mask also
   restores the M4 roof comparison population.
+- Isolated M4's binary centre-texel ground-ownership discard ahead of every M5
+  colour, class-detail and water sample, so those additions can only shade
+  ground that the proven present-class versus future-class test already drew.
+- Sized orchard crowns directly from the 7.5 m planting grid: 6.4-7.1 m
+  irregular crowns now nearly touch down each row while preserving the wider
+  inter-row gaps and the established keyed planting colour grade.

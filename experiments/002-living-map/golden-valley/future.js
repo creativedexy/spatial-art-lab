@@ -314,10 +314,10 @@ export function blendGround(
            // was pointless. The class maps answer it exactly: two indices,
            // and they either differ or they do not.
            //
-           // This is deliberately the original, binary centre-texel test.
-           // probe_light.py uses the same discard to classify authored ground;
-           // colour filtering and field detail belong to the render below and
-           // must never alter which square metres the diagnostic can see.
+           // Self-check: M4's decision is one centre tap from uTodayClass and
+           // one from uFutureClass at the SAME vMapUv, followed by futureAt.
+           // Do not use uGroundTexel, gvClassWeight or the filtered colour in
+           // this block: those are M5 surface detail, not ground ownership.
            if (uGroundMask > 0.5) {
              float wasClass = texture2D(uTodayClass, vMapUv).r;
              float willClass = texture2D(uFutureClass, vMapUv).r;
@@ -325,7 +325,12 @@ export function blendGround(
              if (!changed || futureAt(vFutureWorld) < 0.5) discard;
            }
          }
-         #include <map_fragment>
+         #include <map_fragment>`)
+      // The ownership discard above is M4's decision. Keeping M5's filtered
+      // colour, field grain and water in a later chunk makes the ordering
+      // explicit: discarded photographed ground cannot reach this code.
+      .replace('#include <alphatest_fragment>',
+        `#include <alphatest_fragment>
          vec2 detailStep = uGroundTexel * 3.5;
          vec4 futureTexel = texture2D(uFutureMap, vMapUv) * 0.36
            + texture2D(uFutureMap, vMapUv + vec2(detailStep.x, 0.0)) * 0.16
@@ -1102,7 +1107,7 @@ async function loadFutureTrees(groundAt, unitTree, treeKinds, grade = null) {
     list.forEach((t, i) => {
       pos.set(t.x, groundAt(t.x, t.z) - 0.2, t.z);
       q.setFromAxisAngle(axis, t.rot);
-      mesh.setMatrixAt(i, m.compose(pos, q, treeScale(t, scale)));
+      mesh.setMatrixAt(i, m.compose(pos, q, treeScale(t, scale, kind)));
       treeTint(t, kind, tint);
       // Baked into the instance colour, so unlike the ground it stays graded if
       // the measured fallback takes over below the melt line. A small mismatch

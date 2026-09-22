@@ -61,8 +61,8 @@ export const KINDS = [
     [0.00, 0.58, 0.10, 0.30, 1.18, 0.68, 0.90],
     [0.05, 0.37, -0.20, 0.29, 0.98, 0.70, 1.12],
   ] },
-  // Deliberately smaller than the oak/mixed crowns: the 7.5 m planting grid
-  // keeps a strip of ground between most trees, so its rows remain readable.
+  // Lower than oak/mixed crowns, but wide enough to read as a planted canopy:
+  // treeScale fixes their physical diameter from the 7.5 m planting grid.
   { name: 'orchard', colour: 0x4d7341, trunk: 0.22, lobes: [
     [0.00, 0.55, 0.00, 0.22, 1.06, 0.86, 1.06],
     [0.14, 0.56, -0.07, 0.16, 1.00, 0.82, 1.10],
@@ -204,7 +204,20 @@ function treeHash(t, salt) {
   return n - Math.floor(n);
 }
 
-export function treeScale(t, target) {
+export function treeScale(t, target, kind = null) {
+  if (kind?.name === 'orchard') {
+    // The irregular orchard geometry spans 0.617 unit in X and 0.499 in Z.
+    // A 6.75 m crown is 90% of the measured 7.5 m in-row spacing; restrained
+    // +/-5% variation lets neighbours nearly touch without closing the wider
+    // inter-row gap or turning the planting into a hedge.
+    const crown = 6.75 * (0.95 + treeHash(t, 1) * 0.10);
+    target.set(
+      crown / 0.617,
+      t.h * (0.7 + treeHash(t, 2) * 0.6),
+      crown / 0.499,
+    );
+    return target;
+  }
   // Independent 0.7-1.3 axes stop one instanced crown becoming a repeated
   // stamp. Rotation then makes the unequal lobe cluster break differently in
   // every silhouette while the source height/spread still set its class size.
@@ -266,7 +279,7 @@ export async function loadTrees(groundAt) {
     list.forEach((t, i) => {
       pos.set(t.x, groundAt(t.x, t.z) - 0.2, t.z);
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), t.rot);
-      mesh.setMatrixAt(i, m.compose(pos, q, treeScale(t, scale)));
+      mesh.setMatrixAt(i, m.compose(pos, q, treeScale(t, scale, kind)));
       mesh.setColorAt(i, treeTint(t, kind, tint));
     });
     mesh.instanceMatrix.needsUpdate = true;
