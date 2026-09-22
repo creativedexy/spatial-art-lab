@@ -1,6 +1,21 @@
 # Phase 12, second half: the 2045 model, made stark
 
-*Decided 15 Sep 2026; design direction set 21 Sep. Phase: Define, moving into Develop.*
+*Decided 15 Sep 2026; design direction set 21 Sep; M0 to M7 delivered 22 Sep.*
+*Phase: Deliver. Branch head `a2e3e7a`.*
+
+**Result.** The switch now changes 13 to 51 per cent of the ground in frame
+(was 2 to 21), with Google's photograph kept on the today side of every shot.
+About 1,100 homes, 105,501 m2 of campus, solid buildings with a measured roof
+programme, mature orchards and woodland, vertical agrivoltaics, solar canopies
+over GCHQ's car parks, stormwater and shadows onto the photograph. Measured:
+buildings -0.05 stops from the photographed buildings across five views,
+ground +0.01, trees -0.02. Tests: 9/9, 19/19, 13/13, 7/7. First load 1.43 MB;
+10.6 to 15.8 ms a frame here at 1280x720.
+
+**Left undone, deliberately:** home roofs read as a checkerboard of PV and
+slate; the live map is cooler and cleaner than the adventurous boards; trees
+are visibly modelled close up; the GCHQ meadow roof is flatter in contrast
+than the photographed fields; mobile frame rate is untested on a phone.
 
 The map is the product, and the switch between today and 2045 is the whole
 argument. Today the switch barely changes anything. This plan makes it stark

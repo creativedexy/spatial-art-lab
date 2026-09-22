@@ -66,3 +66,7 @@ experiments/002-living-map/**/key.js
 experiments/002-living-map/generate/m1/**/*.png
 experiments/002-living-map/generate/m1/**/*.jpg
 experiments/002-living-map/generate/m1/**/index.html
+
+# Keyed captures and pages built from them contain Google tile imagery (licence).
+experiments/002-living-map/generate/m6/shots/
+experiments/002-living-map/generate/m6b/
