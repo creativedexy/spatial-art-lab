@@ -1,0 +1,150 @@
+{
+  "id": "scheme-a",
+  "approvedVariant": "adventurous",
+  "approvedOn": "2026-09-22",
+  "basis": "Visual estimate from scheme-a-adventurous.png against scheme-a-2045.png. This board is the loosest geometric interpretation, so the plate controls all massing, field and water boundaries.",
+  "roofMix": {
+    "PV": 34,
+    "meadow/green": 29,
+    "slate/tile": 26,
+    "walkable/terrace": 8,
+    "other": 3,
+    "reading": "Across the whole scheme, new homes are PV-led, campus blocks mix planted and PV roofs, and existing suburbs remain slate and tile. Walkable roof paths are visible mainly on the large courtyard blocks."
+  },
+  "wallMaterials": [
+    {
+      "material": "warm buff brick and low-carbon masonry",
+      "litHex": "#BE986C",
+      "shadedHex": "#725840",
+      "share": 39
+    },
+    {
+      "material": "honey mass timber",
+      "litHex": "#C59A65",
+      "shadedHex": "#6C5038",
+      "share": 30
+    },
+    {
+      "material": "dark reflective glazing",
+      "litHex": "#687A75",
+      "shadedHex": "#263B3B",
+      "share": 22
+    },
+    {
+      "material": "bronze metal and dark plinths",
+      "litHex": "#665747",
+      "shadedHex": "#302C27",
+      "share": 9
+    }
+  ],
+  "windowRhythm": {
+    "storeyHeightMetres": "2.9 to 3.1 for homes; 3.3 to 3.5 for campus",
+    "windowWidthMetres": "0.9 to 1.2 on terraces; 1.9 to 2.4 within 3 m campus bays",
+    "windowProportion": "Tall domestic openings around 0.6 width:height; campus glazing around 1.4 to 1.7 width:height",
+    "revealDepthImpression": "About 200 mm on masonry homes and 350 to 500 mm behind the campus timber frame.",
+    "rhythm": "Domestic party-wall cadence on the left; strong horizontal floor bands and vertical timber posts on the right. Avoid one facade rule across both."
+  },
+  "groundCover": {
+    "lawn": 13,
+    "meadow": 23,
+    "hardLandscape": 25,
+    "hardLandscapeColour": "#A79B84 buff public paths and #60615C asphalt roads",
+    "water": 8,
+    "gardens": 31,
+    "reading": "The whole scheme is held together by woodland, gardens and a wetland spine. Hard landscape is concentrated at streets and campus thresholds rather than spread as plazas."
+  },
+  "water": {
+    "visible": "A narrow sinuous foreground brook, a connected chain of shallow ponds and rain gardens through the central woodland, and smaller campus channels.",
+    "channelWidthMetres": "2 to 5, locally 6 to 8 where the channel ponds",
+    "pondSize": "Main basins roughly 20 to 45 m across, with smaller rain-garden pockets",
+    "reflectivity": "Silver-blue sky reflection, #8CA5A9 lit and #2D4B4E shaded, interrupted heavily by reed beds and tree shadow.",
+    "buildability": "The board makes the stream wider and invents some ponds. Keep the surveyed brook narrow and place added open water only where the wetland class and drainage logic support it."
+  },
+  "trees": {
+    "forms": [
+      "broad veteran oak",
+      "dense mixed woodland crown",
+      "regular orchard tree",
+      "upright street lime or hornbeam",
+      "wetland willow or alder",
+      "clipped native hedge"
+    ],
+    "heightMetres": {
+      "veteranOak": "17 to 23",
+      "woodlandMix": "11 to 19",
+      "orchardTree": "4 to 7",
+      "streetTree": "9 to 15",
+      "wetlandTree": "7 to 12",
+      "hedge": "1.8 to 3"
+    },
+    "canopyColour": {
+      "litHex": "#70833D",
+      "shadedHex": "#253D24"
+    },
+    "density": "High in the central woodland and orchard ring, medium in streets and courts, deliberately open over wet meadow and panel fields.",
+    "arrangement": "Large irregular central woodland with clearings, rectilinear orchards, disciplined avenues through built parcels, isolated veteran trees in courts, and lower wetland species following water."
+  },
+  "sustainableFeatures": {
+    "PVGlint": "Blue-black #17242E with sparse cool highlights #91A4AB. Use consistent row orientation and keep glint directional, not a blanket brightness increase.",
+    "canopies": "Solar carports are visible around GCHQ and selected parking, elevated on slim posts with cars or asphalt visible beneath.",
+    "agrivoltaicRows": "Vertical bifacial 2 m rows in the left fields at about 10 to 12 m centres. Most of the field must remain green.",
+    "glasshouses": "Small distant pale glass volumes north of the panel fields. Read through fine frames and sky reflections, never as opaque white sheds.",
+    "other": "Campus meadow roofs, walkable roof loops, productive orchards and the connected wetland spine should all read in one glance."
+  },
+  "people/vehicles": {
+    "people": "Small figures along the main wetland path, campus entries and a few accessible roofs. They are near the limit of useful resolution at 450 m.",
+    "vehicles": "Sparse moving traffic, parked cars in recognised parking areas and beneath carports. Avoid populating every road.",
+    "scopeNote": "At this wide camera, people are not buildable as meaningful 3D detail. If required, use sparse stable sprites after all landscape and roof work."
+  },
+  "gapsVsPlate": [
+    {
+      "rank": 1,
+      "difference": "The plate reads as large empty olive parcels between isolated building bands; the board reads as a continuous inhabited landscape of woodland, orchards, gardens and wetland.",
+      "modellingAction": "Break broad classes into parcel-scale garden, meadow, orchard and wetland zones, then soften their boundaries while preserving the masterplan geometry.",
+      "system": "scripts/golden_valley_2045.py and gv-2045 land-cover data, rendered by future.js",
+      "effort": "1 to 1.5 days, largely covered by in-flight M5"
+    },
+    {
+      "rank": 2,
+      "difference": "Plate tree mass is sparse and uniformly faceted; the board's central woodland and orchard ring are the dominant organising structure.",
+      "modellingAction": "Create distinct veteran, woodland, avenue, orchard and wetland forms; cluster woodland, regularise orchards and deepen shaded canopy values.",
+      "system": "tree geometry/grade in landcover.js and future.js, plus gv-2045 tree data",
+      "effort": "1.5 to 2 days, covered by in-flight M5"
+    },
+    {
+      "rank": 3,
+      "difference": "The plate barely reveals water; the board has a continuous reflective brook and pond sequence through the centre.",
+      "modellingAction": "Keep the brook narrow but improve reflectivity, add only drainage-supported ponded reaches and blend reed margins into wet meadow.",
+      "system": "ground shader in future.js, water in life.js and generated land-cover data",
+      "effort": "1 day, covered by in-flight M5"
+    },
+    {
+      "rank": 4,
+      "difference": "Plate roofs are a limited dark or green palette; the board makes PV, meadow and walkable roof programmes visibly different across homes and campus.",
+      "modellingAction": "Set typology-specific roof allocation to the target mix and strengthen module, meadow and path masks so each reads at 450 m.",
+      "system": "roof shader in facades.js and roof programme in scripts/golden_valley_2045.py",
+      "effort": "1 day"
+    },
+    {
+      "rank": 5,
+      "difference": "The plate's large blocks are flat beige grids; the board has honey timber depth, dark glazing and warm masonry variation.",
+      "modellingAction": "Use separate campus and home material grades, deepen campus reveals and introduce deterministic block-level variation without adding facade geometry beyond the visible bay grid.",
+      "system": "futureGeometry in future.js, facade materials in facades.js and KEYED_GRADE",
+      "effort": "1 day"
+    },
+    {
+      "rank": 6,
+      "difference": "Agrivoltaics are flat ground stripes in the plate and elevated energy infrastructure in the board.",
+      "modellingAction": "Build instanced vertical panel rows with posts, terrain following, narrow shadows and green spacing.",
+      "system": "scripts/golden_valley_2045.py data and futureGeometry in future.js",
+      "effort": "1 to 1.5 days"
+    },
+    {
+      "rank": 7,
+      "difference": "The board shifts housing rows, courtyard dimensions, woodland clearings and pond positions well beyond the requested tolerance.",
+      "modellingAction": "Do not reproduce board geometry drift. Use shots.json and the plate as the camera and layout master, and treat the board as a character, density and palette reference only.",
+      "system": "geometry lock, no model change",
+      "effort": "none"
+    }
+  ]
+}

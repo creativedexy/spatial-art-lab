@@ -1,0 +1,148 @@
+{
+  "id": "panels-b",
+  "approvedVariant": "adventurous",
+  "approvedOn": "2026-09-22",
+  "basis": "Visual estimate from panels-b-adventurous.png against panels-b-2045.png. Percentages for ground refer to developed foreground parcels, not the central agrivoltaic field.",
+  "roofMix": {
+    "PV": 53,
+    "meadow/green": 13,
+    "slate/tile": 28,
+    "walkable/terrace": 4,
+    "other": 2,
+    "reading": "Foreground terraces carry almost whole-roof PV, with planted roofs on taller corner blocks. The distant existing town remains a grey and clay pitched-roof field. Vertical agrivoltaics are not counted as roof area."
+  },
+  "wallMaterials": [
+    {
+      "material": "warm buff brick terraces",
+      "litHex": "#BD9569",
+      "shadedHex": "#71543E",
+      "share": 52
+    },
+    {
+      "material": "honey timber frame on taller blocks",
+      "litHex": "#C39763",
+      "shadedHex": "#6B4E37",
+      "share": 24
+    },
+    {
+      "material": "dark recessed glazing",
+      "litHex": "#687973",
+      "shadedHex": "#263A39",
+      "share": 16
+    },
+    {
+      "material": "dark bronze trims and plinths",
+      "litHex": "#625545",
+      "shadedHex": "#302B26",
+      "share": 8
+    }
+  ],
+  "windowRhythm": {
+    "storeyHeightMetres": "2.9 to 3.1 on terraces; 3.2 to 3.4 on corner blocks",
+    "windowWidthMetres": "0.9 to 1.2 on terraces; 1.8 to 2.2 within a 3 m bay on blocks",
+    "windowProportion": "Terrace windows about 0.55 to 0.70 width:height; block glazing about 1.2 to 1.5 width:height",
+    "revealDepthImpression": "Moderate on homes at 180 to 250 mm; deep on timber blocks at about 350 mm.",
+    "rhythm": "One or two tall openings per dwelling bay, clear party breaks, and a stronger regular timber bay on the corner blocks."
+  },
+  "groundCover": {
+    "lawn": 16,
+    "meadow": 14,
+    "hardLandscape": 39,
+    "hardLandscapeColour": "#A59A84 buff-grey court paving and #60615C asphalt",
+    "water": 4,
+    "gardens": 27,
+    "reading": "Foreground courts and streets are planted and inhabited. Beyond them, the separate agrivoltaic field remains predominantly grazed grass, not hard landscape."
+  },
+  "water": {
+    "visible": "Several small wetland ponds and a narrow connected channel along the right side of the agrivoltaic fields. Existing treatment tanks remain circular engineered objects.",
+    "channelWidthMetres": "2 to 4, widening at reed beds",
+    "pondSize": "Shallow irregular ponds roughly 18 to 40 m across",
+    "reflectivity": "Mid-value silver-blue, #88A4A8 lit and #304C50 shaded, with high reed cover and only 35 to 50 per cent open reflective surface.",
+    "buildability": "The number and exact shapes of board ponds are partly invented. Keep water within mapped wetland or drainage areas and prioritise two or three readable surfaces."
+  },
+  "trees": {
+    "forms": [
+      "regular orchard tree",
+      "dense mixed woodland crown",
+      "upright avenue tree",
+      "broad veteran oak",
+      "wetland willow or alder"
+    ],
+    "heightMetres": {
+      "orchardTree": "4 to 7",
+      "woodlandMix": "11 to 19",
+      "avenueTree": "9 to 14",
+      "veteranOak": "17 to 23",
+      "wetlandTree": "7 to 12"
+    },
+    "canopyColour": {
+      "litHex": "#71843E",
+      "shadedHex": "#253D24"
+    },
+    "density": "High in the flanking woodland and orchard, low within the grazed panel rows, medium around foreground homes.",
+    "arrangement": "Disciplined orchard rows, clumped woodland belts with irregular edges, street avenues, and sparse wetland trees that do not hide the panel field."
+  },
+  "sustainableFeatures": {
+    "PVGlint": "Roof and field panels are blue-black #17252F with thin pale blue-grey edge glints #91A5AD. Keep grazing green visible so the central field does not become a black slab.",
+    "canopies": "Minor in the foreground. Any parking canopy must remain visibly elevated on slim posts.",
+    "agrivoltaicRows": "The focal feature: vertical bifacial panels about 2 m high, single thin rows at about 10 to 12 m centres, aligned with the field grain. At least 80 per cent of each field remains visually green. Sheep read as small cream dots between rows.",
+    "glasshouses": "A compact distant group near the top centre, clear or pale blue-grey roofs with fine white frames. They should read as agricultural glass, not opaque sheds.",
+    "other": "Wetland ponds, orchard production and the retained water-treatment works complete the productive-landscape reading."
+  },
+  "people/vehicles": {
+    "people": "Tiny figures in the foreground courts and a few farm workers between panel rows. The board's sheep are stronger scale cues than people in the central field.",
+    "vehicles": "Sparse cars on foreground streets, service vehicles near glasshouses, no parking scattered through pasture.",
+    "scopeNote": "Sheep and workers are not worth full geometry at this range. If retained, use a few instanced low-detail markers after the panel rows and shadows are correct."
+  },
+  "gapsVsPlate": [
+    {
+      "rank": 1,
+      "difference": "The plate shows dark stripes painted on the ground; the board shows individual vertical bifacial rows with height, gaps, posts, shadow and grazing beneath.",
+      "modellingAction": "Replace the agrivoltaic land-cover stripe with instanced vertical 2 m panel rows at about 11 m centres, following terrain and field axes, and cast narrow shadows.",
+      "system": "scripts/golden_valley_2045.py data and futureGeometry in future.js",
+      "effort": "1 to 1.5 days"
+    },
+    {
+      "rank": 2,
+      "difference": "Plate woodland is a carpet of identical angular crowns; the board has deep, varied belts, orchard rows and readable open edges.",
+      "modellingAction": "Deploy separate woodland, orchard, avenue and veteran forms, with clumped density and a darker interior grade.",
+      "system": "tree geometry/grade in landcover.js and future.js, plus gv-2045-trees.bin generation",
+      "effort": "1.5 days, covered by in-flight M5"
+    },
+    {
+      "rank": 3,
+      "difference": "The plate's foreground roofs and walls are almost black and beige blocks; the board resolves whole-roof PV, warm brick and planted corner-block roofs.",
+      "modellingAction": "Increase residential PV coverage, reveal module seams and tune home/corner-block materials separately using the approved warm brick and timber palette.",
+      "system": "roof shader and facade materials in facades.js, with futureGeometry in future.js",
+      "effort": "0.5 to 1 day"
+    },
+    {
+      "rank": 4,
+      "difference": "Plate glasshouses are pale opaque boxes; the board has fine-framed transparent-looking agricultural volumes.",
+      "modellingAction": "Keep opaque rendering for robustness but add fine roof/wall frame lines, brighter sky-facing panes and darker lower reflections so the volumes read as glasshouses.",
+      "system": "glasshouse branch in futureGeometry and facades.js",
+      "effort": "0.5 day"
+    },
+    {
+      "rank": 5,
+      "difference": "Water in the plate is a flat colour and partly disappears; the board has reflective ponds and a connected wetland edge.",
+      "modellingAction": "Strengthen two or three mapped ponds, use sky reflection at low roughness and soften their reed margins into the wet meadow.",
+      "system": "ground shader in future.js and water treatment in life.js",
+      "effort": "0.5 to 1 day, covered by in-flight M5"
+    },
+    {
+      "rank": 6,
+      "difference": "The plate field is one uniform olive plane; the board shows grazed pasture, panel-row wear, sheep and changing meadow texture.",
+      "modellingAction": "Add low-frequency grass variation and a restrained lighter strip beneath panel rows. Do not model individual blades or every sheep.",
+      "system": "gv-2045 land-cover data and ground shader in future.js",
+      "effort": "0.5 day, covered by in-flight M5"
+    },
+    {
+      "rank": 7,
+      "difference": "The board adds picturesque ponds and shifts distant development and woodland boundaries relative to the plate.",
+      "modellingAction": "Reject the drift. Keep mapped field, water and building boundaries, borrowing only the vertical-panel construction and material character.",
+      "system": "geometry and data lock, no model change",
+      "effort": "none"
+    }
+  ]
+}

@@ -58,6 +58,10 @@ of ground in frame (sky excluded) whose 8 px blocks differ by more than 30 of
    and realism. The scheme gives us *what and where*: counts, siting, named
    buildings. The architecture, the landscape and the energy are ours, set by
    the direction below.
+7. **Adventurous, on every shot** (22 Sep). Dex picked the adventurous
+   board for all five frames (`generate/m2/boards/*-adventurous.png`). They
+   are the targets the live model is worked towards and measured against;
+   specs in `generate/m2/specs/`.
 
 ---
 
