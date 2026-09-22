@@ -130,14 +130,18 @@
     "campus": 9.1
   },
   "fields": 29,
-  "newBuildings": 93,
-  "floorHectares": 10.7,
-  "newTrees": 6234,
+  "newBuildings": 147,
+  "dwellings": 1030,
+  "campusFloorM2": 105501,
+  "densityNote": "Scheme-true density: about 1,100 homes and at least 93,000 m2 of campus floor area.",
+  "floorHectares": 23.1,
+  "newTrees": 7806,
   "treeCounts": {
     "hedge": 3157,
     "standard": 166,
-    "orchard": 2595,
-    "street": 316
+    "orchard": 2892,
+    "woodland": 909,
+    "street": 682
   },
   "sources": [
     "Environment Agency LiDAR (OGL v3)",
