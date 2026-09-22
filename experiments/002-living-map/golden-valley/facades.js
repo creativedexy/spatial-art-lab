@@ -103,14 +103,19 @@ export const CAMPUS_FRAGMENT = NOISE + /* glsl */`
       float mottle = fHash(m * 1.7) * 0.20 + fHash(m * 0.4) * 0.12;
       vec3 c = sedum * (0.84 + mottle);
       rough = 0.96;
-      // Diagonal rows keep the south-east bearing visible even on a flat
-      // roof. Meadow strips remain between them rather than becoming trim.
+      // The data programme gives campus roofs 25% PV, 57% meadow, 15% broad
+      // walkable paths and 3% service margin. Keep those uses as large bands:
+      // at 400 m a path resolves, while furniture and tiny roof plots do not.
+      float programme = fract(m.y / 20.0);
+      float path = 1.0 - fBand(programme, 0.075, 0.925);
+      float service = fBand(programme, 0.075, 0.105);
+      float planted = max(0.0, 1.0 - path - service);
       float saw = fract((m.x + m.y * 0.55) / 2.4);
-      float rows = fBand(saw, 0.10, 0.68);
-      float meadowStrip = 1.0 - fBand(fract(m.y / 9.0), 0.08, 0.72);
-      float pv = rows * (1.0 - meadowStrip);
+      float pv = fBand(saw, 0.10, 0.405) * planted;
       c = mix(c, base * vec3(0.16, 0.21, 0.27), pv * 0.96);
       c = mix(c, base * 1.25, fBand(saw, 0.08, 0.11) * pv);
+      c = mix(c, base * vec3(1.18, 1.12, 1.00), path * 0.88);
+      c = mix(c, base * vec3(0.42, 0.40, 0.37), service * 0.92);
       rough = mix(rough, 0.22, pv);
       return c;
     }
@@ -121,9 +126,11 @@ export const CAMPUS_FRAGMENT = NOISE + /* glsl */`
     // uniform grid of punched windows is a curtain wall with the glass swapped
     // for holes, so the timber carries a darker floor-depth spandrel.
     vec3 larch  = base * vec3(1.00, 0.99, 0.96);
-    vec3 course = base * vec3(0.74, 0.72, 0.68);
-    vec3 timber = base * vec3(0.90, 0.76, 0.55);
-    vec3 glass  = base * vec3(0.19, 0.25, 0.31);
+    vec3 course = base * vec3(0.86, 0.81, 0.70);
+    vec3 timber = base * vec3(0.82, 0.67, 0.49);
+    // Relative linear-sRGB ratio of reflective glazing #687A75 to the honey
+    // timber base #C49A65. It stays tied to the keyed grade, not exposure here.
+    vec3 glass  = base * vec3(0.251, 0.602, 1.367);
     if (variant > 0.5 && variant < 1.5) {
       larch *= 0.88; course *= 0.84; timber *= 0.90; glass *= 0.78;
     }
@@ -204,8 +211,10 @@ export const CAMPUS_FRAGMENT = NOISE + /* glsl */`
     // painted on the wall.
     float dx = fEdge(bay, pad) - fEdge(bay, bayW - pad);
     float dy = fEdge(inFloor, 1.45) - fEdge(inFloor, 2.80);
-    nrm = normalize(nrm + vec3(dx, dy, 0.0) * 0.6 * (1.0 - pane)
-                        + vec3(0.0, 0.0, 0.25) * fin);
+    float reveal = clamp(abs(dx) + abs(dy), 0.0, 1.0) * (1.0 - pane);
+    c = mix(c, glass * 0.42, reveal * 0.78);
+    nrm = normalize(nrm + vec3(dx, dy, 0.0) * 0.82 * (1.0 - pane)
+                        + vec3(0.0, 0.0, 0.34) * fin);
     return c;
   }
 `;
@@ -291,10 +300,13 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
     if (typology > 0.5) {
       if (surf > 0.5 && surf < 1.5) {
         vec3 meadow = base * vec3(0.74, 0.93, 0.67);
-        float pvRow = fBand(fract((m.x + 0.32 * m.y) / 2.2), 0.12, 0.68)
-                    * fBand(fract(m.y / 8.0), 0.08, 0.70);
-        rough = mix(0.96, 0.23, pvRow);
-        return mix(meadow, base * vec3(0.16, 0.22, 0.29), pvRow * 0.96);
+        float programme = fract((m.x + 0.18 * m.y) / 20.0);
+        float service = fBand(programme, 0.00, 0.170056);
+        float path = fBand(programme, 0.170056, 0.196911);
+        vec3 c = mix(meadow, base * vec3(0.48, 0.46, 0.42), service * 0.92);
+        c = mix(c, base * vec3(1.16, 1.10, 0.98), path * 0.88);
+        rough = mix(0.96, 0.78, path + service);
+        return c;
       }
       float along = m.x, up = m.y;
       if (up > wallTop - 0.75) {
@@ -309,7 +321,7 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
       float pad = max(0.25, (bayW - 1.65) * 0.5);
       float pane = fBand(bay, pad, bayW - pad) * fBand(floorM, 1.02, 2.62);
       float lightness = dot(base, vec3(0.2126, 0.7152, 0.0722));
-      vec3 glass = lightness * vec3(0.16, 0.22, 0.27);
+      vec3 glass = lightness * vec3(0.42, 0.55, 0.53);
       vec3 c = mix(larch, glass, pane);
       // A deep balcony/slab shadow at every floor, without adding transparent
       // rail geometry that would shimmer at the map's working distance.
@@ -325,7 +337,9 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
       return mix(c, base * 0.42, plinth * 0.78);
     }
 
-    // Terraces: one whole south-east pitch is PV, the other dark slate.
+    // Terraces: every suitable south-east pitch is PV. A deterministic 16.4%
+    // of opposite dwelling pitches is also PV, producing the programme's
+    // 58.2% home-pitch share as near-whole roofs rather than thin token strips.
     if (surf > 0.5 && surf < 1.5) {
       vec3 pv = base * vec3(0.42, 0.58, 0.72);
       float frameX = 1.0 - fBand(fract(m.x / 1.05), 0.025, 0.975);
@@ -340,10 +354,21 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
       return c;
     }
     if (surf > 1.5 && surf < 2.5) {
+      float programme = fHash(vec2(floor(m.x / max(bayW, 0.1)), 41.0));
+      float secondPv = 1.0 - step(0.16432, programme);
+      float maintenance = step(0.16432, programme)
+                        * (1.0 - step(0.182744, programme));
       float tile = fBand(fract(m.y / 0.34), 0.04, 0.88);
       float breakLine = 1.0 - fBand(fract(m.x / bayW), 0.035, 0.965);
-      rough = 0.88;
-      return base * (0.76 + tile * 0.16 - breakLine * 0.18);
+      vec3 slate = base * (0.76 + tile * 0.16 - breakLine * 0.18);
+      vec3 pv = base * vec3(0.42, 0.58, 0.72);
+      float frameX = 1.0 - fBand(fract(m.x / 1.05), 0.025, 0.975);
+      float frameY = 1.0 - fBand(fract(m.y / 1.65), 0.025, 0.975);
+      float frame = clamp(frameX + frameY, 0.0, 1.0);
+      pv = mix(pv, base * 1.55, frame * 0.52);
+      rough = mix(0.88, 0.20, secondPv);
+      vec3 c = mix(slate, pv, secondPv);
+      return mix(c, base * vec3(1.10, 1.05, 0.96), maintenance * 0.86);
     }
     float along = m.x, up = m.y;
     float floorM = mod(up, ${STOREY.toFixed(1)});
@@ -355,7 +380,7 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
     float pad = max(0.18, (bayW - 1.2) * 0.5);
     float pane = fBand(bay, pad, bayW - pad) * fBand(floorM, 0.92, 2.52);
     float lightness = dot(base, vec3(0.2126, 0.7152, 0.0722));
-    vec3 glass = lightness * vec3(0.14, 0.20, 0.25);
+    vec3 glass = lightness * vec3(0.42, 0.55, 0.53);
     vec3 c = mix(brick, glass, pane);
     float reveal = fBand(bay, pad - 0.16, pad)
                  + fBand(bay, bayW - pad, bayW - pad + 0.16)
@@ -378,20 +403,21 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
 export const GLASSHOUSE_FRAGMENT = NOISE + /* glsl */`
   vec3 fGlasshouse(vec2 m, float surf, inout vec3 nrm, inout float rough,
                    vec3 base) {
-    float mullion = 1.0 - fBand(fract(m.x / 2.4), 0.035, 0.965);
-    float transom = 1.0 - fBand(fract(m.y / 1.55), 0.035, 0.965);
+    float mullion = 1.0 - fBand(fract(m.x / 1.8), 0.045, 0.955);
+    float transom = 1.0 - fBand(fract(m.y / 1.40), 0.045, 0.955);
     float frame = clamp(mullion + transom, 0.0, 1.0);
-    vec3 glass = base * vec3(0.72, 0.91, 1.02);
+    vec3 glass = base * vec3(0.62, 0.86, 0.94);
     if (surf > 0.5) {
       // Denser bars on the pitches make the ridge and repeated glass bays read
       // from the aerial views, where reflection alone would be a flat wash.
-      float rafter = 1.0 - fBand(fract(m.x / 3.0), 0.04, 0.96);
-      vec3 c = mix(glass * 1.12, base * 1.55, rafter * 0.72);
-      rough = mix(0.15, 0.48, rafter);
+      float rafter = 1.0 - fBand(fract(m.x / 1.8), 0.045, 0.955);
+      float pane = 0.90 + 0.14 * fHash(vec2(floor(m.x / 1.8), floor(m.y / 3.0)));
+      vec3 c = mix(glass * 1.18 * pane, base * 1.72, rafter * 0.80);
+      rough = mix(0.13, 0.52, rafter);
       return c;
     }
-    vec3 c = mix(glass, base * 1.42, frame * 0.72);
-    c *= mix(0.82, 1.08, clamp(m.y / 5.5, 0.0, 1.0));
+    vec3 c = mix(glass, base * 1.62, frame * 0.82);
+    c *= mix(0.68, 1.20, clamp(m.y / 5.5, 0.0, 1.0));
     c = mix(c, base * 0.46, (1.0 - fEdge(m.y, 0.38)) * 0.82);
     rough = mix(0.14, 0.46, frame);
     return c;
@@ -418,7 +444,7 @@ export const CANOPY_FRAGMENT = NOISE + /* glsl */`
     // the photographed cars; still neutral, so it cannot read as another PV
     // face when seen obliquely.
     rough = 0.78;
-    return base * vec3(1.38, 1.34, 1.25);
+    return base * vec3(1.12, 1.16, 1.12);
   }
 `;
 
