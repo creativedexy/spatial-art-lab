@@ -347,3 +347,17 @@ Valley SPD; `inspiration/golden-valley/README.md`.
   wetland side of the home streets. Each reach is directed towards its nearest
   wetland cell in the generated street grid.
 - Kept 1,030 dwellings and 105,501 m2 of campus floor area unchanged.
+- Follow-up: replaced the smooth grey-olive puffballs with overlapping,
+  unequal faceted lobes, lower crowns and independent 0.7-1.3 instance axes.
+  Woodland crowns overlap into a broken continuous canopy; orchard crowns are
+  smaller so the 7.5 m planting rows retain visible ground between them.
+- Shifted `KEYED_GRADE.trees` from saturation 0.40 / exposure 1.16 to
+  saturation 0.47 / exposure 1.41 after the keyed M5 probe measured planting
+  0.10 saturation and 0.28 stops below photographed canopy.
+- Restored the probe's exact centre-texel future-ground classification and
+  added a flat white, unlit diagnostic output. The seven-metre colour filter,
+  field texture and water treatment remain confined to the normal render.
+- Confirmed the Doughnut material and `KEYED_GRADE.meadow` never changed in
+  M5. Its apparent proxy shift came from the regressed ground mask changing
+  which photographed fields formed the reference; restoring that mask also
+  restores the M4 roof comparison population.

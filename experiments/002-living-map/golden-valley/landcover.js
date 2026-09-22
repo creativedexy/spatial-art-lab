@@ -30,46 +30,48 @@ export const coverMeta = await (await fetch(url('gv-landcover.json'))).json();
 // generator uses 3 for orchard and 4 for avenue lime. Woodland uses the mixed
 // scrub form, while standards use the oak.
 //
-// These are higher-detail noisy lobe clusters rather than impostors. At the
-// map's 340-450 m working distance the added silhouette and self-shadowing
-// survive, while an atlas would spend fill rate and make its shadow a card.
-// Geometry is paid for five times, then instanced about 17,000 times. Baked
-// vertex occlusion deepens the underside without moving the measured median;
-// the scene light supplies the actual sunward highlight.
+// Low-poly facets are intentional. The smoother M5 forms merged into identical
+// grey puffballs at 400 m; several overlapping, unequal icosahedra keep a broken
+// crown silhouette, hard sunward facets and dark inter-lobe gaps at that range.
+// Geometry is paid for five times, then instanced about 17,000 times. Low lobes
+// hide the short trunks in an aerial view without losing them near the ground.
 //
 // A lobe is [x, y, z, radius, xScale, yScale, zScale]. The whole result is a
 // one-metre tree, standing on the origin.
 export const KINDS = [
-  { name: 'oak', colour: 0x54703f, trunk: 0.34, detail: 1, lobes: [
-    [0.00, 0.68, 0.00, 0.27, 1.08, 0.92, 1.04],
-    [0.20, 0.61, -0.09, 0.22, 1.08, 0.88, 1.00],
-    [-0.18, 0.62, 0.12, 0.23, 1.06, 0.90, 1.08],
-    [0.05, 0.79, 0.12, 0.20, 0.94, 1.00, 1.02],
-    [-0.08, 0.80, -0.14, 0.18, 1.08, 0.96, 0.94],
-    [0.20, 0.75, 0.15, 0.16, 0.96, 0.92, 1.05],
+  { name: 'oak', colour: 0x3f6846, trunk: 0.26, lobes: [
+    [0.00, 0.60, 0.00, 0.30, 1.12, 0.84, 1.05],
+    [0.23, 0.62, -0.10, 0.22, 1.08, 0.82, 0.96],
+    [-0.21, 0.60, 0.13, 0.24, 1.04, 0.86, 1.12],
+    [0.04, 0.79, 0.14, 0.19, 0.92, 0.98, 1.04],
+    [-0.10, 0.78, -0.17, 0.17, 1.12, 0.90, 0.92],
+    [0.22, 0.73, 0.17, 0.15, 0.94, 0.86, 1.08],
   ] },
-  { name: 'mixed', colour: 0x667a48, trunk: 0.18, detail: 0, lobes: [
-    [-0.16, 0.53, 0.04, 0.31, 1.10, 0.85, 0.96],
-    [0.16, 0.55, -0.10, 0.29, 0.98, 0.98, 1.12],
-    [0.02, 0.75, 0.11, 0.25, 0.90, 1.00, 0.98],
-    [0.25, 0.72, 0.14, 0.20, 1.05, 0.88, 0.92],
-    [-0.23, 0.72, -0.13, 0.19, 0.95, 0.90, 1.08],
+  { name: 'mixed', colour: 0x315f42, trunk: 0, lobes: [
+    [-0.18, 0.48, 0.05, 0.35, 1.14, 0.78, 0.98],
+    [0.19, 0.54, -0.12, 0.31, 0.96, 0.91, 1.15],
+    [0.01, 0.75, 0.13, 0.25, 0.88, 1.02, 0.96],
+    [0.29, 0.70, 0.17, 0.19, 1.08, 0.83, 0.90],
+    [-0.27, 0.69, -0.16, 0.18, 0.93, 0.86, 1.12],
+    [-0.02, 0.57, -0.27, 0.21, 1.02, 0.80, 0.94],
   ] },
-  { name: 'hedge', colour: 0x4f6440, trunk: 0, detail: 0, lobes: [
+  { name: 'hedge', colour: 0x365b3b, trunk: 0, lobes: [
     [-0.24, 0.43, 0.03, 0.35, 1.08, 0.70, 0.92],
     [0.22, 0.45, -0.05, 0.35, 1.02, 0.72, 0.98],
     [0.00, 0.58, 0.10, 0.30, 1.18, 0.68, 0.90],
     [0.05, 0.37, -0.20, 0.29, 0.98, 0.70, 1.12],
   ] },
-  { name: 'orchard', colour: 0x657b43, trunk: 0.38, detail: 1, lobes: [
-    [0.00, 0.62, 0.00, 0.27, 1.08, 0.90, 1.08],
-    [0.18, 0.59, -0.08, 0.21, 1.02, 0.88, 1.06],
-    [-0.17, 0.60, 0.10, 0.21, 1.08, 0.90, 1.00],
-    [0.01, 0.75, 0.10, 0.20, 0.98, 0.94, 1.04],
-    [-0.05, 0.73, -0.14, 0.17, 1.04, 0.90, 0.98],
+  // Deliberately smaller than the oak/mixed crowns: the 7.5 m planting grid
+  // keeps a strip of ground between most trees, so its rows remain readable.
+  { name: 'orchard', colour: 0x4d7341, trunk: 0.22, lobes: [
+    [0.00, 0.55, 0.00, 0.22, 1.06, 0.86, 1.06],
+    [0.14, 0.56, -0.07, 0.16, 1.00, 0.82, 1.10],
+    [-0.13, 0.55, 0.09, 0.17, 1.10, 0.84, 0.96],
+    [0.01, 0.70, 0.08, 0.15, 0.94, 0.94, 1.05],
+    [-0.05, 0.68, -0.11, 0.13, 1.08, 0.86, 0.94],
   ] },
-  { name: 'lime', colour: 0x5d7842, trunk: 0.35, detail: 1, lobes: [
-    [0.00, 0.58, 0.00, 0.25, 0.88, 1.16, 0.88],
+  { name: 'lime', colour: 0x467344, trunk: 0.30, lobes: [
+    [0.00, 0.54, 0.00, 0.27, 0.88, 1.10, 0.88],
     [0.13, 0.68, -0.06, 0.22, 0.86, 1.20, 0.90],
     [-0.12, 0.71, 0.09, 0.22, 0.90, 1.20, 0.86],
     [0.02, 0.84, 0.03, 0.18, 0.82, 1.10, 0.84],
@@ -170,39 +172,59 @@ export function unitTree(kind) {
     trunkPart.setAttribute('color', new THREE.BufferAttribute(trunkShade, 3));
     parts.push(trunkPart);
   }
-  for (const [x, y, z, r, sx, sy, sz] of kind.lobes) {
-    const lobe = new THREE.IcosahedronGeometry(r, kind.detail);
+  kind.lobes.forEach(([x, y, z, r, sx, sy, sz], lobeIndex) => {
+    const lobe = new THREE.IcosahedronGeometry(r, 0);
     lobe.scale(sx, sy, sz);
     lobe.translate(x, y, z);
     const position = lobe.attributes.position;
-    const normal = lobe.attributes.normal;
     const shades = new Float32Array(position.count * 3);
     for (let i = 0; i < position.count; i++) {
-      // Detail-zero polyhedra normally carry one normal per triangular face.
-      // Give duplicated vertices the ellipsoid's radial normal instead, so
-      // even the cheap hedge and woodland lobes shade as foliage, not gems.
-      normal.setXYZ(i,
-        (position.getX(i) - x) / (sx * sx),
-        (position.getY(i) - y) / (sy * sy),
-        (position.getZ(i) - z) / (sz * sz));
-      // 0.72 at a lobe's bottom and 1.28 at its top gives roughly a 0.8-stop
-      // crown range around a median of one. A tiny deterministic variation
-      // prevents the extra triangles resolving as another regular polyhedron.
+      // Preserve the icosahedron's face normals: those facets, unlike M5's
+      // radial normals, retain sun-side structure at aerial distance. Vertex
+      // occlusion adds a dark crown floor and slightly separates each lobe.
       const relativeY = THREE.MathUtils.clamp(
         (position.getY(i) - y) / (2 * r * sy) + 0.5, 0, 1);
       const hash = Math.sin(position.getX(i) * 91.7
                           + position.getY(i) * 57.3
                           + position.getZ(i) * 113.1) * 0.04;
-      const shade = THREE.MathUtils.clamp(0.72 + relativeY * 0.56 + hash,
-                                          0.64, 1.32);
+      const lobeShade = ((lobeIndex * 37) % 7 - 3) * 0.018;
+      const shade = THREE.MathUtils.clamp(
+        0.58 + relativeY * 0.72 + hash + lobeShade, 0.50, 1.34);
       shades[i * 3] = shades[i * 3 + 1] = shades[i * 3 + 2] = shade;
     }
-    normal.needsUpdate = true;
-    lobe.normalizeNormals();
     lobe.setAttribute('color', new THREE.BufferAttribute(shades, 3));
     parts.push(lobe);
-  }
+  });
   return mergeGeometries(parts);
+}
+
+function treeHash(t, salt) {
+  const n = Math.sin(t.x * 12.9898 + t.z * 78.233
+                   + t.rot * 19.19 + salt * 37.719) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+export function treeScale(t, target) {
+  // Independent 0.7-1.3 axes stop one instanced crown becoming a repeated
+  // stamp. Rotation then makes the unequal lobe cluster break differently in
+  // every silhouette while the source height/spread still set its class size.
+  target.set(
+    t.h * t.spread * (0.7 + treeHash(t, 1) * 0.6),
+    t.h * (0.7 + treeHash(t, 2) * 0.6),
+    t.h * t.spread * (0.7 + treeHash(t, 3) * 0.6),
+  );
+  return target;
+}
+
+export function treeTint(t, kind, target) {
+  const value = 0.70 + treeHash(t, 4) * 0.60;
+  target.setHex(kind.colour).multiplyScalar(value);
+  target.offsetHSL(
+    (treeHash(t, 5) - 0.5) * 0.11,
+    (treeHash(t, 6) - 0.5) * 0.10,
+    0,
+  );
+  return target;
 }
 
 export async function loadTrees(groundAt) {
@@ -236,6 +258,7 @@ export async function loadTrees(groundAt) {
       unitTree(kind),
       new THREE.MeshStandardMaterial({
         color: 0xffffff, roughness: 0.94, vertexColors: true,
+        flatShading: true,
       }),
       list.length);
     mesh.castShadow = true;
@@ -243,14 +266,8 @@ export async function loadTrees(groundAt) {
     list.forEach((t, i) => {
       pos.set(t.x, groundAt(t.x, t.z) - 0.2, t.z);
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), t.rot);
-      scale.set(t.h * t.spread, t.h, t.h * t.spread);
-      mesh.setMatrixAt(i, m.compose(pos, q, scale));
-      // Deterministic variation from the record itself, so the wood is not
-      // one flat green and the same seed renders the same wood every time.
-      const v = 0.78 + ((t.rot * 97) % 1) * 0.44;
-      tint.setHex(kind.colour).multiplyScalar(v);
-      tint.offsetHSL(((t.spread * 31) % 1 - 0.5) * 0.06, 0, 0);
-      mesh.setColorAt(i, tint);
+      mesh.setMatrixAt(i, m.compose(pos, q, treeScale(t, scale)));
+      mesh.setColorAt(i, treeTint(t, kind, tint));
     });
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;

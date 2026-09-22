@@ -21,7 +21,7 @@
 
 import * as THREE from 'three';
 import { applyLife } from './life.js';
-import { loadClassTexture } from './landcover.js';
+import { loadClassTexture, treeScale, treeTint } from './landcover.js';
 import { facadeChunk } from './facades.js';
 import { MEASURED_SUN } from './look.js';
 
@@ -43,6 +43,7 @@ const RAGGED = 110;           // metres of noise on the front
  */
 export const groundMask = { value: 0 };
 const groundDirect = { value: 0 };
+const groundProbeMask = { value: 0 };
 
 /**
  * A keyed build's grade for what 2045 paints over the photograph.
@@ -63,7 +64,9 @@ const groundDirect = { value: 0 };
  */
 export const KEYED_GRADE = {
   ground: { saturation: 0.68, exposure: 0.74 },
-  trees: { saturation: 0.40, exposure: 1.16 },   // M4: mature canopy measured +0.10 sat at 0.53 (22 Sep)
+  // M5's first keyed render measured -0.10 saturation and -0.28 stops against
+  // photographed canopy. 0.47 restores the lost colour; 1.41 is 1.16 * 2^0.28.
+  trees: { saturation: 0.47, exposure: 1.41 },
   meadow: { saturation: 0.52, exposure: 0.55 },   // M4: textured meadow measured +0.15 sat at 0.80 (22 Sep)
   // M4 starts each authored material about 0.4 stops below the former pale
   // boxes in the keyed build. These are deliberately palette compensation,
@@ -141,6 +144,7 @@ function share(material, patch, life = {}) {
  */
 const groundMaskUniforms = [];
 const groundDirectUniforms = [];
+const groundProbeMaskUniforms = [];
 const groundClass = Object.fromEntries(Object.entries(futureMeta.classes)
   .map(([name, value]) => [name, value.index / 255]));
 
@@ -153,6 +157,12 @@ export function setGroundMasked(on) {
 export function setGroundDirect(on) {
   groundDirect.value = on ? 1 : 0;
   for (const u of groundDirectUniforms) u.value = groundDirect.value;
+}
+
+/** Flat binary output for probe_light.py; never enabled in the live map. */
+export function setGroundProbeMask(on) {
+  groundProbeMask.value = on ? 1 : 0;
+  for (const u of groundProbeMaskUniforms) u.value = groundProbeMask.value;
 }
 
 /** World-space meadow detail for GCHQ's very large annular roof. */
@@ -242,6 +252,7 @@ export function blendGround(
                       1 / (futureTexture.image?.width || 2000),
                       1 / (futureTexture.image?.height || 2000)) },
                     uGroundMask: { value: groundMask.value },
+                    uGroundProbeMask: { value: groundProbeMask.value },
                     uDirectGround: { value: groundDirect.value },
                     uGroundSaturation: groundGrade.saturation,
                     uGroundExposure: groundGrade.exposure });
@@ -249,6 +260,7 @@ export function blendGround(
     // rebuild on a toggle is a stutter, and on a year change it would be a
     // stutter every frame.
     groundMaskUniforms.push(shader.uniforms.uGroundMask);
+    groundProbeMaskUniforms.push(shader.uniforms.uGroundProbeMask);
     groundDirectUniforms.push(shader.uniforms.uDirectGround);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
@@ -272,6 +284,7 @@ export function blendGround(
          uniform sampler2D uFutureClass;
          uniform vec2 uGroundTexel;
          uniform float uGroundMask;
+         uniform float uGroundProbeMask;
          uniform float uDirectGround;
          uniform float uGroundSaturation;
          uniform float uGroundExposure;
@@ -301,29 +314,15 @@ export function blendGround(
            // was pointless. The class maps answer it exactly: two indices,
            // and they either differ or they do not.
            //
-           // Five taps across seven metres turn a one-texel polygon edge into
-           // a 3-8 m transition. Over the photograph that transition has to
-           // be stippled with discard rather than alpha blended: two opaque
-           // terrains in one depth layer otherwise make a grey fringe.
+           // This is deliberately the original, binary centre-texel test.
+           // probe_light.py uses the same discard to classify authored ground;
+           // colour filtering and field detail belong to the render below and
+           // must never alter which square metres the diagnostic can see.
            if (uGroundMask > 0.5) {
-             vec2 md = uGroundTexel * 3.5;
-             float changed = step(0.002, abs(
-               texture2D(uTodayClass, vMapUv).r
-               - texture2D(uFutureClass, vMapUv).r)) * 0.36;
-             changed += step(0.002, abs(
-               texture2D(uTodayClass, vMapUv + vec2(md.x, 0.0)).r
-               - texture2D(uFutureClass, vMapUv + vec2(md.x, 0.0)).r)) * 0.16;
-             changed += step(0.002, abs(
-               texture2D(uTodayClass, vMapUv - vec2(md.x, 0.0)).r
-               - texture2D(uFutureClass, vMapUv - vec2(md.x, 0.0)).r)) * 0.16;
-             changed += step(0.002, abs(
-               texture2D(uTodayClass, vMapUv + vec2(0.0, md.y)).r
-               - texture2D(uFutureClass, vMapUv + vec2(0.0, md.y)).r)) * 0.16;
-             changed += step(0.002, abs(
-               texture2D(uTodayClass, vMapUv - vec2(0.0, md.y)).r
-               - texture2D(uFutureClass, vMapUv - vec2(0.0, md.y)).r)) * 0.16;
-             float edgeDither = fHash(floor(vFutureWorld.xz * 2.0) + 37.0);
-             if (edgeDither > changed || futureAt(vFutureWorld) < 0.5) discard;
+             float wasClass = texture2D(uTodayClass, vMapUv).r;
+             float willClass = texture2D(uFutureClass, vMapUv).r;
+             bool changed = abs(wasClass - willClass) > 0.002;
+             if (!changed || futureAt(vFutureWorld) < 0.5) discard;
            }
          }
          #include <map_fragment>
@@ -415,7 +414,11 @@ export function blendGround(
          float gvRippleY = cos(vFutureWorld.x * -0.28
                              + vFutureWorld.z * 0.83 + uTime * 1.75);
          normal = normalize(normal + gvWaterAmount * 0.035
-                            * vec3(gvRippleX, gvRippleY, 0.0));`);
+                            * vec3(gvRippleX, gvRippleY, 0.0));`)
+      .replace('#include <opaque_fragment>',
+        `// The probe needs classification, not the terrain's light or grade.
+         if (uGroundProbeMask > 0.5) outgoingLight = vec3(1.0);
+         #include <opaque_fragment>`);
   };
   m.needsUpdate = true;
 }
@@ -1009,6 +1012,8 @@ export async function addFuture(scene, renderer, {
     setGroundMasked,
     /** Use today's base map again once the measured fallback is ready. */
     setGroundDirect,
+    /** Emit the exact authored-ground classification for probe_light.py. */
+    setGroundProbeMask,
     /** Shared with the tile shader that clears photographed roof furniture. */
     get gchqMeadowUniform() { return meadowMix; },
     /**
@@ -1088,7 +1093,8 @@ async function loadFutureTrees(groundAt, unitTree, treeKinds, grade = null) {
     const mesh = new THREE.InstancedMesh(
       unitTree(kind),
       growMaterial(new THREE.MeshStandardMaterial({
-        color: 0xffffff, roughness: 0.94, vertexColors: true })),
+        color: 0xffffff, roughness: 0.94, vertexColors: true,
+        flatShading: true })),
       list.length);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -1096,11 +1102,8 @@ async function loadFutureTrees(groundAt, unitTree, treeKinds, grade = null) {
     list.forEach((t, i) => {
       pos.set(t.x, groundAt(t.x, t.z) - 0.2, t.z);
       q.setFromAxisAngle(axis, t.rot);
-      scale.set(t.h * t.spread, t.h, t.h * t.spread);
-      mesh.setMatrixAt(i, m.compose(pos, q, scale));
-      const v = 0.78 + ((t.rot * 97) % 1) * 0.44;
-      tint.setHex(kind.colour).multiplyScalar(v);
-      tint.offsetHSL(((t.spread * 31) % 1 - 0.5) * 0.06, 0, 0);
+      mesh.setMatrixAt(i, m.compose(pos, q, treeScale(t, scale)));
+      treeTint(t, kind, tint);
       // Baked into the instance colour, so unlike the ground it stays graded if
       // the measured fallback takes over below the melt line. A small mismatch
       // at low camera heights against our ungraded existing trees; noted.
