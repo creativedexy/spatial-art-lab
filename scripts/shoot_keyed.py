@@ -39,9 +39,22 @@ PREPARE = """async () => {
   return !!m.tiles;
 }"""
 
-FRAME = """({ look, bearing, slant, pitch, fov, lift }) => {
+FRAME = """({ look, bearing, slant, pitch, fov, lift, pos: given }) => {
   const m = window.__map;
   const V = m.camera.position.constructor;
+  // A place photograph names its camera outright (places.json): shoot from
+  // exactly there, so a re-plate lands on the frame the photograph was made at.
+  if (given) {
+    m.camera.fov = fov;
+    m.camera.updateProjectionMatrix();
+    m.camera.position.set(given[0], given[1], given[2]);
+    m.camera.lookAt(new V(look[0], look[1], look[2]));
+    m.camera.updateMatrixWorld(true);
+    m.controls.target.set(look[0], look[1], look[2]);
+    window.__shootCam = m.camera.position.clone();
+    return { pos: given.map((v) => Math.round(v * 10) / 10),
+             above: Math.round(given[1] - m.groundAt(given[0], given[2])) };
+  }
   const gy = m.groundAt(look[0], look[1]) + (lift || 0);
   const b = bearing * Math.PI / 180, p = pitch * Math.PI / 180;
   // Compass bearing the camera faces: 0 north (-z), 90 east (+x).
