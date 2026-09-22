@@ -88,8 +88,11 @@ FILL_ALPHA = 185
 # the buildings themselves are geometry standing on top of this.
 BUILT_GROUND = "grass"
 
-# 3-5 storeys, in metres, per the masterplan vocabulary already in vision/.
+# A storey is kept explicit because both the dwelling and campus-area checks
+# are programme checks, not estimates recovered from rounded mesh heights.
 STOREY = 3.4
+HOME_STREET = 14.0
+CAMPUS_STREET = 18.0
 
 
 def load():
@@ -355,52 +358,247 @@ def ground_at(heights, meta, x, z):
     return zmin + heights[r, c] / 65535 * (zmax - zmin)
 
 
-SHAPES = {
-    # length, depth, gap, storeys, roof, street inset
-    "campus": (38, 17, 9, 4, "flat", 22),
-    "homes": (24, 12, 6, 2.5, "gable", 18),
-}
+GRID_U = (math.cos(math.radians(BEARING)), math.sin(math.radians(BEARING)))
+GRID_V = (math.cos(math.radians(BEARING + 90)),
+          math.sin(math.radians(BEARING + 90)))
 
 
-def make_buildings(cells, heights, meta, parcel_1m, W):
+def to_grid(x, z):
+    return x * GRID_U[0] + z * GRID_U[1], x * GRID_V[0] + z * GRID_V[1]
+
+
+def from_grid(u, v):
+    return (u * GRID_U[0] + v * GRID_V[0],
+            u * GRID_U[1] + v * GRID_V[1])
+
+
+def cell_frame(cell):
+    q = [to_grid(*p) for p in cell["poly"]]
+    return min(p[0] for p in q), max(p[0] for p in q), \
+        min(p[1] for p in q), max(p[1] for p in q)
+
+
+def grid_rect(u0, u1, v0, v1):
+    return [from_grid(u0, v0), from_grid(u1, v0),
+            from_grid(u1, v1), from_grid(u0, v1)]
+
+
+def inside_parcel(poly, parcel_1m, W):
+    """True when all corners and edge midpoints remain in the allocation."""
+    probes = list(poly)
+    probes += [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+               for a, b in zip(poly, poly[1:] + poly[:1])]
+    for x, z in probes:
+        r, c = int(z + W / 2), int(x + W / 2)
+        if not (0 <= r < W and 0 <= c < W and parcel_1m[r, c]):
+            return False
+    return True
+
+
+def edge_footprint(a, b, depth, start, length):
+    """A street-facing footprint; its depth always points into the block."""
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    span = math.hypot(dx, dz)
+    ux, uz = dx / span, dz / span
+    nx, nz = -uz, ux                 # block rectangles are anticlockwise
+    p0 = (a[0] + ux * start, a[1] + uz * start)
+    p1 = (p0[0] + ux * length, p0[1] + uz * length)
+    return [p0, p1, (p1[0] + nx * depth, p1[1] + nz * depth),
+            (p0[0] + nx * depth, p0[1] + nz * depth)], (ux, uz)
+
+
+def terrace_runs(span, corner=4.5, gap=3.0):
+    """Runs of 4-10 houses, each with a 5.5-6.5 m street frontage."""
+    usable = span - corner * 2
+    nruns = max(1, int(round((usable + gap) / 32.0)))
+    bay = (usable - gap * (nruns - 1)) / nruns
     out = []
-    for c in cells:
-        if c["use"] not in SHAPES:
-            continue
-        length, depth, gap, storeys, roof, street = SHAPES[c["use"]]
-        ring = inset(c["poly"], street)
-        if ring is None:
-            continue
-        cx, cz = c["centre"]
-        for a, b in zip(ring, ring[1:] + ring[:1]):
-            for foot, (ux, uz) in blocks_along(a, b, cx, cz, length, depth, gap):
-                # Anything hanging outside the allocation is not ours to build.
-                if not all(parcel_1m[
-                        min(max(int(z + W / 2), 0), W - 1),
-                        min(max(int(x + W / 2), 0), W - 1)] for x, z in foot):
+    t = corner
+    for _ in range(nruns):
+        dwellings = max(4, min(10, int(round(bay / 6.0))))
+        frontage = min(6.5, max(5.5, bay / dwellings))
+        length = dwellings * frontage
+        out.append((t + (bay - length) / 2, length, dwellings))
+        t += bay + gap
+    return out
+
+
+def home_layout(cell):
+    """Six 70 x 43 m perimeter blocks divided by 14 m internal streets."""
+    u0, u1, v0, v1 = cell_frame(cell)
+    bw, bd = 70.0, 43.0
+    total_u = bw * 2 + HOME_STREET
+    total_v = bd * 3 + HOME_STREET * 2
+    su = (u0 + u1 - total_u) / 2
+    sv = (v0 + v1 - total_v) / 2
+    blocks = []
+    for j in range(3):
+        for i in range(2):
+            a = su + i * (bw + HOME_STREET)
+            b = sv + j * (bd + HOME_STREET)
+            blocks.append({"poly": grid_rect(a, a + bw, b, b + bd),
+                           "i": i, "j": j})
+    streets = [
+        (from_grid(su + bw + HOME_STREET / 2, sv),
+         from_grid(su + bw + HOME_STREET / 2, sv + total_v), HOME_STREET),
+        *[(from_grid(su, sv + j * bd + (j - 0.5) * HOME_STREET),
+           from_grid(su + total_u,
+                     sv + j * bd + (j - 0.5) * HOME_STREET), HOME_STREET)
+          for j in (1, 2)],
+    ]
+    return blocks, streets
+
+
+def campus_layout(cell, parcel_1m=None, W=None):
+    """Four 17 m wings around a 66 x 54 m courtyard and 18 m streets."""
+    u0, u1, v0, v1 = cell_frame(cell)
+    ow, od, depth = 100.0, 88.0, 17.0
+    cu, cv = (u0 + u1) / 2, (v0 + v1) / 2
+
+    def wings(at_u, at_v):
+        a, b = at_u - ow / 2, at_v - od / 2
+        return [grid_rect(a, a + ow, b, b + depth),
+                grid_rect(a + ow - depth, a + ow, b + depth, b + od - depth),
+                grid_rect(a, a + ow, b + od - depth, b + od),
+                grid_rect(a, a + depth, b + depth, b + od - depth)]
+
+    # Boundary campus cells are clipped pieces of the measured grid. Find the
+    # nearest position within the same cell that keeps all four wings on land
+    # we are actually allocated; this changes no programme boundary.
+    best = (None, -1, 1e9)
+    for at_u in np.arange(u0 + ow / 2, u1 - ow / 2 + 0.1, 5):
+        for at_v in np.arange(v0 + od / 2, v1 - od / 2 + 0.1, 5):
+            fs = wings(at_u, at_v)
+            score = sum(inside_parcel(f, parcel_1m, W) for f in fs) \
+                if parcel_1m is not None else 4
+            shift = abs(at_u - cu) + abs(at_v - cv)
+            if score > best[1] or (score == best[1] and shift < best[2]):
+                best = (fs, score, shift)
+    fs = best[0]
+    # Use the actual shifted wing bounds for the perimeter street.
+    q = [to_grid(*p) for f in fs for p in f]
+    au0, au1 = min(x[0] for x in q), max(x[0] for x in q)
+    av0, av1 = min(x[1] for x in q), max(x[1] for x in q)
+    off = CAMPUS_STREET / 2
+    streets = [
+        (from_grid(au0 - off, av0 - off), from_grid(au1 + off, av0 - off),
+         CAMPUS_STREET),
+        (from_grid(au1 + off, av0 - off), from_grid(au1 + off, av1 + off),
+         CAMPUS_STREET),
+        (from_grid(au1 + off, av1 + off), from_grid(au0 - off, av1 + off),
+         CAMPUS_STREET),
+        (from_grid(au0 - off, av1 + off), from_grid(au0 - off, av0 - off),
+         CAMPUS_STREET),
+    ]
+    return fs, streets
+
+
+def building_record(foot, family, cell, heights, meta, storeys, roof,
+                    axis=None, **extra):
+    h = round(storeys * STOREY, 2)
+    base = round(min(ground_at(heights, meta, x, z) for x, z in foot), 2)
+    b = {"ring": [[round(x, 2), round(z, 2)] for x, z in foot],
+         "holes": [], "base": base, "height": h, "family": family,
+         "cell": cell["centre"], "storeys": storeys}
+    if roof == "flat":
+        b.update(roof="flat", axis=None, eaves=h, ridge=h)
+    else:
+        b.update(roof="gable", axis=round(axis, 1),
+                 # One storey of rise over a 9-10 m-deep terrace is a roughly
+                 # 35-degree pitch: visibly steep from the aerial views.
+                 eaves=round(h - STOREY, 2), ridge=h)
+    b.update(extra)
+    return b
+
+
+def make_buildings(cells, heights, meta, parcel_1m, W, road, named_routes):
+    out, campus = [], []
+    for cell in cells:
+        if cell["use"] == "homes":
+            blocks, _ = home_layout(cell)
+            for block in blocks:
+                edges = list(zip(block["poly"], block["poly"][1:] + block["poly"][:1]))
+                # Apartment blocks take the short outside edge of the four
+                # corner blocks, facing the orchard/green edge of the cell.
+                apt_edge = None
+                if block["j"] in (0, 2):
+                    apt_edge = 3 if block["i"] == 0 else 1
+                for ei, (a, b) in enumerate(edges):
+                    span = math.dist(a, b)
+                    if ei == apt_edge:
+                        length = 31.0
+                        foot, _ = edge_footprint(a, b, 15.0,
+                                                 (span - length) / 2, length)
+                        if inside_parcel(foot, parcel_1m, W):
+                            storeys = random.choice((4, 5, 5, 6))
+                            area = length * 15.0 * storeys
+                            out.append(building_record(
+                                foot, "homes", cell, heights, meta, storeys,
+                                "flat", dwellings=round(area / 80),
+                                typology="apartments"))
+                        continue
+                    for start, length, dwellings in terrace_runs(span):
+                        depth = random.uniform(9.0, 10.0)
+                        foot, axis = edge_footprint(a, b, depth, start, length)
+                        if not inside_parcel(foot, parcel_1m, W):
+                            continue
+                        storeys = random.choice((2.5, 2.5, 3))
+                        out.append(building_record(
+                            foot, "homes", cell, heights, meta, storeys,
+                            "gable", math.degrees(math.atan2(axis[1], axis[0])),
+                            dwellings=dwellings, typology="terrace"))
+        elif cell["use"] == "campus":
+            wings, _ = campus_layout(cell, parcel_1m, W)
+            anchor = [round(sum(p[0] for f in wings for p in f) /
+                            sum(len(f) for f in wings)),
+                      round(sum(p[1] for f in wings for p in f) /
+                            sum(len(f) for f in wings))]
+            site = {"centre": anchor}
+            for foot in wings:
+                if not inside_parcel(foot, parcel_1m, W):
                     continue
-                n = storeys + (random.choice((-0.5, 0, 0, 0.5, 1))
-                               if c["use"] == "campus" else
-                               random.choice((-0.5, 0, 0.5)))
-                h = round(max(2, n) * STOREY, 2)
-                base = round(min(ground_at(heights, meta, x, z) for x, z in foot), 2)
-                b2 = {
-                    "ring": [[round(x, 2), round(z, 2)] for x, z in foot],
-                    "holes": [], "base": base, "height": h,
-                    "family": c["use"],
-                    # Which field it belongs to. The map needs this to put a
-                    # one-off building in a courtyard, and recovering it by
-                    # clustering the blocks afterwards is a guess about
-                    # something the generator already knows.
-                    "cell": c["centre"],
-                }
-                if roof == "flat":
-                    b2.update(roof="flat", axis=None, eaves=h, ridge=h)
-                else:
-                    b2.update(roof="gable",
-                              axis=round(math.degrees(math.atan2(uz, ux)), 1),
-                              eaves=round(h * 0.7, 2), ridge=h)
-                out.append(b2)
+                storeys = random.choice((4, 5, 5, 6))
+                campus.append(building_record(
+                    foot, "campus", site, heights, meta, storeys, "flat"))
+
+    # Name the scheme's four buildings without changing the loader schema.
+    # IDEA is a site marker on a perimeter wing: models.js still puts the
+    # one-off meadow-roof model in this field's clear courtyard.
+    campus_sites = {tuple(b["cell"]) for b in campus}
+    route_cells = []
+    for site in campus_sites:
+        d = min(math.dist(site, p) for p in named_routes)
+        if d <= 150:
+            route_cells.append(site)
+    pool = route_cells or campus_sites
+    idea_cell = min(pool, key=lambda p: math.dist(p, (123, 64)))
+
+    def centre(b):
+        return (sum(p[0] for p in b["ring"]) / len(b["ring"]),
+                sum(p[1] for p in b["ring"]) / len(b["ring"]))
+
+    named = set()
+    idea = min((b for b in campus if tuple(b["cell"]) == tuple(idea_cell)),
+               key=lambda b: math.dist(centre(b), idea_cell))
+    idea.update(name="IDEA", storeys=4, height=4 * STOREY,
+                eaves=4 * STOREY, ridge=4 * STOREY)
+    named.add(id(idea))
+    router = min((b for b in campus if id(b) not in named),
+                 key=lambda b: min_dist(road, *centre(b)))
+    router.update(name="ROUTER", storeys=2, height=2 * STOREY,
+                  eaves=2 * STOREY, ridge=2 * STOREY,
+                  groundFloorUse="transport hub")
+    named.add(id(router))
+    output = max((b for b in campus if id(b) not in named),
+                 key=lambda b: math.dist(centre(b), (123, 64)))
+    output.update(name="OUTPUT", storeys=7, height=7 * STOREY,
+                  eaves=7 * STOREY, ridge=7 * STOREY)
+    named.add(id(output))
+    input_b = min((b for b in campus if id(b) not in named),
+                  key=lambda b: math.dist(centre(b), (123, 64)))
+    input_b.update(name="INPUT", storeys=5, height=5 * STOREY,
+                   eaves=5 * STOREY, ridge=5 * STOREY)
+    out.extend(campus)
     return out
 
 
@@ -438,7 +636,13 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
 # --- trees ------------------------------------------------------------------
 
 def tree_record(x, z, height, kind, spread, rot=None):
-    """The same 8-byte record gv-trees.bin uses. No Y: the map computes it."""
+    """The same 8-byte record gv-trees.bin uses. No Y: the map computes it.
+
+    `future.js` reads the last byte as spread/100 and scales X/Z by
+    `height * spread`. The broadleaf unit crown is about 0.71 units across,
+    so a 7 m orchard tree at spread=145 renders about 7.2 m across: neighbours
+    on the 7.5 m rows nearly touch without turning the orchard into a wall.
+    """
     return (int(round(x * 10)), int(round(z * 10)),
             max(1, min(255, int(round(height / 0.25)))),
             random.randrange(256) if rot is None else rot,
@@ -458,53 +662,117 @@ def clip_to_parcel(a, b, parcel_1m, W, step):
             yield x, z
 
 
+def internal_streets(cell, parcel_1m, W):
+    if cell["use"] == "homes":
+        return home_layout(cell)[1]
+    if cell["use"] == "campus":
+        return campus_layout(cell, parcel_1m, W)[1]
+    return []
+
+
+def orchard_points(cell, parcel_1m, W, spacing=7.5):
+    """Rows on the measured grid, rather than a north/south point lattice."""
+    ring = inset(cell["poly"], 14)
+    if ring is None:
+        return
+    q = [to_grid(*p) for p in ring]
+    u0, u1 = min(p[0] for p in q), max(p[0] for p in q)
+    v0, v1 = min(p[1] for p in q), max(p[1] for p in q)
+    m = rasterise(ring, W, W)
+    for u in np.arange(math.ceil(u0 / spacing) * spacing, u1, spacing):
+        for v in np.arange(math.ceil(v0 / spacing) * spacing, v1, spacing):
+            x, z = from_grid(u + random.uniform(-0.45, 0.45),
+                             v + random.uniform(-0.45, 0.45))
+            r, cc = int(z + W / 2), int(x + W / 2)
+            if 0 <= r < W and 0 <= cc < W and m[r, cc] and parcel_1m[r, cc]:
+                yield x, z
+
+
+def woodland_points(cell, settled, parcel_1m, W):
+    """Irregular 20-40 m copses on the orchard edge facing open farmland."""
+    cx, cz = cell["centre"]
+    edges = list(zip(cell["poly"], cell["poly"][1:] + cell["poly"][:1]))
+    a, b = max(edges, key=lambda e: min(
+        math.dist(((e[0][0] + e[1][0]) / 2, (e[0][1] + e[1][1]) / 2), s)
+        for s in settled))
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(dx, dz)
+    ux, uz = dx / length, dz / length
+    nx, nz = -uz, ux
+    if (cx - a[0]) * nx + (cz - a[1]) * nz < 0:
+        nx, nz = -nx, -nz
+
+    # Three loose clumps, leaving deliberate gaps along the outer edge. A
+    # jittered 5 m lattice gives Poisson-like spacing without an O(n^2) pass.
+    clumps = [(0.04, 0.27, 30), (0.36, 0.62, 38), (0.72, 0.94, 24)]
+    for lo, hi, depth in clumps:
+        start, stop = length * lo, length * hi
+        row = 0
+        d = 4.0
+        while d <= depth:
+            spacing = random.uniform(4.6, 5.8)
+            t = start + (row % 2) * spacing / 2
+            while t <= stop:
+                x = a[0] + ux * (t + random.uniform(-1.0, 1.0)) \
+                    + nx * (d + random.uniform(-1.0, 1.0))
+                z = a[1] + uz * (t + random.uniform(-1.0, 1.0)) \
+                    + nz * (d + random.uniform(-1.0, 1.0))
+                r, cc = int(z + W / 2), int(x + W / 2)
+                if 0 <= r < W and 0 <= cc < W and parcel_1m[r, cc]:
+                    yield x, z
+                t += spacing
+            d += spacing
+            row += 1
+
+
 def make_trees(lines, cells, parcel_1m, W):
-    """Hedges first, because they are the plan; then orchards and streets."""
+    """Mature hedges, orchards, outer copses and internal street avenues."""
     out, counts = [], Counter()
     for _, a, b in lines:
         for x, z in clip_to_parcel(a, b, parcel_1m, W, 2.6):
             x += random.uniform(-0.5, 0.5)
             z += random.uniform(-0.5, 0.5)
-            out.append(tree_record(x, z, random.uniform(2.4, 3.8), 2,
-                                   random.uniform(70, 110)))
+            out.append(tree_record(x, z, random.uniform(3.5, 5.0), 2,
+                                   random.uniform(62, 90)))
             counts["hedge"] += 1
         # A standard oak every so often along a hedge, which is what makes an
         # English field boundary read as one from the air rather than as a wall.
         for x, z in clip_to_parcel(a, b, parcel_1m, W, 48):
             out.append(tree_record(x + random.uniform(-2, 2),
                                    z + random.uniform(-2, 2),
-                                   random.uniform(9, 14), 0,
-                                   random.uniform(85, 120)))
+                                   random.uniform(12, 16), 0,
+                                   random.uniform(90, 125)))
             counts["standard"] += 1
 
+    settled = [c["centre"] for c in cells if c["use"] in ("homes", "campus")]
     for c in cells:
         if c["use"] == "orchard":
-            ring = inset(c["poly"], 14)
-            if ring is None:
-                continue
-            xs = [p[0] for p in ring]
-            zs = [p[1] for p in ring]
-            m = rasterise(ring, W, W)
-            for x in np.arange(min(xs), max(xs), 8.0):
-                for z in np.arange(min(zs), max(zs), 8.0):
-                    r, cc = int(z + W / 2), int(x + W / 2)
-                    if not (0 <= r < W and 0 <= cc < W) or not m[r, cc] \
-                            or not parcel_1m[r, cc]:
-                        continue
-                    out.append(tree_record(x + random.uniform(-1, 1),
-                                           z + random.uniform(-1, 1),
-                                           random.uniform(4.5, 6.5), 0,
-                                           random.uniform(60, 85)))
-                    counts["orchard"] += 1
-        elif c["use"] in SHAPES:
-            ring = inset(c["poly"], SHAPES[c["use"]][5])
-            if ring is None:
-                continue
-            for a, b in zip(ring, ring[1:] + ring[:1]):
-                for x, z in clip_to_parcel(a, b, parcel_1m, W, 13):
-                    out.append(tree_record(x, z, random.uniform(7, 10), 0,
-                                           random.uniform(55, 80)))
-                    counts["street"] += 1
+            for x, z in orchard_points(c, parcel_1m, W):
+                out.append(tree_record(x, z, random.uniform(6, 8), 0,
+                                       random.uniform(135, 155)))
+                counts["orchard"] += 1
+            for x, z in woodland_points(c, settled, parcel_1m, W):
+                out.append(tree_record(x, z, random.uniform(12, 18), 0,
+                                       random.uniform(75, 115)))
+                counts["woodland"] += 1
+        elif c["use"] in ("homes", "campus"):
+            for a, b, width in internal_streets(c, parcel_1m, W):
+                dx, dz = b[0] - a[0], b[1] - a[1]
+                n = math.hypot(dx, dz)
+                nx, nz = -dz / n, dx / n
+                for side in (-1, 1):
+                    off = width / 2 + 1.5
+                    aa = (a[0] + nx * off * side, a[1] + nz * off * side)
+                    bb = (b[0] + nx * off * side, b[1] + nz * off * side)
+                    step = random.uniform(10, 12)
+                    for x, z in clip_to_parcel(aa, bb, parcel_1m, W, step):
+                        out.append(tree_record(x + random.uniform(-0.5, 0.5),
+                                               z + random.uniform(-0.5, 0.5),
+                                               random.uniform(8, 12), 0,
+                                               random.uniform(75, 105)))
+                        counts["street"] += 1
+    if len(out) >= 30000:
+        raise ValueError(f"tree budget exceeded: {len(out)} records")
     return out, counts
 
 
@@ -572,15 +840,11 @@ def paint(cells, lines, cover, index, parcel_1m, W, palette):
         colour.alpha_composite(rows_img)
         dc = ImageDraw.Draw(colour)
 
-    # Streets round the built blocks, then the hedges on every grid line.
+    # The 14/18 m internal streets are part of the same measured grid as the
+    # field cells. Block interiors remain grass gardens and shared courts.
     for c in cells:
-        if c["use"] not in SHAPES:
-            continue
-        ring = inset(c["poly"], SHAPES[c["use"]][5] - 5)
-        if ring is None:
-            continue
-        for a, b in zip(ring, ring[1:] + ring[:1]):
-            line(a, b, "road_minor", 6.5)
+        for a, b, width in internal_streets(c, parcel_1m, W):
+            line(a, b, "road_minor", width)
     for _, a, b in lines:
         line(a, b, "scrub", 2.5)
 
@@ -643,16 +907,36 @@ def main():
         print(f"   {use:<12} {by_use[use]:>2} fields  {a:6.1f} ha  "
               f"({a / total * 100:4.1f}%)")
 
-    buildings = make_buildings(cells, heights, meta, parcel_1m, W)
+    road = near_mask_metres(np.isin(cls, [index["road"], index["road_minor"]]),
+                            step=4)
+    named_routes = [tuple(p) for route in paths["routes"]
+                    if route["tier"] == "named" for p in route["points"]]
+    buildings = make_buildings(cells, heights, meta, parcel_1m, W,
+                               road, named_routes)
     buildings += make_glasshouses(cells, heights, meta, parcel_1m, W)
-    floor = sum(
-        abs(sum(r[0][0] * r[1][1] - r[1][0] * r[0][1]
-                for r in zip(b["ring"], b["ring"][1:] + b["ring"][:1]))) / 2
-        * max(1, round(b["height"] / STOREY)) for b in buildings)
+
+    def footprint_area(b):
+        r = b["ring"]
+        return abs(sum(a[0] * q[1] - q[0] * a[1]
+                       for a, q in zip(r, r[1:] + r[:1]))) / 2
+
+    floor = sum(footprint_area(b) * b.get(
+        "storeys", max(1, round(b["height"] / STOREY))) for b in buildings)
+    campus_floor = round(sum(footprint_area(b) * b["storeys"] for b in buildings
+                             if b["family"] == "campus"))
+    dwellings = sum(b.get("dwellings", 0) for b in buildings)
     fam = Counter(b["family"] for b in buildings)
     print(f"\n{len(buildings)} new buildings, {floor / 10000:.1f} ha of floor")
     for k, v in fam.most_common():
         print(f"   {k:<12} {v:>4}")
+    print(f"   dwellings    {dwellings:>4}")
+    print(f"   campus floor {campus_floor:>7,} m2")
+    if not 1000 <= dwellings <= 1200:
+        raise ValueError(f"dwelling target missed: {dwellings}")
+    if not 93000 <= campus_floor <= 120000:
+        raise ValueError(f"campus floor target missed: {campus_floor} m2")
+    if max(b.get("storeys", 0) for b in buildings) > 7:
+        raise ValueError("seven-storey height cap exceeded")
 
     trees, tree_counts = make_trees(lines, cells, parcel_1m, W)
     print(f"\n{len(trees)} new trees: " +
@@ -723,6 +1007,10 @@ def main():
         "areasHectares": {k: round(v, 1) for k, v in ha.items()},
         "fields": len(cells),
         "newBuildings": len(buildings),
+        "dwellings": dwellings,
+        "campusFloorM2": campus_floor,
+        "densityNote": ("Scheme-true density: about 1,100 homes and at least "
+                        "93,000 m2 of campus floor area."),
         "floorHectares": round(floor / 10000, 1),
         "newTrees": len(trees),
         "treeCounts": dict(tree_counts),
