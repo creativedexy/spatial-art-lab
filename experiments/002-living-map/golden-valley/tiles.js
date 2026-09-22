@@ -256,6 +256,110 @@ export function intoLocalFrame(b, lift = 0) {
   return m;
 }
 
+const GCHQ_MASK_SIZE = 256;
+
+function pointInRing(x, z, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, zi] = ring[i];
+    const [xj, zj] = ring[j];
+    if ((zi > z) !== (zj > z)
+        && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Rasterise the surveyed ring, including its courtyard hole, once. */
+function makeGchqRoofMask(building) {
+  const outer = building.ring;
+  const holes = building.holes ?? [];
+  const pad = 1;
+  const xs = outer.map((p) => p[0]);
+  const zs = outer.map((p) => p[1]);
+  const minX = Math.min(...xs) - pad;
+  const maxX = Math.max(...xs) + pad;
+  const minZ = Math.min(...zs) - pad;
+  const maxZ = Math.max(...zs) + pad;
+  const data = new Uint8Array(GCHQ_MASK_SIZE * GCHQ_MASK_SIZE * 4);
+
+  for (let iz = 0; iz < GCHQ_MASK_SIZE; iz++) {
+    const z = minZ + (iz + 0.5) / GCHQ_MASK_SIZE * (maxZ - minZ);
+    for (let ix = 0; ix < GCHQ_MASK_SIZE; ix++) {
+      const x = minX + (ix + 0.5) / GCHQ_MASK_SIZE * (maxX - minX);
+      const p = (iz * GCHQ_MASK_SIZE + ix) * 4;
+      const inside = pointInRing(x, z, outer)
+        && !holes.some((hole) => pointInRing(x, z, hole));
+      if (inside) data[p] = data[p + 1] = data[p + 2] = 255;
+      data[p + 3] = 255;
+    }
+  }
+
+  const texture = new THREE.DataTexture(
+    data, GCHQ_MASK_SIZE, GCHQ_MASK_SIZE,
+    THREE.RGBAFormat, THREE.UnsignedByteType,
+  );
+  texture.name = 'gchq-roof-footprint';
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.minFilter = texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.flipY = false;
+  texture.needsUpdate = true;
+
+  return {
+    texture: { value: texture },
+    // xy is the lower corner; zw turns local metres into mask UVs.
+    bounds: {
+      value: new THREE.Vector4(
+        minX, minZ, 1 / (maxX - minX), 1 / (maxZ - minZ),
+      ),
+    },
+    // Match buildings.js flatRoof(): the surveyed building is sunk 0.4 m and
+    // its cap lifted 0.05 m, then start the cut 0.3 m below that meadow plane.
+    roofY: { value: building.base - 0.4 + building.height + 0.05 - 0.3 },
+  };
+}
+
+/** Remove today's photographed roof furniture only where meadow replaces it. */
+function clipTileMaterialAtGchq(material, clip, patched) {
+  if (patched.has(material)) return;
+  patched.add(material);
+  const previous = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.onBeforeCompile = (shader, ...args) => {
+    if (previous) previous.call(material, shader, ...args);
+    shader.uniforms.uGchqMeadowAt = clip.amount;
+    shader.uniforms.uGchqRoofMask = clip.texture;
+    shader.uniforms.uGchqRoofMaskBounds = clip.bounds;
+    shader.uniforms.uGchqRoofClipY = clip.roofY;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>',
+        '#include <common>\nvarying vec3 vGchqTileWorld;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vGchqTileWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform float uGchqMeadowAt;
+        uniform sampler2D uGchqRoofMask;
+        uniform vec4 uGchqRoofMaskBounds;
+        uniform float uGchqRoofClipY;
+        varying vec3 vGchqTileWorld;`)
+      .replace('#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        if (uGchqMeadowAt > 0.001 && vGchqTileWorld.y > uGchqRoofClipY) {
+          vec2 gchqUv = (vGchqTileWorld.xz - uGchqRoofMaskBounds.xy)
+                      * uGchqRoofMaskBounds.zw;
+          bool inGchqMask = all(greaterThanEqual(gchqUv, vec2(0.0)))
+                         && all(lessThanEqual(gchqUv, vec2(1.0)));
+          if (inGchqMask && texture2D(uGchqRoofMask, gchqUv).r > 0.5) discard;
+        }`);
+  };
+  // Every tile receives the same suffix, so equivalent glTF materials reuse
+  // shader programs instead of compiling one copy per decoded tile.
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : material.type}:gchq-roof-clip-v1`;
+  material.needsUpdate = true;
+}
+
 /**
  * Add the layer. Returns null when there is no key, which is not a failure:
  * it is the public map.
@@ -271,12 +375,22 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
   // Imported here and not at module scope, so a map with no key never fetches
   // the library at all. Phase 7 spent a day on the first load; this must not
   // put it back.
-  const [{ TilesRenderer }, { ReorientationPlugin }, { GoogleCloudAuthPlugin }] =
+  const [
+    { TilesRenderer }, { ReorientationPlugin }, { GoogleCloudAuthPlugin }, gchq,
+  ] =
     await Promise.all([
       import('3d-tiles-renderer/three'),
       import('3d-tiles-renderer/three/plugins'),
       import('3d-tiles-renderer/core/plugins'),
+      fetch(new URL('gv-gchq.json', import.meta.url))
+        .then((response) => response.json()).then((rows) => rows[0]),
     ]);
+
+  const clip = makeGchqRoofMask(gchq);
+  // This is the same uniform that colours and fades the meadow roof. At zero
+  // (today) the discard branch is closed, so the photograph is untouched.
+  clip.amount = future?.gchqMeadowUniform ?? { value: 0 };
+  const patchedTileMaterials = new WeakSet();
 
   const tiles = new TilesRenderer();
   tiles.registerPlugin(new GoogleCloudAuthPlugin({
@@ -328,7 +442,9 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
       const materials = Array.isArray(object.material)
         ? object.material : [object.material];
       for (const material of materials) {
-        if (material) material.needsUpdate = true;
+        if (material) clipTileMaterialAtGchq(
+          material, clip, patchedTileMaterials,
+        );
       }
     });
   });

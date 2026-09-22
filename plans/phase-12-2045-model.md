@@ -321,3 +321,5 @@ Valley SPD; `inspiration/golden-valley/README.md`.
 - Reworked the Doughnut roof as graded wildflower meadow: 5-20 m planting
   patches, yellow/white/purple fleck, two concentric mown paths, radial cuts
   and a darker planted edge, all derived from `KEYED_GRADE.meadow`.
+- Masked photographed masts and lighting columns above the Doughnut's surveyed
+  roof footprint while its 2045 meadow is visible, leaving today's tiles intact.

@@ -63,8 +63,8 @@ const groundDirect = { value: 0 };
  */
 export const KEYED_GRADE = {
   ground: { saturation: 0.68, exposure: 0.74 },
-  trees: { saturation: 0.53, exposure: 1.16 },
-  meadow: { saturation: 0.80, exposure: 0.55 },
+  trees: { saturation: 0.40, exposure: 1.16 },   // M4: mature canopy measured +0.10 sat at 0.53 (22 Sep)
+  meadow: { saturation: 0.52, exposure: 0.55 },   // M4: textured meadow measured +0.15 sat at 0.80 (22 Sep)
   // M4 starts each authored material about 0.4 stops below the former pale
   // boxes in the keyed build. These are deliberately palette compensation,
   // not a second light: probe_light.py remains the authority on the live map.
@@ -901,6 +901,8 @@ export async function addFuture(scene, renderer, {
     setGroundMasked,
     /** Use today's base map again once the measured fallback is ready. */
     setGroundDirect,
+    /** Shared with the tile shader that clears photographed roof furniture. */
+    get gchqMeadowUniform() { return meadowMix; },
     /**
      * Over photogrammetry, our whole town is hidden except one thing: the
      * ring's 2045 meadow roof, laid over the real building. Overlaying our own
