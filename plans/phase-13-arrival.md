@@ -2,7 +2,7 @@
 
 *Designed by Codex 12 Sep 2026 against the model at `665efcd`; re-measured here
 against the phase-12 model on 22 Sep, which changed the answer.*
-*Phase: Develop.*
+*Phase: Deliver. Branch head `6e886f7`.*
 
 ## What the re-measurement found
 
@@ -121,6 +121,52 @@ wrong in the direction of more work.
 **Both frames are 2045-only.** Before frames stay parked.
 
 ---
+
+## Delivered
+
+Three arrivals, each a photograph generated from a plate rendered at the camera
+a person standing there would have, and each reachable from the shot that looks
+at that ground:
+
+| Arrival | From | Stand | Eye on landing |
+|---|---|---|---|
+| The street | the-homes | `(-230, -636)` | 1.56 m above the terrain |
+| The court | the-campus | `(-150, -210)` | 1.59 m |
+| Among the panels | the-panels | `(-500, -545)` | 1.48 m |
+
+- An arrival and an aerial photograph of the same courtyard are two routes into
+  the same ground, which `viewpoints.json` forbids and `test_viewpoints.py`
+  enforces. The campus shot now offers the arrival; the aerial photograph of
+  that court moved to the vale, which looks across the campus from the west.
+- `test_public_build.py` no longer has the number five typed into it. It counts
+  the places in `places.json`, because a number typed into a test goes stale.
+- Payload is unchanged: 6.48 MB measured before and after, +3.6 KB. The
+  photographs load when a place is visited, not on first load. The build test's
+  own first-load counter is noisy by its own admission and moved from 2.58 to
+  7.15 MB between runs on identical code; `measure_payload.py` is the number to
+  quote.
+- Tests: 19/19 places, 16/16 viewpoints, 13/13 public build, 9/9 tiles gate,
+  7/7 keyed hand-off.
+
+### Left undone, deliberately
+
+- **No arrival for the vale or the meadow roof.** The original design's refusal
+  still holds for both: the vale is a regional relationship, and GCHQ's roof has
+  no credible public ground-level destination. Two of its three refusals stand;
+  only The Homes reversed, and only because phase 12 built the street.
+- **The court arrives into shade.** The campus blocks face east, so at the hour
+  every photograph in this map is matched to, their courtyards are in their own
+  shadow. The generated photograph is brighter and warmer than its plate. That
+  is the generator disagreeing with the model about the light, and it was
+  allowed because the picture is better; it is not measured.
+- **No people in the panels photograph**, though the prompt asked for a grower
+  and someone on the field track.
+- **No back-down path.** Leaving an arrival uses the same flight every other
+  place uses, reversed. The design's stylised descent, and its "Back to Cyber
+  Central" control, were not built: the straight line from every parent
+  viewpoint clears the terrain, so the machinery would have been ceremony.
+- **The crop between the rows is a shader pattern, not plants.** It reads from
+  340 m and it reads at 1.6 m as drilled rows; it is not modelled growth.
 
 ## The original design, as written 12 Sep
 
