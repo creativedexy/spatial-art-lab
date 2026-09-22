@@ -95,8 +95,11 @@ def main():
     ap.add_argument("--size", default="1280,720")
     ap.add_argument("--settle-ms", type=int, default=90000)
     ap.add_argument("--only", default="")
+    ap.add_argument("--keyless", action="store_true",
+                    help="?clean=1: our own model only, no Google tiles. Use this for "
+                         "anything that goes to a generator (tiles may never be fed to one)")
     args = ap.parse_args()
-    if not (GV / "key.js").is_file():
+    if not args.keyless and not (GV / "key.js").is_file():
         raise SystemExit("golden-valley/key.js is required (its contents are never read here)")
 
     src = Path(args.candidates)
@@ -127,11 +130,17 @@ def main():
         browser = pw.chromium.launch(headless=False, args=["--no-sandbox"])
         page = browser.new_page(viewport={"width": width, "height": height})
         page.set_default_timeout(900000)
-        page.goto(f"http://127.0.0.1:{args.port}/golden-valley/index.html",
+        query = "?clean=1" if args.keyless else ""
+        page.goto(f"http://127.0.0.1:{args.port}/golden-valley/index.html{query}",
                   wait_until="load")
         page.wait_for_function("window.__terrainReady === true")
-        if not page.evaluate(PREPARE):
+        has_tiles = page.evaluate(PREPARE)
+        if args.keyless and has_tiles:
+            raise SystemExit("keyless shoot found a tiles layer: refusing (plates must not contain Google imagery)")
+        if not args.keyless and not has_tiles:
             raise SystemExit("no tiles layer: is key.js present and valid?")
+        if args.keyless:
+            page.wait_for_timeout(8000)   # the full measured world streams in after first paint
         for s in shots:
             cam = page.evaluate(FRAME, s)
             row = {"id": s["id"], "pillar": s.get("pillar", ""), **cam,
@@ -144,7 +153,7 @@ def main():
                     .convert("RGB").save(out / f"{s['id']}-{name}.png")
                 row[name] = {"showing": r["showing"], "settled": r["settled"]}
             print(f"  {s['id']:24s} {row['above']:>4} m up  tiles "
-                  f"{'on' if row['today']['showing'] else 'OFF'}"
+                  f"{'keyless' if args.keyless else ('on' if row['today']['showing'] else 'OFF')}"
                   f"{'' if row['today']['settled'] else '  (not settled)'}")
             results.append(row)
         browser.close()
@@ -159,7 +168,7 @@ def main():
         for j, name in enumerate(("today", "2045")):
             im = Image.open(out / f"{row['id']}-{name}.png").resize((tw, th))
             sheet.paste(im, (j * tw, y + 28))
-        warn = "" if row["today"]["showing"] else "   TILES OFF: inside the melt line"
+        warn = "" if (args.keyless or row["today"]["showing"]) else "   TILES OFF: inside the melt line"
         d.text((8, y + 8), f"{row['id']}  ·  {row['pillar']}  ·  {row['slant']} m  ·  "
                f"bearing {row['bearing']}°  ·  {row['above']} m up{warn}", fill="black")
     sheet.save(out / "contact-sheet.jpg", quality=86)

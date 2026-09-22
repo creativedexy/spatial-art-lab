@@ -1,0 +1,17 @@
+Use the built-in image_gen tool. Use case: sketch-to-render of a proposed place, Golden Valley, west Cheltenham, in 2045.
+
+INPUT 1 is the geometry master: a render of our own 3D model from the exact camera. Preserve its camera, horizon, terrain, the positions, footprints and heights of every building block, the streets, the tree belts and orchards, the fields and the existing town, within about 15 px at 1280x720. Do not invent new blocks, move blocks, or add towers. The existing town beyond the site stays an ordinary existing English town (red and buff brick, slate and clay tile roofs) exactly where the plate puts it.
+INPUT 2 is the approved look: a real-looking aerial photograph of GCHQ with a wildflower meadow roof. Match its photographic realism, late-summer afternoon sun, colour, haze and level of detail. It is the standard.
+INPUT 3 (if present) is the scheme's own aerial photomontage of this site: use it only for how the scheme sits in the real landscape, not for its architecture.
+INPUT 4 (if present) is the scheme's IDEA building: take only its idea of a meadow roof running to the ground.
+
+Design direction (excellence and realism, never corporate office park, never illustration). Everything must look built and photographed; every move has a built precedent: homes like Goldsmith Street Norwich (steep-roofed Passivhaus terraces), Marmalade Lane Cambridge (cohousing round shared gardens) and Solarsiedlung Freiburg (whole roofs of PV); campus like Sara Kulturhus Skellefteå and Powerhouse Brattørkaia Trondheim (mass timber and glass, roofs of PV sawn to the sun and meadow); water like Augustenborg Malmö (open stormwater channels and rain gardens reading as silver lines); energy like Next2Sun vertical bifacial PV over grazed pasture and solar carports; trees as native mixes at maturity (veteran oaks, woodland courtyards, avenues, orchards). Seven storeys maximum. No text, labels, logos or watermark. People visible at true scale on streets, paths and roofs; cars where cars park.
+
+Make THREE images from the same plate, same camera, same layout, differing only in how far the design goes:
+ - homes-a-measured.png: the best of current UK practice, restrained palette, calm.
+ - homes-a-bold.png: stronger material identity and more of every sustainable move (more PV, more meadow roof, more tree mass, water visible).
+ - homes-a-adventurous.png: the edge of design excellence that is still buildable and photographable: expressive timber structure, walkable roofs, water and planting as the dominant moves, energy as landscape.
+Save them at 1280x720 (resize the whole frame only, no crop, no warping, no retouching outside image_gen) in experiments/002-living-map/generate/m2/boards/. One generation per variant plus at most one correction pass each if geometry drifts more than about 15 px. Then write experiments/002-living-map/generate/m2/boards/homes-a-notes.md: the prompts verbatim, passes made, and a short honest inspection per variant (geometry drift you can see, realism, anything that reads as CGI or corporate).
+
+THIS FRAME: the homes streets, looking north-east from 380 m to the existing town.
+What 2045 shows here: Terrace streets with PV on the south-east roof pitches and slate on the other, 4-6 storey timber apartment blocks with meadow roofs, shared gardens inside the blocks, street avenues, open stormwater channels along the streets, the mature orchard beside them.
