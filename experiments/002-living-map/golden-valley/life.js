@@ -46,6 +46,10 @@ const uniforms = {
   uWaterIndex: { value: 10 },
 };
 
+// The world clock, for shaders that are not given applyLife (the keyed
+// terrain): their own uniform name, the same value object, so no redeclaration.
+export const lifeTime = uniforms.uTime;
+
 // Two octaves of value noise. Three looked better and cost a third of the
 // frame on a machine with no GPU; the shadows are soft-edged anyway.
 const NOISE = /* glsl */`

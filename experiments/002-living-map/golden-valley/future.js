@@ -20,7 +20,7 @@
 // tool and a much weaker shot, and this is the shot.
 
 import * as THREE from 'three';
-import { applyLife } from './life.js';
+import { applyLife, lifeTime } from './life.js';
 import { loadClassTexture, treeScale, treeTint } from './landcover.js';
 import { facadeChunk } from './facades.js';
 import { MEASURED_SUN } from './look.js';
@@ -145,8 +145,11 @@ function share(material, patch, life = {}) {
 const groundMaskUniforms = [];
 const groundDirectUniforms = [];
 const groundProbeMaskUniforms = [];
+// Written into GLSL, so always as a float literal: farmland is index 0, and a
+// bare `0` is an int that no overload of gvClassWeight accepts. That one
+// character stopped the whole keyed terrain shader compiling in M5.
 const groundClass = Object.fromEntries(Object.entries(futureMeta.classes)
-  .map(([name, value]) => [name, value.index / 255]));
+  .map(([name, value]) => [name, (value.index / 255).toFixed(6)]));
 
 /** Draw our ground only where 2045 changes it. */
 export function setGroundMasked(on) {
@@ -253,6 +256,9 @@ export function blendGround(
                       1 / (futureTexture.image?.height || 2000)) },
                     uGroundMask: { value: groundMask.value },
                     uGroundProbeMask: { value: groundProbeMask.value },
+                    // Not uTime: only applyLife declares that, and the keyed
+                    // terrain never gets applyLife, so the shader did not compile.
+                    uGroundTime: lifeTime,
                     uDirectGround: { value: groundDirect.value },
                     uGroundSaturation: groundGrade.saturation,
                     uGroundExposure: groundGrade.exposure });
@@ -285,6 +291,7 @@ export function blendGround(
          uniform vec2 uGroundTexel;
          uniform float uGroundMask;
          uniform float uGroundProbeMask;
+         uniform float uGroundTime;
          uniform float uDirectGround;
          uniform float uGroundSaturation;
          uniform float uGroundExposure;
@@ -415,9 +422,9 @@ export function blendGround(
       .replace('#include <normal_fragment_maps>',
         `#include <normal_fragment_maps>
          float gvRippleX = sin(vFutureWorld.x * 0.72
-                             + vFutureWorld.z * 0.31 + uTime * 1.35);
+                             + vFutureWorld.z * 0.31 + uGroundTime * 1.35);
          float gvRippleY = cos(vFutureWorld.x * -0.28
-                             + vFutureWorld.z * 0.83 + uTime * 1.75);
+                             + vFutureWorld.z * 0.83 + uGroundTime * 1.75);
          normal = normalize(normal + gvWaterAmount * 0.035
                             * vec3(gvRippleX, gvRippleY, 0.0));`)
       .replace('#include <opaque_fragment>',

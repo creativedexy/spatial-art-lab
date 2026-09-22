@@ -473,9 +473,7 @@ SURFACE_MASKS = """() => {
     if (object.isLight) object.visible = true;
   }
   scene.overrideMaterial = null;
-  m.future.setGroundProbeMask?.(true);
   const ground = capture();
-  m.future.setGroundProbeMask?.(false);
 
   // These targets have ordinary geometry, so an unlit white override gives
   // a binary screen mask without changing any tile or application material.
