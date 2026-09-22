@@ -130,6 +130,13 @@ def main():
         browser = pw.chromium.launch(headless=False, args=["--no-sandbox"])
         page = browser.new_page(viewport={"width": width, "height": height})
         page.set_default_timeout(900000)
+        # A shader that fails to compile draws nothing, and over the tiles that
+        # is invisible: M5's keyed terrain never compiled and every frame showed
+        # Google's photograph where our ground should have been. So any shader
+        # error stops the shoot rather than producing plausible pictures.
+        shader_errors = []
+        page.on("console", lambda msg: shader_errors.append(msg.text)
+                if msg.type == "error" and "Shader Error" in msg.text else None)
         query = "?clean=1" if args.keyless else ""
         page.goto(f"http://127.0.0.1:{args.port}/golden-valley/index.html{query}",
                   wait_until="load")
@@ -142,6 +149,8 @@ def main():
         if args.keyless:
             page.wait_for_timeout(8000)   # the full measured world streams in after first paint
         for s in shots:
+            if shader_errors:
+                raise SystemExit("shader failed to compile:\n" + shader_errors[0][-1500:])
             cam = page.evaluate(FRAME, s)
             row = {"id": s["id"], "pillar": s.get("pillar", ""), **cam,
                    "slant": s["slant"], "bearing": s["bearing"]}
@@ -156,6 +165,8 @@ def main():
                   f"{'keyless' if args.keyless else ('on' if row['today']['showing'] else 'OFF')}"
                   f"{'' if row['today']['settled'] else '  (not settled)'}")
             results.append(row)
+        if shader_errors:
+            raise SystemExit("shader failed to compile:\n" + shader_errors[0][-1500:])
         browser.close()
     server.shutdown()
 
