@@ -1,0 +1,202 @@
+[
+  {
+    "id": "homes-a",
+    "pillar": "homes streets",
+    "pos": [
+      -506.5,
+      188.4,
+      -460.1
+    ],
+    "above": 149,
+    "slant": 380,
+    "bearing": 40,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "homes-b",
+    "pillar": "homes streets",
+    "pos": [
+      -222,
+      180.3,
+      -371.3
+    ],
+    "above": 135,
+    "slant": 360,
+    "bearing": 350,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "campus-a",
+    "pillar": "campus around IDEA",
+    "pos": [
+      -522.7,
+      178.2,
+      -38.2
+    ],
+    "above": 143,
+    "slant": 380,
+    "bearing": 75,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "campus-b",
+    "pillar": "campus around IDEA",
+    "pos": [
+      -394.6,
+      176.9,
+      -385.7
+    ],
+    "above": 136,
+    "slant": 360,
+    "bearing": 140,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "meadow-a",
+    "pillar": "meadow roof + solar car parks",
+    "pos": [
+      -96,
+      188,
+      290.8
+    ],
+    "above": 150,
+    "slant": 340,
+    "bearing": 44,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "meadow-b",
+    "pillar": "meadow roof + solar car parks",
+    "pos": [
+      -109.6,
+      207,
+      -168.6
+    ],
+    "above": 163,
+    "slant": 360,
+    "bearing": 135,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "panels-a",
+    "pillar": "panels and glasshouses",
+    "pos": [
+      -119.1,
+      182.7,
+      -597.7
+    ],
+    "above": 135,
+    "slant": 400,
+    "bearing": 250,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "panels-b",
+    "pillar": "panels and glasshouses",
+    "pos": [
+      -349.5,
+      181.7,
+      -801.1
+    ],
+    "above": 137,
+    "slant": 380,
+    "bearing": 200,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "edge-a",
+    "pillar": "orchard and wetland edge",
+    "pos": [
+      -231.3,
+      181.3,
+      -231.5
+    ],
+    "above": 141,
+    "slant": 420,
+    "bearing": 280,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "edge-b",
+    "pillar": "orchard and wetland edge",
+    "pos": [
+      -499.5,
+      180,
+      31.1
+    ],
+    "above": 145,
+    "slant": 380,
+    "bearing": 340,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  }
+]

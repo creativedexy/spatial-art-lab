@@ -1,105 +1,162 @@
 {
-  "note": "Places you can visit, each one a photograph and the camera it was generated from. The camera is not a framing chosen to suit the picture: it is the camera the plate was rendered from, so the live map arrives at the viewpoint the photograph was made at and the two are the same view of the same ground. `wave` is how far 2045 has arrived at that place \u2014 the photographs are of different years and the map has to agree with each. Local metres, x east, z south, origin at the box centre. Every `pos`, `look` and `wave` here is copied from the plate's own sidecar, named in `plate`, and scripts/test_places.py fails if the two ever drift: the first draft of this file was typed from the camera the plate was ASKED for rather than the one it was rendered from, and two places were 36 m and 9 m out with nothing visibly wrong.\n\nPhase 7: the map is served the WebP of each photograph, about a fifth of the PNG's size. The PNG stays beside it as the approved original that the generate/ briefs point at.\n\nPhase 8: the copy is about 80 words a place and every one of them carries a number this map measured \u2014 the ring's height from the LiDAR, the field grid's bearing from surviving hedges, the wetland and orchard hectares from the scheme's own allocation. A blurb that could have been written about any development is worse than none.",
-  "defaults": {
-    "fov": 48,
-    "flyMs": 2600,
-    "fadeMs": 700
+ "note": "Places you can visit, each one a photograph and the camera it was generated from. The camera is not a framing chosen to suit the picture: it is the camera the plate was rendered from, so the live map arrives at the viewpoint the photograph was made at and the two are the same view of the same ground. `wave` is how far 2045 has arrived at that place — the photographs are of different years and the map has to agree with each. Local metres, x east, z south, origin at the box centre. Every `pos`, `look` and `wave` here is copied from the plate's own sidecar, named in `plate`, and scripts/test_places.py fails if the two ever drift: the first draft of this file was typed from the camera the plate was ASKED for rather than the one it was rendered from, and two places were 36 m and 9 m out with nothing visibly wrong.\n\nPhase 7: the map is served the WebP of each photograph, about a fifth of the PNG's size. The PNG stays beside it as the approved original that the generate/ briefs point at.\n\nPhase 8: the copy is about 80 words a place and every one of them carries a number this map measured — the ring's height from the LiDAR, the field grid's bearing from surviving hedges, the wetland and orchard hectares from the scheme's own allocation. A blurb that could have been written about any development is worse than none.\n\nPhase 13: the arrivals. Three places are photographed from 1.6 m above the ground rather than from the air, at the cameras a person standing there would have. They are the first pictures in this map of ground no aerial camera can show, and the model was changed to deserve them: the solar rows were opaque black walls at head height until the sky they reflect was added as light rather than as albedo.",
+ "defaults": {
+  "fov": 48,
+  "flyMs": 2600,
+  "fadeMs": 700
+ },
+ "places": [
+  {
+   "id": "gchq",
+   "name": "GCHQ",
+   "year": "today",
+   "blurb": "The Doughnut, and the reason any of this is here. Measured from the LiDAR rather than looked up: 14.8 m tall on ground 52.7 m above sea level, courtyard and all. Its roof is pale ribbed metal, not the dark glass of its facade — a distinction worth a sentence, because getting it wrong once turned the most recognisable building in Gloucestershire into a pond. The cyber campus goes 100 m that way. Everything else in this map is measured the same way, which is what lets the 2045 half be argued rather than drawn.",
+   "photo": "../generate/gchq/out/gchq-photo.webp",
+   "wave": 0,
+   "pos": [
+    0,
+    110,
+    230
+   ],
+   "look": [
+    123,
+    62.597,
+    64
+   ],
+   "plate": "generate/gchq/plate.json"
   },
-  "places": [
-    {
-      "id": "gchq",
-      "name": "GCHQ",
-      "year": "today",
-      "blurb": "The Doughnut, and the reason any of this is here. Measured from the LiDAR rather than looked up: 14.8 m tall on ground 52.7 m above sea level, courtyard and all. Its roof is pale ribbed metal, not the dark glass of its facade \u2014 a distinction worth a sentence, because getting it wrong once turned the most recognisable building in Gloucestershire into a pond. The cyber campus goes 100 m that way. Everything else in this map is measured the same way, which is what lets the 2045 half be argued rather than drawn.",
-      "photo": "../generate/gchq/out/gchq-photo.webp",
-      "wave": 0,
-      "pos": [
-        0,
-        110,
-        230
-      ],
-      "look": [
-        123,
-        62.597,
-        64
-      ],
-      "plate": "generate/gchq/plate.json"
-    },
-    {
-      "id": "cyber-central",
-      "name": "Cyber Central",
-      "year": "2045",
-      "blurb": "The innovation campus, on a field grid rebuilt at 22 degrees \u2014 inside the band that 35% of the box's surviving hedge length already runs in, so the new streets follow lines that are there rather than lines we liked. Twenty blocks of 38 by 17 m, four or five storeys, banded buff stone over a glazed ground floor. GCHQ sits on the skyline beyond, 100 m away and the whole point of the address. Nothing here is a tower: the scheme caps built ground at a third.",
-      "photo": "../generate/golden-valley-2045/out/a-cyber-central-photo.webp",
-      "wave": 1,
-      "pos": [
-        -760,
-        209.609,
-        430
-      ],
-      "look": [
-        123,
-        62.597,
-        64
-      ],
-      "plate": "generate/golden-valley-2045/a-cyber-central.json"
-    },
-    {
-      "id": "campus-courtyards",
-      "name": "The courtyards",
-      "year": "2045",
-      "blurb": "Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule \u2014 campus within reach of GCHQ and a road \u2014 and none of them by hand.",
-      "photo": "../generate/golden-valley-2045/out/b-the-campus-photo.webp",
-      "wave": 1,
-      "pos": [
-        -380,
-        225.664,
-        60
-      ],
-      "look": [
-        -190,
-        47.341,
-        -200
-      ],
-      "plate": "generate/golden-valley-2045/b-the-campus.json"
-    },
-    {
-      "id": "panels-and-glasshouses",
-      "name": "Panels and glasshouses",
-      "year": "2045",
-      "blurb": "The whole proposition in one frame. Solar canopies in rows over a crop that is still being farmed \u2014 9.6 hectares of west-facing slope doing two jobs instead of choosing \u2014 and the glasshouses that take the campus's waste heat. Beyond them the orchard ring, 21.9 hectares of it, planted within 150 m of everything built so the edge of the scheme is trees rather than fence. This is what the third that is not built looks like.",
-      "photo": "../generate/golden-valley-2045/out/c-panels-and-glasshouses-photo.webp",
-      "wave": 1,
-      "pos": [
-        -720,
-        240.817,
-        -520
-      ],
-      "look": [
-        -330,
-        43.977,
-        -230
-      ],
-      "plate": "generate/golden-valley-2045/c-panels-and-glasshouses.json"
-    },
-    {
-      "id": "gchq-meadow",
-      "name": "The meadow roof",
-      "year": "2045",
-      "blurb": "The most recognisable building in Gloucestershire, re-roofed. 3.6 hectares of south-facing ring, 20 m up, turned over to wildflower meadow \u2014 the largest piece of open land in the box that nobody has to buy, and 100 m from the new campus. The survey found it before anyone proposed it: it came out of the open-land pass as parcel 5, which is how a rule-built scheme is supposed to work.",
-      "photo": "../generate/close-2045/out/gchq-meadow-photo.webp",
-      "wave": 1,
-      "pos": [
-        20,
-        125,
-        170
-      ],
-      "look": [
-        123,
-        62.597,
-        64
-      ],
-      "plate": "generate/close-2045/gchq-meadow.json"
-    }
-  ]
+  {
+   "id": "cyber-central",
+   "name": "Cyber Central",
+   "year": "2045",
+   "blurb": "The innovation campus, on a field grid rebuilt at 22 degrees — inside the band that 35% of the box's surviving hedge length already runs in, so the new streets follow lines that are there rather than lines we liked. Twenty blocks of 38 by 17 m, four or five storeys, banded buff stone over a glazed ground floor. GCHQ sits on the skyline beyond, 100 m away and the whole point of the address. Nothing here is a tower: the scheme caps built ground at a third.",
+   "photo": "../generate/golden-valley-2045/out/a-cyber-central-photo.webp",
+   "wave": 1,
+   "pos": [
+    -760,
+    209.609,
+    430
+   ],
+   "look": [
+    123,
+    62.597,
+    64
+   ],
+   "plate": "generate/golden-valley-2045/a-cyber-central.json"
+  },
+  {
+   "id": "campus-courtyards",
+   "name": "The courtyards",
+   "year": "2045",
+   "blurb": "Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.",
+   "photo": "../generate/golden-valley-2045/out/b-the-campus-photo.webp",
+   "wave": 1,
+   "pos": [
+    -380,
+    225.664,
+    60
+   ],
+   "look": [
+    -190,
+    47.341,
+    -200
+   ],
+   "plate": "generate/golden-valley-2045/b-the-campus.json"
+  },
+  {
+   "id": "panels-and-glasshouses",
+   "name": "Panels and glasshouses",
+   "year": "2045",
+   "blurb": "The whole proposition in one frame. Solar canopies in rows over a crop that is still being farmed — 9.6 hectares of west-facing slope doing two jobs instead of choosing — and the glasshouses that take the campus's waste heat. Beyond them the orchard ring, 21.9 hectares of it, planted within 150 m of everything built so the edge of the scheme is trees rather than fence. This is what the third that is not built looks like.",
+   "photo": "../generate/golden-valley-2045/out/c-panels-and-glasshouses-photo.webp",
+   "wave": 1,
+   "pos": [
+    -720,
+    240.817,
+    -520
+   ],
+   "look": [
+    -330,
+    43.977,
+    -230
+   ],
+   "plate": "generate/golden-valley-2045/c-panels-and-glasshouses.json"
+  },
+  {
+   "id": "gchq-meadow",
+   "name": "The meadow roof",
+   "year": "2045",
+   "blurb": "The most recognisable building in Gloucestershire, re-roofed. 3.6 hectares of south-facing ring, 20 m up, turned over to wildflower meadow — the largest piece of open land in the box that nobody has to buy, and 100 m from the new campus. The survey found it before anyone proposed it: it came out of the open-land pass as parcel 5, which is how a rule-built scheme is supposed to work.",
+   "photo": "../generate/close-2045/out/gchq-meadow-photo.webp",
+   "wave": 1,
+   "pos": [
+    20,
+    125,
+    170
+   ],
+   "look": [
+    123,
+    62.597,
+    64
+   ],
+   "plate": "generate/close-2045/gchq-meadow.json"
+  },
+  {
+   "id": "the-street",
+   "name": "The street",
+   "year": "2045",
+   "blurb": "A street in the new neighbourhood, at eye height. Nothing here is composed for the picture: the terraces stand 23 m apart because that is what the model built, the nearest are 20 m away, and the open channel in the verge is 8 m from where you are standing. 1,030 dwellings went into this allocation as terraces of two and a half and three storeys with apartment blocks of five and seven among them. Every aerial shot in this map flew over this street without ever showing it.",
+   "photo": "../generate/arrival/out/the-street.webp",
+   "wave": 1,
+   "pos": [
+    -230,
+    47.1,
+    -636
+   ],
+   "look": [
+    -150,
+    49.16,
+    -604
+   ],
+   "plate": "generate/arrival/final/the-street.json"
+  },
+  {
+   "id": "the-court",
+   "name": "The court",
+   "year": "2045",
+   "blurb": "Between two buildings of the campus, 17.0 m and 13.6 m tall, 40 and 60 m away. The blocks make perimeter courtyards instead of sitting in car parks, so the ground between them has to be worth walking through: sett and gravel through long wildflower, seating at the glazed ground floor, the trees that were already here. 105,501 m2 of campus floor, all of it placed by one rule — within reach of GCHQ and a road.",
+   "photo": "../generate/arrival/out/the-court.webp",
+   "wave": 1,
+   "pos": [
+    -150,
+    45.23,
+    -210
+   ],
+   "look": [
+    -200,
+    43.67,
+    -190
+   ],
+   "plate": "generate/arrival/final/the-court.json"
+  },
+  {
+   "id": "among-the-panels",
+   "name": "Among the panels",
+   "year": "2045",
+   "blurb": "Standing between the rows of the solar field. The modules are vertical and bifacial, 2.0 m tall and 0.35 m clear of the ground, 11 m apart on the same 22 degree grain as the fields, and the 11 m between them is still farmed — which is the whole argument. 9.7 hectares, 39 rows. From 380 m up these read as a fine dark stripe; from here you can see that the land underneath them is still working.",
+   "photo": "../generate/arrival/out/among-the-panels.webp",
+   "wave": 1,
+   "pos": [
+    -500,
+    39.11,
+    -545
+   ],
+   "look": [
+    -365,
+    43.34,
+    -581
+   ],
+   "plate": "generate/arrival/final/among-the-panels.json"
+  }
+ ]
 }

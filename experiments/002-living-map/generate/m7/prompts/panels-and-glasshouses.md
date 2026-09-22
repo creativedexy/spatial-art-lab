@@ -1,0 +1,12 @@
+Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
+
+INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
+INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
+INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
+
+Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
+
+Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/panels-and-glasshouses-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/panels-and-glasshouses-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
+
+THIS PLACE: Panels and glasshouses (2045). Camera [-720, 240.817, -520] looking at [-330, 43.977, -230].
+What the place copy says, so the photograph must show it: The whole proposition in one frame. Solar canopies in rows over a crop that is still being farmed — 9.6 hectares of west-facing slope doing two jobs instead of choosing — and the glasshouses that take the campus's waste heat. Beyond them the orchard ring, 21.9 hectares of it, planted within 150 m of everything built so the edge of the scheme is trees rather than fence. This is what the third that is not built looks like.

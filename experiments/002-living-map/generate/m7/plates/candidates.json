@@ -1,0 +1,90 @@
+{
+ "note": "M7 re-plate: the five place cameras, keyless (our model only), from places.json",
+ "shots": [
+  {
+   "id": "gchq",
+   "pillar": "GCHQ",
+   "pos": [
+    0,
+    110,
+    230
+   ],
+   "look": [
+    123,
+    62.597,
+    64
+   ],
+   "fov": 48,
+   "slant": 0,
+   "bearing": 0
+  },
+  {
+   "id": "cyber-central",
+   "pillar": "Cyber Central",
+   "pos": [
+    -760,
+    209.609,
+    430
+   ],
+   "look": [
+    123,
+    62.597,
+    64
+   ],
+   "fov": 48,
+   "slant": 0,
+   "bearing": 0
+  },
+  {
+   "id": "campus-courtyards",
+   "pillar": "The courtyards",
+   "pos": [
+    -380,
+    225.664,
+    60
+   ],
+   "look": [
+    -190,
+    47.341,
+    -200
+   ],
+   "fov": 48,
+   "slant": 0,
+   "bearing": 0
+  },
+  {
+   "id": "panels-and-glasshouses",
+   "pillar": "Panels and glasshouses",
+   "pos": [
+    -720,
+    240.817,
+    -520
+   ],
+   "look": [
+    -330,
+    43.977,
+    -230
+   ],
+   "fov": 48,
+   "slant": 0,
+   "bearing": 0
+  },
+  {
+   "id": "gchq-meadow",
+   "pillar": "The meadow roof",
+   "pos": [
+    20,
+    125,
+    170
+   ],
+   "look": [
+    123,
+    62.597,
+    64
+   ],
+   "fov": 48,
+   "slant": 0,
+   "bearing": 0
+  }
+ ]
+}

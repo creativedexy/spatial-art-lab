@@ -22,11 +22,39 @@ import * as THREE from 'three';
 // the single biggest lever: it is what puts a long shadow off every building
 // and reveals the shape of the ground between them.
 export const SUN_DIRECTION = new THREE.Vector3(-1500, 700, -900).normalize();
+// NB that vector is west-NORTH-west (azimuth 301), not the west-south-west the
+// comment above describes: it treats -z as south, and in this frame -z is
+// north. Left as it is because the keyless map was art-directed on what it
+// actually renders. Anything new builds its direction from a bearing instead.
+
+/**
+ * A sun direction from a compass bearing and an elevation, in local metres:
+ * x east, y up, z SOUTH. Azimuth is clockwise from north.
+ */
+export function sunFrom(azimuthDeg, elevationDeg) {
+  const az = THREE.MathUtils.degToRad(azimuthDeg);
+  const el = THREE.MathUtils.degToRad(elevationDeg);
+  return new THREE.Vector3(
+    Math.cos(el) * Math.sin(az),    // east
+    Math.sin(el),                   // up
+    -Math.cos(el) * Math.cos(az),   // south: north is -z
+  ).normalize();
+}
+
+/**
+ * The sun printed into Google's photogrammetry over this box, measured by
+ * scripts/probe_light.py on 14 Sep 2026: three independent shadow patches
+ * within 3 degrees of azimuth. Provisional — the probe's strict gate still
+ * wants tighter agreement on elevation (9 degrees of spread) — but the
+ * direction is no longer in doubt, and a keyed build has to stand in THAT
+ * light, not in one we chose.
+ */
+export const MEASURED_SUN = { azimuth: 137, elevation: 49 };
 const HORIZON = new THREE.Color(0xd9dfe0);
 const ZENITH = new THREE.Color(0x7ea3c4);
 const SUN_TINT = new THREE.Color(0xffe6c2);
 
-function skyDome() {
+function skyDome(sunDir = SUN_DIRECTION, radius = 150000) {
   const material = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
@@ -34,7 +62,7 @@ function skyDome() {
       horizon: { value: HORIZON },
       zenith: { value: ZENITH },
       sunTint: { value: SUN_TINT },
-      sunDir: { value: SUN_DIRECTION.clone() },
+      sunDir: { value: sunDir.clone() },
     },
     vertexShader: `
       varying vec3 vWorld;
@@ -57,7 +85,12 @@ function skyDome() {
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(9000, 32, 16), material);
+  // Between the far field and the camera's far plane, and it has to be BOTH.
+  // At 260 km it was outside the 180 km far plane and got culled, which does
+  // not draw a bigger sky, it draws no sky: every frame came back with a black
+  // band across the top. The far field reaches 106 km at its corners, so 150
+  // clears the land and stays inside the camera.
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(radius, 48, 24), material);
   dome.frustumCulled = false;
   return dome;
 }
@@ -103,7 +136,15 @@ function regradeTerrain(mesh) {
  * `grade` colours the terrain by height and slope; turn it off when a land
  * cover image is supplying the ground colour instead, or the two multiply.
  */
-export function applyLook(scene, renderer, { extent = 1250, grade = true } = {}) {
+export function applyLook(scene, renderer, {
+  extent = 1250, grade = true, keyed = false,
+} = {}) {
+  // A keyed build stands our 2045 scheme inside Google's photograph, so it
+  // takes the photograph's sun. The keyless map keeps the light it was
+  // designed in.
+  const sunDir = keyed
+    ? sunFrom(MEASURED_SUN.azimuth, MEASURED_SUN.elevation)
+    : SUN_DIRECTION;
   // Filmic tone mapping, so a white model stops clipping to flat paper and
   // keeps detail in the lit faces.
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -119,10 +160,18 @@ export function applyLook(scene, renderer, { extent = 1250, grade = true } = {})
 
   // Exponential fog sits the far distance into the sky instead of ending at a
   // hard line, and matches the horizon colour so the join is invisible.
-  scene.fog = new THREE.FogExp2(HORIZON.getHex(), 0.00022);
+  //
+  // 0.00022 gave about four and a half kilometres of visibility, which was
+  // right for a world two kilometres across and wrong the moment there was a
+  // horizon behind it: the escarpment would have arrived already dissolved
+  // and the Malverns would not have arrived at all. 3.3e-5 is an ordinary
+  // clear English afternoon — Cleeve Common at 8.6 km reads at 92% of its
+  // colour, the Malverns at 27 km at about 40%, and everything past 60 km is
+  // haze, which is what distance looks like from here.
+  scene.fog = new THREE.FogExp2(HORIZON.getHex(), 0.000033);
 
   const sun = new THREE.DirectionalLight(0xffe0b5, 3.9);
-  sun.position.copy(SUN_DIRECTION).multiplyScalar(3000);
+  sun.position.copy(sunDir).multiplyScalar(3000);
   sun.castShadow = true;
   sun.shadow.mapSize.set(4096, 4096);
   const cam = sun.shadow.camera;
@@ -142,7 +191,15 @@ export function applyLook(scene, renderer, { extent = 1250, grade = true } = {})
   // faces read as shadow rather than as black.
   // Deliberately low. Fill light is what quietly erases shadows, and the
   // shadows are the entire point of this pass.
-  scene.add(new THREE.HemisphereLight(0xa9c8e4, 0x8a7d5c, 0.5));
+  //
+  // Not in a keyed build. The hemisphere was a stand-in for the sky's fill,
+  // and the keyed build now has the sky itself as an environment (below), so
+  // keeping both counts the sky twice. The first keyed render with both showed
+  // exactly that on everything flat and rough — 2045 fields, orchards, the
+  // future trees and GCHQ's meadow roof went a saturated lime, brighter than
+  // the photographed fields beside them — while walls, which the double fill
+  // barely reaches, came out right.
+  if (!keyed) scene.add(new THREE.HemisphereLight(0xa9c8e4, 0x8a7d5c, 0.5));
 
   // Do this before the dome is added: a 9 km sphere wrapping the whole scene
   // renders into the shadow map and puts everything in its own shadow.
@@ -162,9 +219,27 @@ export function applyLook(scene, renderer, { extent = 1250, grade = true } = {})
     m.needsUpdate = true;
   }
 
-  const dome = skyDome();
+  const dome = skyDome(sunDir);
   dome.castShadow = false;
   dome.receiveShadow = false;
   scene.add(dome);
+
+  // An environment for the keyed build. The materials below have always set
+  // envMapIntensity, and nothing anywhere set scene.environment, so that line
+  // did nothing: facade glass (albedo about 0.1, roughness 0.13) had no sky to
+  // reflect and rendered black, which is most of why the 2045 campus reads as
+  // dark slabs beside the photographed town.
+  //
+  // Its own small dome, not the one above. PMREM renders a cube camera with a
+  // 100 m far plane, and the scene's dome is 150 km across — reused, it would
+  // be culled and the environment would come out black, the exact problem it
+  // is here to fix. No fog in this scene for the same reason.
+  if (keyed && renderer) {
+    const skyScene = new THREE.Scene();
+    skyScene.add(skyDome(sunDir, 50));
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(skyScene, 0.04).texture;
+    pmrem.dispose();
+  }
   return scene;
 }

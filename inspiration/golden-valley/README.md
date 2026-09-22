@@ -72,3 +72,10 @@ things to do rather than things wrong:
    correspondences the photograph cannot give: the doughnut is clipped by the
    right edge, so its centre has to be guessed. Worth doing properly against
    `official/aerial.jpg` if the comparison is ever going in front of anyone.
+
+## Cleared for generator input, 21 Sep 2026
+
+Dex: the project is non-commercial and private, so `official/` and `hbd/`
+images may be sent to Codex as references. Still never shipped. Grimshaw's
+style is excluded; `grimshaw/…n26…` may be used for parcel layout only. See
+`plans/phase-12-2045-model.md`.

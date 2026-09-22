@@ -1,0 +1,83 @@
+{
+  "note": "The three arrivals, locked. Eye 1.6 m above the measured terrain, 48 degree vertical field of view, keyless: our own model only, because these plates go to a generator.",
+  "shots": [
+    {
+      "id": "the-street",
+      "pillar": "the same street, standing 20 m back so the near terraces fra",
+      "pos": [
+        -230,
+        47.1,
+        -636
+      ],
+      "look": [
+        -150,
+        49.16,
+        -604
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0,
+      "from": "the-homes",
+      "stand": [
+        -230,
+        -636
+      ],
+      "lookXZ": [
+        -150,
+        -604
+      ]
+    },
+    {
+      "id": "the-court",
+      "pillar": "eight metres south in the same clearing, both blocks in one ",
+      "pos": [
+        -150,
+        45.23,
+        -210
+      ],
+      "look": [
+        -200,
+        43.67,
+        -190
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0,
+      "from": "the-campus",
+      "stand": [
+        -150,
+        -210
+      ],
+      "lookXZ": [
+        -200,
+        -190
+      ]
+    },
+    {
+      "id": "among-the-panels",
+      "pillar": "inside the panel field looking at the new homes: rows in the",
+      "pos": [
+        -500,
+        39.11,
+        -545
+      ],
+      "look": [
+        -365,
+        43.34,
+        -581
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0,
+      "from": "the-panels",
+      "stand": [
+        -500,
+        -545
+      ],
+      "lookXZ": [
+        -365,
+        -581
+      ]
+    }
+  ]
+}

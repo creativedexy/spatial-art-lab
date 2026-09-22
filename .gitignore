@@ -61,3 +61,12 @@ experiments/002-living-map/tiles-test/key.js
 # The Google Maps Platform key for the tiles layer. Never committed: the map
 # reads it at run time and does without it everywhere else.
 experiments/002-living-map/**/key.js
+
+# Keyed captures contain Google tile imagery: never committed (licence).
+experiments/002-living-map/generate/m1/**/*.png
+experiments/002-living-map/generate/m1/**/*.jpg
+experiments/002-living-map/generate/m1/**/index.html
+
+# Keyed captures and pages built from them contain Google tile imagery (licence).
+experiments/002-living-map/generate/m6/shots/
+experiments/002-living-map/generate/m6b/

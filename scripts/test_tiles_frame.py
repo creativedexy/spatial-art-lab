@@ -29,7 +29,10 @@ THREE = ROOT / "experiments" / "002-living-map" / "terrain" / "vendor" / "three.
 # with the transpose, the negation and the ordering all wrong.
 NODE = r"""
 import * as THREE from 'three';
-import { intoLocalFrame } from '%s';
+import {
+  FALLBACK_FLOOR_METRES, FALLBACK_FOCUS_METRES, intoLocalFrame,
+  needsFallback, wantsTiles,
+} from '%s';
 
 // East, north, up as an orthonormal set rotated well away from the axes, and
 // an origin far from zero — which is what the real one is, since the tileset
@@ -60,7 +63,52 @@ function run(lift) {
   });
 }
 
-console.log(JSON.stringify({ flat: run(0), lifted: run(2.75) }));
+// Every camera the piece actually puts you at, with the two quantities the
+// melt gate is given: height above the ground beneath, and distance to the
+// ground at the centre of the frame. Measured on the running map, 12 Sep.
+const CAMERAS = [
+  // the five place photographs — all must keep the real town
+  { name: 'gchq',                   above:  67, focus:  254, want: true },
+  { name: 'gchq-meadow',            above:  79, focus:  184, want: true },
+  { name: 'campus-courtyards',      above: 190, focus:  378, want: true },
+  { name: 'panels-and-glasshouses', above: 210, focus:  537, want: true },
+  { name: 'cyber-central',          above: 175, focus: 1032, want: true },
+  // the five held shots, at rest (moved in by phase 12 M1, 22 Sep)
+  { name: 'the-vale',               above: 141, focus:  450, want: true },
+  { name: 'the-campus',             above: 106, focus:  360, want: true },
+  { name: 'the-meadow-roof',        above: 128, focus:  340, want: true },
+  { name: 'the-homes',              above: 118, focus:  380, want: true },
+  { name: 'the-panels',             above: 105, focus:  380, want: true },
+  // and everything that must fall back to our own model
+  { name: 'walk, level ahead',      above:  14, focus: 1400, want: false },
+  { name: 'walk, looking down',     above:  14, focus:   80, want: false },
+  { name: 'arrival at 1.6 m',       above: 1.6, focus:  900, want: false },
+  { name: 'arrival, at the ground', above: 1.6, focus:    4, want: false },
+  { name: 'low hover, steep down',  above:  55, focus:   78, want: false },
+];
+
+const gate = CAMERAS.map((c) => ({
+  ...c,
+  // Approaching from either state: a camera that belongs in the real town must
+  // reach it from cold, and one that does not must not be held there warm.
+  fromOff: wantsTiles(false, c.above, c.focus),
+  fromOn: wantsTiles(true, c.above, c.focus),
+}));
+
+// The gate must never chatter: nothing may be on from cold yet off when warm.
+const chatter = gate.filter((g) => g.fromOff && !g.fromOn);
+
+console.log(JSON.stringify({
+  flat: run(0), lifted: run(2.75), gate, chatter,
+  warning: {
+    focus: FALLBACK_FOCUS_METRES,
+    floor: FALLBACK_FLOOR_METRES,
+    outside: needsFallback(FALLBACK_FLOOR_METRES,
+                           FALLBACK_FOCUS_METRES),
+    byFocus: needsFallback(1000, FALLBACK_FOCUS_METRES - 0.1),
+    byFloor: needsFallback(FALLBACK_FLOOR_METRES - 0.1, Infinity),
+  },
+}));
 """
 
 checks = []
@@ -118,6 +166,53 @@ def main():
         lifted = max(lifted, max(abs(a - b) for a, b in zip(row["want"], row["got"])))
     check("the lift raises the tiles and nothing else",
           lifted < 1e-3, f"2.75 m applied, worst error {lifted * 1000:.3f} mm")
+
+    # The melt gate. Height alone shipped once and cost the two closest places:
+    # gchq sits 67 m up but 212 m from the building it frames, and its tiles
+    # measured 6.02 against a target of 6. So the gate is asked how far away
+    # what you are LOOKING AT is, with height kept only as a floor.
+    gate = out["gate"]
+    kept = [g for g in gate if g["want"]]
+    dropped = [g for g in gate if not g["want"]]
+
+    wrong = [g["name"] for g in kept if not g["fromOff"]]
+    check("every place and shot keeps the real town",
+          not wrong,
+          f"{len(kept)} cameras" if not wrong else "lost: " + ", ".join(wrong))
+
+    wrong = [g["name"] for g in dropped if g["fromOn"]]
+    check("the walk and every arrival fall back to our model",
+          not wrong,
+          f"{len(dropped)} cameras" if not wrong else "kept: " + ", ".join(wrong))
+
+    # The regression itself, named so it cannot come back quietly: a gate on
+    # height alone drops gchq (67 m) and gchq-meadow (79 m).
+    low = [g for g in kept if g["above"] < 105]
+    check("a camera low over the ground but far from its subject is not dropped",
+          low and all(g["fromOff"] for g in low),
+          ", ".join(f"{g['name']} {g['above']}m up, {g['focus']}m out"
+                    for g in low))
+
+    check("the gate cannot chatter", not out["chatter"],
+          "nothing switches on from cold that switches off when warm"
+          if not out["chatter"]
+          else ", ".join(g["name"] for g in out["chatter"]))
+
+    warning = out["warning"]
+    check("fallback warming starts before either melt line",
+          warning["focus"] > 140 and warning["floor"] > 50
+          and warning["byFocus"] and warning["byFloor"]
+          and not warning["outside"],
+          f"{warning['focus'] - 140:.0f} m focus warning, "
+          f"{warning['floor'] - 50:.0f} m floor warning")
+
+    bulk = json.loads((GV / "gv-buildings.json").read_text())
+    gchq = json.loads((GV / "gv-gchq.json").read_text())
+    check("GCHQ is the only eager measured footprint",
+          len(bulk) == 4032 and len(gchq) == 1
+          and gchq[0].get("name") == "Government Communications Headquarters"
+          and not any(b.get("name") == gchq[0]["name"] for b in bulk),
+          f"{len(gchq)} eager, {len(bulk)} deferred")
 
     print(f"\n{sum(checks)}/{len(checks)} checks passed")
     return 0 if all(checks) else 1

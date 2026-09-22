@@ -1,0 +1,1088 @@
+Reading prompt from stdin...
+OpenAI Codex v0.153.4
+--------
+workdir: /Users/user/Projects/3D Design
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0c920-ea13-79d2-b819-13731e7bf208
+--------
+user
+Use the built-in image_gen tool. Use case: sketch-to-render of a proposed place, Golden Valley, west Cheltenham, in 2045.
+
+INPUT 1 is the geometry master: a render of our own 3D model from the exact camera. Preserve its camera, horizon, terrain, the positions, footprints and heights of every building block, the streets, the tree belts and orchards, the fields and the existing town, within about 15 px at 1280x720. Do not invent new blocks, move blocks, or add towers. The existing town beyond the site stays an ordinary existing English town (red and buff brick, slate and clay tile roofs) exactly where the plate puts it.
+INPUT 2 is the approved look: a real-looking aerial photograph of GCHQ with a wildflower meadow roof. Match its photographic realism, late-summer afternoon sun, colour, haze and level of detail. It is the standard.
+INPUT 3 (if present) is the scheme's own aerial photomontage of this site: use it only for how the scheme sits in the real landscape, not for its architecture.
+INPUT 4 (if present) is the scheme's IDEA building: take only its idea of a meadow roof running to the ground.
+
+Design direction (excellence and realism, never corporate office park, never illustration). Everything must look built and photographed; every move has a built precedent: homes like Goldsmith Street Norwich (steep-roofed Passivhaus terraces), Marmalade Lane Cambridge (cohousing round shared gardens) and Solarsiedlung Freiburg (whole roofs of PV); campus like Sara Kulturhus Skellefteå and Powerhouse Brattørkaia Trondheim (mass timber and glass, roofs of PV sawn to the sun and meadow); water like Augustenborg Malmö (open stormwater channels and rain gardens reading as silver lines); energy like Next2Sun vertical bifacial PV over grazed pasture and solar carports; trees as native mixes at maturity (veteran oaks, woodland courtyards, avenues, orchards). Seven storeys maximum. No text, labels, logos or watermark. People visible at true scale on streets, paths and roofs; cars where cars park.
+
+Make THREE images from the same plate, same camera, same layout, differing only in how far the design goes:
+ - scheme-a-measured.png: the best of current UK practice, restrained palette, calm.
+ - scheme-a-bold.png: stronger material identity and more of every sustainable move (more PV, more meadow roof, more tree mass, water visible).
+ - scheme-a-adventurous.png: the edge of design excellence that is still buildable and photographable: expressive timber structure, walkable roofs, water and planting as the dominant moves, energy as landscape.
+Save them at 1280x720 (resize the whole frame only, no crop, no warping, no retouching outside image_gen) in experiments/002-living-map/generate/m2/boards/. One generation per variant plus at most one correction pass each if geometry drifts more than about 15 px. Then write experiments/002-living-map/generate/m2/boards/scheme-a-notes.md: the prompts verbatim, passes made, and a short honest inspection per variant (geometry drift you can see, realism, anything that reads as CGI or corporate).
+
+THIS FRAME: the whole scheme from 450 m, looking north-east to GCHQ.
+What 2045 shows here: Every pillar legible at once: the homes streets, the campus courtyards, the orchard ring and woodland belts, water channels and ponds, the solar canopies at GCHQ and its meadow roof, all sitting in the real landscape.
+
+warning: Skill descriptions were shortened to fit the skills context budget. Codex can still see every skill, but some descriptions are shorter. Disable unused skills or plugins to leave more room for the rest.
+codex
+I’m using the image generation skill because this is a geometry-constrained sketch-to-photoreal render. I’ll first inspect its instructions and the supplied plates, then generate the three controlled variants and verify their output dimensions and visible drift.
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/user/.codex/skills/.system/imagegen/SKILL.md" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for image generation, editing, and transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for or confirms the CLI/API/model path. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- For transparent images, ask built-in `image_gen` for a transparent background and preserve the generated alpha.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`; ask the user first unless they explicitly requested `gpt-image-1.5`.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including transparent-output requests; fallback CLI only if explicitly requested or confirmed.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, ask built-in `image_gen` for a transparent background and preserve the generated alpha channel.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Ask built-in `image_gen` for actual transparency.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+Style/medium: <photo/illustration/3D/etc>
+Composition/framing: <wide/close/top-down; placement>
+Lighting/mood: <lighting + mood>
+Color palette: <palette notes>
+Materials/textures: <surface details>
+Text (verbatim): "<exact text>"
+Constraints: <must keep/must avoid>
+Avoid: <negative constraints>
+```
+
+Notes:
+- `Asset type` and `Input images` are prompt scaffolding, not dedicated CLI flags.
+- `Scene/backdrop` refers to the visual setting. It is not the same as the fallback CLI `background` parameter, which controls output transparency behavior.
+- Fallback-only execution notes such as `Quality:`, `Input fidelity:`, masks, output format, and output paths belong in the CLI path only. Do not treat them as built-in `image_gen` tool arguments.
+
+Augmentation rules:
+- Keep it short.
+- Add only the details needed to improve the prompt materially.
+- For edits, explicitly list invariants (`change only X; keep Y unchanged`).
+- If any critical detail is missing and blocks success, ask a question; otherwise proceed.
+
+## Examples
+
+### Generation example (hero image)
+```text
+Use case: product-mockup
+Asset type: landing page hero
+Primary request: a minimal hero image of a ceramic coffee mug
+Style/medium: clean product photography
+Composition/framing: wide composition with usable negative space for page copy if needed
+Lighting/mood: soft studio lighting
+Constraints: no logos, no text, no watermark
+```
+
+### Edit example (invariants)
+```text
+Use case: precise-object-edit
+Asset type: product photo background replacement
+Primary request: replace only the background with a warm sunset gradient
+Constraints: change only the background; keep the product and its edges unchanged; no text; no watermark
+```
+
+## Prompting best practices
+- Structure prompt as scene/backdrop -> subject -> details -> constraints.
+- Include intended use (ad, UI mock, infographic) to set the mode and polish level.
+- Use camera/composition language for photorealism.
+- Only use SVG/vector stand-ins when the user explicitly asked for vector output or a non-image placeholder.
+- Quote exact text and specify typography + placement.
+- For tricky words, spell them letter-by-letter and require verbatim rendering.
+- For multi-image inputs, reference images by index and describe how they should be used.
+- For edits, repeat invariants every iteration to reduce drift.
+- Iterate with single-change follow-ups.
+- If the prompt is generic, add only the extra detail that will materially help.
+- If the prompt is already detailed, normalize it instead of expanding it.
+- For CLI fallback only, see `references/cli.md` and `references/image-api.md` for model, `quality`, `input_fidelity`, masks, output format, and output-path guidance.
+- For transparent images, ask built-in `image_gen` for actual transparency and preserve its alpha.
+
+More principles shared by both modes: `references/prompting.md`.
+Copy/paste specs shared by both modes: `references/sample-prompts.md`.
+
+
+codex
+The request is specific enough to proceed without reinterpretation. I’m treating Image 1 as the edit target/geometry lock, Image 2 as the photographic style reference, and Image 3 only as landscape siting context; I’ll keep the architectural precedents in the prompt but won’t let them override the master plate.
+codex
+The measured pass is rendering now. I’ve made the geometry lock unusually explicit—especially the rectangular GCHQ/campus courtyards—because the circular style reference is otherwise a strong source of composition drift.
+codex
+The first two passes are strongly photographic and keep the principal massing pattern, but the model is broadening some field/tree textures and interpreting the distant terrain more freely than the 15 px target. I’ll finish the adventurous base pass, then use the allowed correction pass only where it can materially tighten the master-plate alignment.
+codex
+All three base passes showed enough visible drift to justify the single permitted correction. The corrections are restoring the master horizon and foreground field/stream relationship, though I’ll document any remaining mismatch honestly rather than imply pixel-perfect registration.
+codex
+The single correction pass is complete for each variant. I’m now placing the corrected outputs in the requested board folder, resizing the entire frame to exactly 1280×720 without cropping, then I’ll write the verbatim prompt/pass log and final visual inspection.
+exec
+/bin/zsh -lc "mkdir -p 'experiments/002-living-map/generate/m2/boards' && cp '/Users/user/.codex/generated_images/01a0c920-ea13-79d2-b819-13731e7bf208/exec-3d501ffd-8010-47f9-870a-81b40b20c663.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-measured.png' && cp '/Users/user/.codex/generated_images/01a0c920-ea13-79d2-b819-13731e7bf208/exec-fab8bad6-2c3c-4e1d-96a5-20ac79be2974.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-bold.png' && cp '/Users/user/.codex/generated_images/01a0c920-ea13-79d2-b819-13731e7bf208/exec-82efde70-b341-4174-ab45-8fa14d77e9bc.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png' && sips -z 720 1280 'experiments/002-living-map/generate/m2/boards/scheme-a-measured.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-bold.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png' >/dev/null && sips -g pixelWidth -g pixelHeight 'experiments/002-living-map/generate/m2/boards/scheme-a-measured.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-bold.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png'" in /Users/user/Projects/3D Design
+ succeeded in 271ms:
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/scheme-a-measured.png
+  pixelWidth: 1280
+  pixelHeight: 720
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/scheme-a-bold.png
+  pixelWidth: 1280
+  pixelHeight: 720
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png
+  pixelWidth: 1280
+  pixelHeight: 720
+
+apply patch
+patch: completed
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..c02bb3dc29a31a80d9ccc09c77a3512effcbfcb5
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,35 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
+
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..c02bb3dc29a31a80d9ccc09c77a3512effcbfcb5
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,35 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
+
+apply patch
+patch: completed
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3be360094b07b8a13840715eebd160333f5404a5
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,66 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Bold — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the BOLD variant: keep the identical master-plate layout, but give it a stronger material identity and visibly more of every sustainable move—more photovoltaic area, more wildflower meadow roof, more mature tree mass and more visible water—while remaining credible, built and calm.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and extensive whole-roof PV like Solarsiedlung Freiburg. Campus uses a strong but buildable palette of mass timber, warm brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with many PV roofs oriented to the sun and generous meadow roofs. Water is built open drainage and rain gardens reading as clear silver-blue lines, like Augustenborg Malmö. Energy includes substantial orderly Next2Sun-style vertical bifacial PV over grazed pasture and broad solar carports. Trees are dense mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Stronger contrast between warm brick, honey-coloured mass timber, dark photovoltaic glass, meadow greens and straw-gold late-summer fields; rich but photographic, never over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, clearly expressed timber frames where buildable, photovoltaic glass, species-rich wildflower meadow, mown walkable paths, visibly wet open channels and ponds, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as meadow, walkable roof paths and PV without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Bold — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the BOLD variant. Keep Image 2's stronger material identity, extensive PV, meadow roofs, mature tree mass and visible water, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the bold candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the bold variant's substantial orderly vertical bifacial PV in the exact left field, broad solar canopies only in existing parking areas, generous meadow roofs, native woodland and orchard density, clearly visible but narrow stormwater channels and ponds, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged or relocated water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
+
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3be360094b07b8a13840715eebd160333f5404a5
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,66 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Bold — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the BOLD variant: keep the identical master-plate layout, but give it a stronger material identity and visibly more of every sustainable move—more photovoltaic area, more wildflower meadow roof, more mature tree mass and more visible water—while remaining credible, built and calm.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and extensive whole-roof PV like Solarsiedlung Freiburg. Campus uses a strong but buildable palette of mass timber, warm brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with many PV roofs oriented to the sun and generous meadow roofs. Water is built open drainage and rain gardens reading as clear silver-blue lines, like Augustenborg Malmö. Energy includes substantial orderly Next2Sun-style vertical bifacial PV over grazed pasture and broad solar carports. Trees are dense mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Stronger contrast between warm brick, honey-coloured mass timber, dark photovoltaic glass, meadow greens and straw-gold late-summer fields; rich but photographic, never over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, clearly expressed timber frames where buildable, photovoltaic glass, species-rich wildflower meadow, mown walkable paths, visibly wet open channels and ponds, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as meadow, walkable roof paths and PV without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Bold — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the BOLD variant. Keep Image 2's stronger material identity, extensive PV, meadow roofs, mature tree mass and visible water, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the bold candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the bold variant's substantial orderly vertical bifacial PV in the exact left field, broad solar canopies only in existing parking areas, generous meadow roofs, native woodland and orchard density, clearly visible but narrow stormwater channels and ponds, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged or relocated water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
+
+apply patch
+patch: completed
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f9453e72e660b77d72af93f364fd54e39f5d415
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,123 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Bold — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the BOLD variant: keep the identical master-plate layout, but give it a stronger material identity and visibly more of every sustainable move—more photovoltaic area, more wildflower meadow roof, more mature tree mass and more visible water—while remaining credible, built and calm.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and extensive whole-roof PV like Solarsiedlung Freiburg. Campus uses a strong but buildable palette of mass timber, warm brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with many PV roofs oriented to the sun and generous meadow roofs. Water is built open drainage and rain gardens reading as clear silver-blue lines, like Augustenborg Malmö. Energy includes substantial orderly Next2Sun-style vertical bifacial PV over grazed pasture and broad solar carports. Trees are dense mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Stronger contrast between warm brick, honey-coloured mass timber, dark photovoltaic glass, meadow greens and straw-gold late-summer fields; rich but photographic, never over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, clearly expressed timber frames where buildable, photovoltaic glass, species-rich wildflower meadow, mown walkable paths, visibly wet open channels and ponds, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as meadow, walkable roof paths and PV without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Bold — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the BOLD variant. Keep Image 2's stronger material identity, extensive PV, meadow roofs, mature tree mass and visible water, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the bold candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the bold variant's substantial orderly vertical bifacial PV in the exact left field, broad solar canopies only in existing parking areas, generous meadow roofs, native woodland and orchard density, clearly visible but narrow stormwater channels and ponds, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged or relocated water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Adventurous — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the ADVENTUROUS variant: the edge of design excellence that is still buildable and photographable, with expressive timber structure, walkable roofs, water and planting as the dominant moves, and renewable energy designed as landscape—while preserving the identical master-plate massing and layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses expressive but plausible exposed mass-timber structural rhythms, deep glazed winter gardens and warm brick like Sara Kulturhus and Powerhouse Brattørkaia. Roofs combine species-rich meadow, extensive walkable paths and PV planes precisely tilted to the sun; selected meadow roofs visually descend toward the ground through planted terraces and ramps without altering the master building envelopes. Water and wetland planting dominate public space: connected open channels, rain gardens and ponds read clearly as silver-blue lines like Augustenborg Malmö. Energy is landscape: extensive orderly Next2Sun-style vertical bifacial PV over grazed pasture and large elegant solar carports. Trees form powerful mature native ecologies: veteran oaks, dense woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Expressive natural timber, warm red and buff brick, dark blue-black photovoltaic glass, richly varied meadow greens and wildflower golds against straw-coloured fields; vivid ecology but true photographic colour.
++Materials/textures: Deep mass-timber frames, weathered masonry, real glass reflections, photovoltaic glass, thick mixed wildflower meadow, timber-and-gravel roof walks with tiny true-scale people, wet channels, reed beds and ponds, richly varied mature tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; meadow-to-ground gestures are planted access ramps or terraces contained within those footprints, never new massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated or unbuildable roof forms, fantasy infrastructure, giant bridges, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Adventurous — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the ADVENTUROUS variant. Keep Image 2's expressive but buildable timber architecture, walkable meadow roofs, dominant water and planting, and energy-as-landscape character, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the adventurous candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain expressive credible mass-timber rhythms, walkable meadow roofs and contained planted ramps, extensive orderly vertical bifacial PV in the exact left field, solar canopies only on existing parking, connected but narrow stormwater channels and ponds, dense native woodland and orchards, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, megastructures, enlarged or relocated water bodies, moved roads, changed field boundaries, impossible roof landforms, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Passes and honest inspection
++
++### Measured
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-measured.png`.
++- Geometry: the correction restores the low master horizon, overall left-to-right development sequence, foreground stream, central woodland and three main courtyard blocks. It is not within 15 px everywhere: the distant town/terrain is regenerated, the left housing quarter is more regular and slightly re-spaced, woodland edges and pond positions are inferred, and some secondary block footprints differ. The foreground stream is wider and more sinuous than the plate.
++- Realism: convincing aerial-photo light, haze, masonry, mature tree canopies and meadow roofs. Roads, cars and small people generally read at scale.
++- CGI/corporate risk: repeated window bays and uniformly pristine courtyard blocks still have a mild architectural-visualisation quality; the large blocks can read more institutional than the desired non-corporate character.
++
++### Bold
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-bold.png`.
++- Geometry: the principal massing hierarchy, master horizon, central woodland, left field and foreground stream are retained, but visible drift remains beyond 15 px in the distant town, left housing rows, road alignments, orchard/woodland boundaries and some courtyard dimensions. PV arrays occupy the intended left-side field but their exact rows were invented from the sustainability brief rather than present in the geometry plate.
++- Realism: strong photographic texture, late-summer colour and credible roof/PV construction. Water, meadow roof and tree mass read immediately, with believable scale and sunlight.
++- CGI/corporate risk: the campus façades are repetitive and unusually consistent; crisp PV repetition and spotless blocks give parts of the image a masterplan-render polish despite otherwise convincing landscape photography.
++
++### Adventurous
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-adventurous.png`.
++- Geometry: overall camera and site ordering are close to the other corrected variants, but this is the loosest interpretation. The distant town, many home rows, internal paths, water bodies and woodland clearings are regenerated and exceed the 15 px tolerance. Main courtyard blocks remain rectilinear and tower-free, but some dimensions and separations differ from the master. The stream and linked ponds are substantially more prominent than in the plate.
++- Realism: the best landscape/ecology read of the set; timber-grid façades, meadow/PV roofs, wetland planting and tiny people are plausibly photographed, with natural haze and shadow.
++- CGI/corporate risk: highly coordinated roof treatments, repeated façade grids and immaculate solar rows reveal generated/masterplan logic. The intended walkable-roof and meadow-to-ground ideas are only partly legible at this altitude.
++
++## Overall caveat
++
++The images meet the requested photographic character, variant progression, 1280×720 delivery size, tower/text/logo exclusions and broad master-plate composition. The built-in generative edit did not achieve literal ±15 px registration across every block, road and landscape edge; even after the single allowed correction per variant, localized geometry drift remains and is most noticeable in the distant town, fine-grain housing, water and vegetation boundaries.
+
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f9453e72e660b77d72af93f364fd54e39f5d415
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,123 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Bold — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the BOLD variant: keep the identical master-plate layout, but give it a stronger material identity and visibly more of every sustainable move—more photovoltaic area, more wildflower meadow roof, more mature tree mass and more visible water—while remaining credible, built and calm.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and extensive whole-roof PV like Solarsiedlung Freiburg. Campus uses a strong but buildable palette of mass timber, warm brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with many PV roofs oriented to the sun and generous meadow roofs. Water is built open drainage and rain gardens reading as clear silver-blue lines, like Augustenborg Malmö. Energy includes substantial orderly Next2Sun-style vertical bifacial PV over grazed pasture and broad solar carports. Trees are dense mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Stronger contrast between warm brick, honey-coloured mass timber, dark photovoltaic glass, meadow greens and straw-gold late-summer fields; rich but photographic, never over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, clearly expressed timber frames where buildable, photovoltaic glass, species-rich wildflower meadow, mown walkable paths, visibly wet open channels and ponds, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as meadow, walkable roof paths and PV without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Bold — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the BOLD variant. Keep Image 2's stronger material identity, extensive PV, meadow roofs, mature tree mass and visible water, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the bold candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the bold variant's substantial orderly vertical bifacial PV in the exact left field, broad solar canopies only in existing parking areas, generous meadow roofs, native woodland and orchard density, clearly visible but narrow stormwater channels and ponds, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged or relocated water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Adventurous — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the ADVENTUROUS variant: the edge of design excellence that is still buildable and photographable, with expressive timber structure, walkable roofs, water and planting as the dominant moves, and renewable energy designed as landscape—while preserving the identical master-plate massing and layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses expressive but plausible exposed mass-timber structural rhythms, deep glazed winter gardens and warm brick like Sara Kulturhus and Powerhouse Brattørkaia. Roofs combine species-rich meadow, extensive walkable paths and PV planes precisely tilted to the sun; selected meadow roofs visually descend toward the ground through planted terraces and ramps without altering the master building envelopes. Water and wetland planting dominate public space: connected open channels, rain gardens and ponds read clearly as silver-blue lines like Augustenborg Malmö. Energy is landscape: extensive orderly Next2Sun-style vertical bifacial PV over grazed pasture and large elegant solar carports. Trees form powerful mature native ecologies: veteran oaks, dense woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Expressive natural timber, warm red and buff brick, dark blue-black photovoltaic glass, richly varied meadow greens and wildflower golds against straw-coloured fields; vivid ecology but true photographic colour.
++Materials/textures: Deep mass-timber frames, weathered masonry, real glass reflections, photovoltaic glass, thick mixed wildflower meadow, timber-and-gravel roof walks with tiny true-scale people, wet channels, reed beds and ponds, richly varied mature tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; meadow-to-ground gestures are planted access ramps or terraces contained within those footprints, never new massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated or unbuildable roof forms, fantasy infrastructure, giant bridges, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Adventurous — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the ADVENTUROUS variant. Keep Image 2's expressive but buildable timber architecture, walkable meadow roofs, dominant water and planting, and energy-as-landscape character, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the adventurous candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain expressive credible mass-timber rhythms, walkable meadow roofs and contained planted ramps, extensive orderly vertical bifacial PV in the exact left field, solar canopies only on existing parking, connected but narrow stormwater channels and ponds, dense native woodland and orchards, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, megastructures, enlarged or relocated water bodies, moved roads, changed field boundaries, impossible roof landforms, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Passes and honest inspection
++
++### Measured
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-measured.png`.
++- Geometry: the correction restores the low master horizon, overall left-to-right development sequence, foreground stream, central woodland and three main courtyard blocks. It is not within 15 px everywhere: the distant town/terrain is regenerated, the left housing quarter is more regular and slightly re-spaced, woodland edges and pond positions are inferred, and some secondary block footprints differ. The foreground stream is wider and more sinuous than the plate.
++- Realism: convincing aerial-photo light, haze, masonry, mature tree canopies and meadow roofs. Roads, cars and small people generally read at scale.
++- CGI/corporate risk: repeated window bays and uniformly pristine courtyard blocks still have a mild architectural-visualisation quality; the large blocks can read more institutional than the desired non-corporate character.
++
++### Bold
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-bold.png`.
++- Geometry: the principal massing hierarchy, master horizon, central woodland, left field and foreground stream are retained, but visible drift remains beyond 15 px in the distant town, left housing rows, road alignments, orchard/woodland boundaries and some courtyard dimensions. PV arrays occupy the intended left-side field but their exact rows were invented from the sustainability brief rather than present in the geometry plate.
++- Realism: strong photographic texture, late-summer colour and credible roof/PV construction. Water, meadow roof and tree mass read immediately, with believable scale and sunlight.
++- CGI/corporate risk: the campus façades are repetitive and unusually consistent; crisp PV repetition and spotless blocks give parts of the image a masterplan-render polish despite otherwise convincing landscape photography.
++
++### Adventurous
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-adventurous.png`.
++- Geometry: overall camera and site ordering are close to the other corrected variants, but this is the loosest interpretation. The distant town, many home rows, internal paths, water bodies and woodland clearings are regenerated and exceed the 15 px tolerance. Main courtyard blocks remain rectilinear and tower-free, but some dimensions and separations differ from the master. The stream and linked ponds are substantially more prominent than in the plate.
++- Realism: the best landscape/ecology read of the set; timber-grid façades, meadow/PV roofs, wetland planting and tiny people are plausibly photographed, with natural haze and shadow.
++- CGI/corporate risk: highly coordinated roof treatments, repeated façade grids and immaculate solar rows reveal generated/masterplan logic. The intended walkable-roof and meadow-to-ground ideas are only partly legible at this altitude.
++
++## Overall caveat
++
++The images meet the requested photographic character, variant progression, 1280×720 delivery size, tower/text/logo exclusions and broad master-plate composition. The built-in generative edit did not achieve literal ±15 px registration across every block, road and landscape edge; even after the single allowed correction per variant, localized geometry drift remains and is most noticeable in the distant town, fine-grain housing, water and vegetation boundaries.
+
+exec
+/bin/zsh -lc "file 'experiments/002-living-map/generate/m2/boards/scheme-a-measured.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-bold.png' 'experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png' && wc -l 'experiments/002-living-map/generate/m2/boards/scheme-a-notes.md' && git status --short -- 'experiments/002-living-map/generate/m2/boards'" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+experiments/002-living-map/generate/m2/boards/scheme-a-measured.png:    PNG image data, 1280 x 720, 8-bit/color RGB, non-interlaced
+experiments/002-living-map/generate/m2/boards/scheme-a-bold.png:        PNG image data, 1280 x 720, 8-bit/color RGB, non-interlaced
+experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png: PNG image data, 1280 x 720, 8-bit/color RGB, non-interlaced
+     123 experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+?? experiments/002-living-map/generate/m2/boards/
+
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f9453e72e660b77d72af93f364fd54e39f5d415
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,123 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Bold — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the BOLD variant: keep the identical master-plate layout, but give it a stronger material identity and visibly more of every sustainable move—more photovoltaic area, more wildflower meadow roof, more mature tree mass and more visible water—while remaining credible, built and calm.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and extensive whole-roof PV like Solarsiedlung Freiburg. Campus uses a strong but buildable palette of mass timber, warm brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with many PV roofs oriented to the sun and generous meadow roofs. Water is built open drainage and rain gardens reading as clear silver-blue lines, like Augustenborg Malmö. Energy includes substantial orderly Next2Sun-style vertical bifacial PV over grazed pasture and broad solar carports. Trees are dense mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Stronger contrast between warm brick, honey-coloured mass timber, dark photovoltaic glass, meadow greens and straw-gold late-summer fields; rich but photographic, never over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, clearly expressed timber frames where buildable, photovoltaic glass, species-rich wildflower meadow, mown walkable paths, visibly wet open channels and ponds, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as meadow, walkable roof paths and PV without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Bold — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the BOLD variant. Keep Image 2's stronger material identity, extensive PV, meadow roofs, mature tree mass and visible water, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the bold candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the bold variant's substantial orderly vertical bifacial PV in the exact left field, broad solar canopies only in existing parking areas, generous meadow roofs, native woodland and orchard density, clearly visible but narrow stormwater channels and ponds, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged or relocated water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Adventurous — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the ADVENTUROUS variant: the edge of design excellence that is still buildable and photographable, with expressive timber structure, walkable roofs, water and planting as the dominant moves, and renewable energy designed as landscape—while preserving the identical master-plate massing and layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses expressive but plausible exposed mass-timber structural rhythms, deep glazed winter gardens and warm brick like Sara Kulturhus and Powerhouse Brattørkaia. Roofs combine species-rich meadow, extensive walkable paths and PV planes precisely tilted to the sun; selected meadow roofs visually descend toward the ground through planted terraces and ramps without altering the master building envelopes. Water and wetland planting dominate public space: connected open channels, rain gardens and ponds read clearly as silver-blue lines like Augustenborg Malmö. Energy is landscape: extensive orderly Next2Sun-style vertical bifacial PV over grazed pasture and large elegant solar carports. Trees form powerful mature native ecologies: veteran oaks, dense woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Expressive natural timber, warm red and buff brick, dark blue-black photovoltaic glass, richly varied meadow greens and wildflower golds against straw-coloured fields; vivid ecology but true photographic colour.
++Materials/textures: Deep mass-timber frames, weathered masonry, real glass reflections, photovoltaic glass, thick mixed wildflower meadow, timber-and-gravel roof walks with tiny true-scale people, wet channels, reed beds and ponds, richly varied mature tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; meadow-to-ground gestures are planted access ramps or terraces contained within those footprints, never new massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated or unbuildable roof forms, fantasy infrastructure, giant bridges, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Adventurous — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the ADVENTUROUS variant. Keep Image 2's expressive but buildable timber architecture, walkable meadow roofs, dominant water and planting, and energy-as-landscape character, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the adventurous candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain expressive credible mass-timber rhythms, walkable meadow roofs and contained planted ramps, extensive orderly vertical bifacial PV in the exact left field, solar canopies only on existing parking, connected but narrow stormwater channels and ponds, dense native woodland and orchards, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, megastructures, enlarged or relocated water bodies, moved roads, changed field boundaries, impossible roof landforms, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Passes and honest inspection
++
++### Measured
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-measured.png`.
++- Geometry: the correction restores the low master horizon, overall left-to-right development sequence, foreground stream, central woodland and three main courtyard blocks. It is not within 15 px everywhere: the distant town/terrain is regenerated, the left housing quarter is more regular and slightly re-spaced, woodland edges and pond positions are inferred, and some secondary block footprints differ. The foreground stream is wider and more sinuous than the plate.
++- Realism: convincing aerial-photo light, haze, masonry, mature tree canopies and meadow roofs. Roads, cars and small people generally read at scale.
++- CGI/corporate risk: repeated window bays and uniformly pristine courtyard blocks still have a mild architectural-visualisation quality; the large blocks can read more institutional than the desired non-corporate character.
++
++### Bold
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-bold.png`.
++- Geometry: the principal massing hierarchy, master horizon, central woodland, left field and foreground stream are retained, but visible drift remains beyond 15 px in the distant town, left housing rows, road alignments, orchard/woodland boundaries and some courtyard dimensions. PV arrays occupy the intended left-side field but their exact rows were invented from the sustainability brief rather than present in the geometry plate.
++- Realism: strong photographic texture, late-summer colour and credible roof/PV construction. Water, meadow roof and tree mass read immediately, with believable scale and sunlight.
++- CGI/corporate risk: the campus façades are repetitive and unusually consistent; crisp PV repetition and spotless blocks give parts of the image a masterplan-render polish despite otherwise convincing landscape photography.
++
++### Adventurous
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-adventurous.png`.
++- Geometry: overall camera and site ordering are close to the other corrected variants, but this is the loosest interpretation. The distant town, many home rows, internal paths, water bodies and woodland clearings are regenerated and exceed the 15 px tolerance. Main courtyard blocks remain rectilinear and tower-free, but some dimensions and separations differ from the master. The stream and linked ponds are substantially more prominent than in the plate.
++- Realism: the best landscape/ecology read of the set; timber-grid façades, meadow/PV roofs, wetland planting and tiny people are plausibly photographed, with natural haze and shadow.
++- CGI/corporate risk: highly coordinated roof treatments, repeated façade grids and immaculate solar rows reveal generated/masterplan logic. The intended walkable-roof and meadow-to-ground ideas are only partly legible at this altitude.
++
++## Overall caveat
++
++The images meet the requested photographic character, variant progression, 1280×720 delivery size, tower/text/logo exclusions and broad master-plate composition. The built-in generative edit did not achieve literal ±15 px registration across every block, road and landscape edge; even after the single allowed correction per variant, localized geometry drift remains and is most noticeable in the distant town, fine-grain housing, water and vegetation boundaries.
+
+codex
+Created all three 1280×720 variants using built-in image generation, with one geometry-correction pass each:
+
+- [Measured](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-measured.png)
+- [Bold](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-bold.png)
+- [Adventurous](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png)
+- [Prompts and inspection notes](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md)
+
+The notes include every prompt verbatim, pass history, and honest per-image assessment. The main caveat is that photographic realism is strong, but generative drift still exceeds ±15 px in portions of the fine-grained housing, distant town, water and vegetation boundaries.
+diff --git a/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f9453e72e660b77d72af93f364fd54e39f5d415
+--- /dev/null
++++ b/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md
+@@ -0,0 +1,123 @@
++# Scheme A 2045 — image generation record
++
++Built-in `image_gen` was used in sketch-to-render mode. Image 1 was treated as the geometry master/edit target, Image 2 as the photographic look reference, and Image 3 only as landscape-siting context. Each variant received one initial generation and one geometry-correction pass because visible drift exceeded the requested tolerance. The corrected full frames were resized from 1672×941 to 1280×720 with no crop or local retouching.
++
++## Measured — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the MEASURED variant: the best of current UK practice, restrained material palette, calm and credible.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses credible mass timber, brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with restrained PV roofs oriented to the sun and meadow roofs. Water is built open drainage and rain gardens reading as fine silver lines, like Augustenborg Malmö. Energy includes a limited, orderly amount of Next2Sun-style vertical bifacial PV over grazed pasture and solar carports. Trees are mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Restrained buff and red brick, natural timber, dark slate and clay roof tones, meadow greens and straw-gold late-summer fields; calm, cohesive and not over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, expressed timber only where buildable, photovoltaic glass, mixed wildflower meadow, mown paths, wet open channels, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as credible meadow and PV systems without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Measured — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the MEASURED variant. Keep Image 2's photographic realism, restrained materials, planting, meadow roofs and sustainability content, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the measured candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, its near foreground field and stream, its left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the measured variant's restrained PV, meadow roofs, native woodland, orchards, fine silver stormwater channels, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Bold — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the BOLD variant: keep the identical master-plate layout, but give it a stronger material identity and visibly more of every sustainable move—more photovoltaic area, more wildflower meadow roof, more mature tree mass and more visible water—while remaining credible, built and calm.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and extensive whole-roof PV like Solarsiedlung Freiburg. Campus uses a strong but buildable palette of mass timber, warm brick and glass like Sara Kulturhus and Powerhouse Brattørkaia, with many PV roofs oriented to the sun and generous meadow roofs. Water is built open drainage and rain gardens reading as clear silver-blue lines, like Augustenborg Malmö. Energy includes substantial orderly Next2Sun-style vertical bifacial PV over grazed pasture and broad solar carports. Trees are dense mature native mixes: veteran oaks, woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Stronger contrast between warm brick, honey-coloured mass timber, dark photovoltaic glass, meadow greens and straw-gold late-summer fields; rich but photographic, never over-saturated.
++Materials/textures: Weathered masonry, real glass reflections, clearly expressed timber frames where buildable, photovoltaic glass, species-rich wildflower meadow, mown walkable paths, visibly wet open channels and ponds, mature varied tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; interpret their roofs as meadow, walkable roof paths and PV without changing massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated roof forms, fantasy infrastructure, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Bold — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the BOLD variant. Keep Image 2's stronger material identity, extensive PV, meadow roofs, mature tree mass and visible water, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the bold candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain the bold variant's substantial orderly vertical bifacial PV in the exact left field, broad solar canopies only in existing parking areas, generous meadow roofs, native woodland and orchard density, clearly visible but narrow stormwater channels and ponds, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, enlarged or relocated water bodies, moved roads, changed field boundaries, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Adventurous — initial prompt
++
++```text
++Use case: sketch-to-render
++Asset type: 1280x720 architectural aerial-photograph board image
++Primary request: Transform the geometry-master render into a completely photorealistic aerial photograph of the proposed Golden Valley, west Cheltenham, in 2045. This is the ADVENTUROUS variant: the edge of design excellence that is still buildable and photographable, with expressive timber structure, walkable roofs, water and planting as the dominant moves, and renewable energy designed as landscape—while preserving the identical master-plate massing and layout.
++Input images: Image 1 is the absolute geometry master and edit target; Image 2 is the approved photographic look reference; Image 3 is landscape-siting context only, never an architectural geometry source.
++Scene/backdrop: The whole scheme from approximately 450 m, looking north-east to GCHQ, embedded in the real west Cheltenham landscape. Ordinary existing English town beyond the site: red and buff brick, slate and clay tile roofs. Late-summer fields, mature hedges, native woodland and distant low hills.
++Subject: Every sustainability pillar legible at once: home streets, campus courtyards, orchard ring and woodland belts, open stormwater channels and ponds, solar canopies at GCHQ and its wildflower meadow roof, all sitting naturally in the real landscape. Homes use steep-roofed Passivhaus terraces like Goldsmith Street Norwich, cohousing around shared gardens like Marmalade Lane Cambridge, and whole-roof PV like Solarsiedlung Freiburg. Campus uses expressive but plausible exposed mass-timber structural rhythms, deep glazed winter gardens and warm brick like Sara Kulturhus and Powerhouse Brattørkaia. Roofs combine species-rich meadow, extensive walkable paths and PV planes precisely tilted to the sun; selected meadow roofs visually descend toward the ground through planted terraces and ramps without altering the master building envelopes. Water and wetland planting dominate public space: connected open channels, rain gardens and ponds read clearly as silver-blue lines like Augustenborg Malmö. Energy is landscape: extensive orderly Next2Sun-style vertical bifacial PV over grazed pasture and large elegant solar carports. Trees form powerful mature native ecologies: veteran oaks, dense woodland courtyards, avenues and orchards.
++Style/medium: Real aerial architectural photography, never illustration, never concept art, never a corporate office-park rendering. Match Image 2's photographic realism, fine-grained detail, natural imperfection, believable construction, atmospheric haze and exposure. Everything must look built and photographed.
++Composition/framing: LOCK IMAGE 1 PIXEL GEOMETRY. Preserve exactly the 1280x720 full-frame camera, lens, viewpoint, horizon, terrain contours, field boundaries, positions, footprints, orientation and heights of every building block, all streets and paths, tree belts, orchards, fields, watercourse and existing town. Keep all major edges within about 15 pixels of Image 1. Do not crop, extend, warp, tilt, zoom or change aspect ratio. Do not use Image 2's or Image 3's camera or layout.
++Lighting/mood: Late-summer afternoon sun matching Image 2, warm but natural, clear blue sky with light small clouds, subtle distance haze, realistic aerial contrast and shadows.
++Color palette: Expressive natural timber, warm red and buff brick, dark blue-black photovoltaic glass, richly varied meadow greens and wildflower golds against straw-coloured fields; vivid ecology but true photographic colour.
++Materials/textures: Deep mass-timber frames, weathered masonry, real glass reflections, photovoltaic glass, thick mixed wildflower meadow, timber-and-gravel roof walks with tiny true-scale people, wet channels, reed beds and ponds, richly varied mature tree canopies. The large GCHQ/campus blocks remain the exact rectilinear courtyard footprints shown in Image 1; meadow-to-ground gestures are planted access ramps or terraces contained within those footprints, never new massing.
++People/vehicles: Small people visible at true 450 m scale on streets, paths and accessible roofs; cars only where streets and parking areas in Image 1 allow them.
++Constraints: Seven storeys maximum. Preserve every block; do not invent, remove, merge, move, rotate or resize blocks. No towers. Preserve the existing town exactly where the plate places it. No circular replacement building. No futuristic megastructures. No text, labels, logos, border or watermark.
++Avoid: CGI sheen, low-poly vegetation, repetitive cloned trees, sterile plazas, glossy office-park architecture, exaggerated or unbuildable roof forms, fantasy infrastructure, giant bridges, oversized people or vehicles, smeared houses, floating PV, extra roads, changed skyline.
++```
++
++## Adventurous — correction prompt
++
++```text
++Use case: sketch-to-render
++Asset type: final 1280x720 architectural aerial-photograph board image
++Primary request: GEOMETRY CORRECTION PASS for the ADVENTUROUS variant. Keep Image 2's expressive but buildable timber architecture, walkable meadow roofs, dominant water and planting, and energy-as-landscape character, but correct its composition to match Image 1 much more literally.
++Input images: Image 1 is the absolute geometry and camera master; Image 2 is the adventurous candidate to correct; Image 3 is the approved photographic look only.
++Correction: Reproject the photoreal design onto Image 1's exact scene. Match Image 1's horizon at about y=54, near foreground field and narrow stream, left field/orchard boundary, central woodland footprint, every housing row, every road, and every large rectilinear courtyard block. The principal courtyard blocks must occupy the same pixel footprints and silhouettes as Image 1, within about 15 pixels. Restore any omitted block and remove any invented massing. Keep the original master camera, viewing direction, terrain, skyline and town placement; do not substitute a wider countryside panorama.
++Invariants: Do not crop, zoom, tilt, rotate, warp or alter the 16:9 frame. Keep all building heights at Image 1 heights and seven storeys maximum. Existing town stays ordinary red/buff brick with slate and clay roofs. Retain expressive credible mass-timber rhythms, walkable meadow roofs and contained planted ramps, extensive orderly vertical bifacial PV in the exact left field, solar canopies only on existing parking, connected but narrow stormwater channels and ponds, dense native woodland and orchards, true-scale people and correctly parked cars. Real late-summer afternoon aerial photography matching Image 3.
++Avoid: any new blocks, towers, circular buildings, megastructures, enlarged or relocated water bodies, moved roads, changed field boundaries, impossible roof landforms, corporate-office-park polish, illustration, CGI sheen, text, logos or watermark.
++```
++
++## Passes and honest inspection
++
++### Measured
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-measured.png`.
++- Geometry: the correction restores the low master horizon, overall left-to-right development sequence, foreground stream, central woodland and three main courtyard blocks. It is not within 15 px everywhere: the distant town/terrain is regenerated, the left housing quarter is more regular and slightly re-spaced, woodland edges and pond positions are inferred, and some secondary block footprints differ. The foreground stream is wider and more sinuous than the plate.
++- Realism: convincing aerial-photo light, haze, masonry, mature tree canopies and meadow roofs. Roads, cars and small people generally read at scale.
++- CGI/corporate risk: repeated window bays and uniformly pristine courtyard blocks still have a mild architectural-visualisation quality; the large blocks can read more institutional than the desired non-corporate character.
++
++### Bold
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-bold.png`.
++- Geometry: the principal massing hierarchy, master horizon, central woodland, left field and foreground stream are retained, but visible drift remains beyond 15 px in the distant town, left housing rows, road alignments, orchard/woodland boundaries and some courtyard dimensions. PV arrays occupy the intended left-side field but their exact rows were invented from the sustainability brief rather than present in the geometry plate.
++- Realism: strong photographic texture, late-summer colour and credible roof/PV construction. Water, meadow roof and tree mass read immediately, with believable scale and sunlight.
++- CGI/corporate risk: the campus façades are repetitive and unusually consistent; crisp PV repetition and spotless blocks give parts of the image a masterplan-render polish despite otherwise convincing landscape photography.
++
++### Adventurous
++
++- Passes: one initial generation, then one permitted geometry-correction pass. Final: `scheme-a-adventurous.png`.
++- Geometry: overall camera and site ordering are close to the other corrected variants, but this is the loosest interpretation. The distant town, many home rows, internal paths, water bodies and woodland clearings are regenerated and exceed the 15 px tolerance. Main courtyard blocks remain rectilinear and tower-free, but some dimensions and separations differ from the master. The stream and linked ponds are substantially more prominent than in the plate.
++- Realism: the best landscape/ecology read of the set; timber-grid façades, meadow/PV roofs, wetland planting and tiny people are plausibly photographed, with natural haze and shadow.
++- CGI/corporate risk: highly coordinated roof treatments, repeated façade grids and immaculate solar rows reveal generated/masterplan logic. The intended walkable-roof and meadow-to-ground ideas are only partly legible at this altitude.
++
++## Overall caveat
++
++The images meet the requested photographic character, variant progression, 1280×720 delivery size, tower/text/logo exclusions and broad master-plate composition. The built-in generative edit did not achieve literal ±15 px registration across every block, road and landscape edge; even after the single allowed correction per variant, localized geometry drift remains and is most noticeable in the distant town, fine-grain housing, water and vegetation boundaries.
+
+tokens used
+90,657
+Created all three 1280×720 variants using built-in image generation, with one geometry-correction pass each:
+
+- [Measured](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-measured.png)
+- [Bold](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-bold.png)
+- [Adventurous](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png)
+- [Prompts and inspection notes](/Users/user/Projects/3D%20Design/experiments/002-living-map/generate/m2/boards/scheme-a-notes.md)
+
+The notes include every prompt verbatim, pass history, and honest per-image assessment. The main caveat is that photographic realism is strong, but generative drift still exceeds ±15 px in portions of the fine-grained housing, distant town, water and vegetation boundaries.

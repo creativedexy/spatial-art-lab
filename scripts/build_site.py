@@ -39,12 +39,29 @@ KEEP = {
     "descent": ["path.js", "player.js", "hotspots.json", "descent-path.json"],
     "descent/clips": ["descent-control.webm"],
 }
-PHOTOS = "generate/*/out/*.webp"
+# The photographs the places actually name, read from places.json rather than
+# globbed. `generate/*/out/*.webp` swept up every frame we have ever made in
+# that tree: a contact sheet and two footpath frames nothing references, 984 kB
+# of them, shipped silently. That is exactly the failure the note above says
+# matters — shipping what we did not mean to, quietly, forever — and a glob
+# cannot tell a delivered photograph from a working one. Reading the manifest
+# also means a place added or renamed cannot leave its photograph behind.
+def photos(site):
+    doc = json.loads((site / "golden-valley" / "places.json").read_text())
+    here = site / "golden-valley"
+    seen = {}
+    for place in doc["places"]:
+        f = (here / place["photo"]).resolve()
+        if not f.is_file():
+            raise SystemExit(f"places.json names a photograph that is not on "
+                             f"disk: {place['id']} -> {place['photo']}")
+        seen[f] = None
+    return list(seen)
 MODELS = ["meshy/campus-block.glb", "meshy/ncic.glb"]
 
 # Never, whatever a glob above may match.
 FORBIDDEN = ("inspiration/", "meshy/src/", "-hq.webm", ".mp4", "LOCAL-SESSION",
-             "LADDER-SESSION", "seam-report")
+             "LADDER-SESSION", "seam-report", "key.js")
 
 
 def copy(rel, dest_root, log):
@@ -72,8 +89,16 @@ def main():
     for folder, globs in KEEP.items():
         for g in globs:
             for f in sorted((SITE / folder).glob(g)):
+                # The tiles key is gitignored, but gitignored is not the same
+                # as unpublishable: it sits in golden-valley/ and `*.js` swept
+                # it straight into the folder this script exists to make safe.
+                # Skipped here so a build still works on the machine that has
+                # a key, and in FORBIDDEN as well, so that if it ever reaches
+                # `copy` by some other route the build stops instead.
+                if f.name == "key.js":
+                    continue
                 copy(f.relative_to(SITE), out, log)
-    for f in sorted(SITE.glob(PHOTOS)):
+    for f in sorted(photos(SITE)):
         copy(f.relative_to(SITE), out, log)
 
     if args.internal:

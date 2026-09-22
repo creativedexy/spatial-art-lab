@@ -1,0 +1,15 @@
+{
+  "note": "Phase 12 M1 candidates. Two headings per pillar, 330 to 420 m from the look point, pitched 20 to 24 degrees down so the horizon stays in frame, 38 degree vertical field of view (was 48). Bearing is the compass direction the camera faces. Look points are the centroids of each pillar in the 2045 data.",
+  "shots": [
+    {"id": "homes-a", "pillar": "homes streets", "look": [-280, -730], "bearing": 40, "slant": 380, "pitch": 22, "fov": 38, "lift": 0},
+    {"id": "homes-b", "pillar": "homes streets", "look": [-280, -700], "bearing": 350, "slant": 360, "pitch": 22, "fov": 38, "lift": 0},
+    {"id": "campus-a", "pillar": "campus around IDEA", "look": [-180, -130], "bearing": 75, "slant": 380, "pitch": 21, "fov": 38, "lift": 0},
+    {"id": "campus-b", "pillar": "campus around IDEA", "look": [-180, -130], "bearing": 140, "slant": 360, "pitch": 22, "fov": 38, "lift": 0},
+    {"id": "meadow-a", "pillar": "meadow roof + solar car parks", "look": [123, 64], "bearing": 44, "slant": 340, "pitch": 22, "fov": 38, "lift": 8},
+    {"id": "meadow-b", "pillar": "meadow roof + solar car parks", "look": [123, 64], "bearing": 135, "slant": 360, "pitch": 24, "fov": 38, "lift": 8},
+    {"id": "panels-a", "pillar": "panels and glasshouses", "look": [-470, -470], "bearing": 250, "slant": 400, "pitch": 21, "fov": 38, "lift": 0},
+    {"id": "panels-b", "pillar": "panels and glasshouses", "look": [-470, -470], "bearing": 200, "slant": 380, "pitch": 22, "fov": 38, "lift": 0},
+    {"id": "edge-a", "pillar": "orchard and wetland edge", "look": [-620, -300], "bearing": 280, "slant": 420, "pitch": 20, "fov": 38, "lift": 0},
+    {"id": "edge-b", "pillar": "orchard and wetland edge", "look": [-620, -300], "bearing": 340, "slant": 380, "pitch": 22, "fov": 38, "lift": 0}
+  ]
+}

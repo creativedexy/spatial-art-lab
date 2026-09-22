@@ -1,0 +1,148 @@
+{
+  "id": "campus-b",
+  "approvedVariant": "adventurous",
+  "approvedOn": "2026-09-22",
+  "basis": "Visual estimate from campus-b-adventurous.png against campus-b-2045.png. The approved board has noticeable geometry drift, so material and landscape character are targets while the plate remains the geometry authority.",
+  "roofMix": {
+    "PV": 29,
+    "meadow/green": 35,
+    "slate/tile": 23,
+    "walkable/terrace": 9,
+    "other": 4,
+    "reading": "The two foreground campus courts have alternating planted strips, walkable perimeter routes and crisp PV bands. The distant GCHQ ring is meadow-roofed. Existing suburbs retain conventional pitched roofs."
+  },
+  "wallMaterials": [
+    {
+      "material": "honey mass-timber exoskeleton",
+      "litHex": "#C39A68",
+      "shadedHex": "#6E513A",
+      "share": 46
+    },
+    {
+      "material": "dark reflective glazing and winter gardens",
+      "litHex": "#6B7D78",
+      "shadedHex": "#263C3D",
+      "share": 31
+    },
+    {
+      "material": "warm buff masonry or precast bands",
+      "litHex": "#C4AD82",
+      "shadedHex": "#79664C",
+      "share": 18
+    },
+    {
+      "material": "dark bronze metal trims and plinths",
+      "litHex": "#665A49",
+      "shadedHex": "#302D29",
+      "share": 5
+    }
+  ],
+  "windowRhythm": {
+    "storeyHeightMetres": "3.3 to 3.5",
+    "windowWidthMetres": "2.0 to 2.4 glazing within a 3.0 m structural bay",
+    "windowProportion": "About 1.35 to 1.70 width:height, often reading as a near-continuous band behind timber posts",
+    "revealDepthImpression": "Very deep, 350 to 600 mm behind the timber frame, with another shallow shadow at each floor edge.",
+    "rhythm": "A clear three-metre bay, vertical posts and strong horizontal floor bands. Ground floors are taller, more open and visibly recessed."
+  },
+  "groundCover": {
+    "lawn": 10,
+    "meadow": 20,
+    "hardLandscape": 34,
+    "hardLandscapeColour": "#A99C83 warm buff sett and resin-bound paths, with #5F625C road surfaces",
+    "water": 7,
+    "gardens": 29,
+    "reading": "Courtyards are woodland rooms with paths and rain gardens. Meadow and planted beds interrupt the hard landscape rather than sitting outside it."
+  },
+  "water": {
+    "visible": "A linked foreground channel and shallow retention ponds along the campus edge, plus small courtyard rain-garden glints.",
+    "channelWidthMetres": "2 to 5; ponded reaches 8 to 14",
+    "pondSize": "Two or three shallow basins roughly 15 to 35 m long",
+    "reflectivity": "Clear but broken sky reflection, #8BA7AD lit and #2E4B50 shaded. Keep most edges planted and rough; only about half the surface should read as open mirror.",
+    "buildability": "The board's continuous picturesque wetland is more elaborate than the current drainage data can justify. Build a legible chain on existing routes, not a literal copy of every pool."
+  },
+  "trees": {
+    "forms": [
+      "large broad veteran oak in courtyards",
+      "multi-stem birch or alder",
+      "upright lime avenue",
+      "rounded orchard tree",
+      "irregular native woodland mass"
+    ],
+    "heightMetres": {
+      "veteranOak": "17 to 23",
+      "courtyardMultiStem": "8 to 13",
+      "avenueTree": "10 to 15",
+      "orchardTree": "4 to 7",
+      "woodlandMix": "11 to 19"
+    },
+    "canopyColour": {
+      "litHex": "#718640",
+      "shadedHex": "#263F27"
+    },
+    "density": "Very high in courtyards, roughly 45 to 60 per cent canopy cover, and 25 to 35 per cent along the public edges.",
+    "arrangement": "Courtyards centre on one or two large retained crowns with irregular smaller trees around them; street trees form disciplined rows; the foreground remains an orchard grid."
+  },
+  "sustainableFeatures": {
+    "PVGlint": "Crisp blue-black rows #17242E with narrow cool highlights #8FA4AC. Roof arrays align consistently to the sun while retaining generous green strips.",
+    "canopies": "Limited solar carports on existing parking only, subordinate in this view.",
+    "agrivoltaicRows": "Only a distant edge condition. If visible, retain roughly 11 m green spacing and a 2 m panel height.",
+    "glasshouses": "Not a primary campus-b feature and should remain distant or absent.",
+    "other": "Walkable meadow roof loops and woodland courtyards are the key sustainable reading. Paths should be broad enough to resolve but remain within the plate envelopes."
+  },
+  "people/vehicles": {
+    "people": "Small clusters at glazed ground floors, courtyard crossings and roof paths. At 360 m most are two to four pixels high.",
+    "vehicles": "Parked cars sit under or beside canopies and on the existing road network. Avoid cars inside the planted courtyards.",
+    "scopeNote": "Useful as scale cues in the board, but excluded from the current aerial model plan. Do not trade roof, tree or shadow quality for them."
+  },
+  "gapsVsPlate": [
+    {
+      "rank": 1,
+      "difference": "The plate's courtyard blocks are flat, repetitive beige extrusions; the board reads as deep timber frames around dark glazed winter gardens.",
+      "modellingAction": "Strengthen the campus shader's expressed posts and floor plates, make glazing darker and more reflective, and increase apparent recess without adding transparent geometry.",
+      "system": "futureGeometry in future.js and campus facade materials in facades.js",
+      "effort": "1 day"
+    },
+    {
+      "rank": 2,
+      "difference": "The plate courtyards are sparse grass with small faceted trees; the board courtyards are dense mature woodland rooms.",
+      "modellingAction": "Allocate veteran trees first, then irregular understory and multi-stem forms. Target 45 to 60 per cent canopy cover without obscuring the courtyard aperture.",
+      "system": "tree geometry/grade in landcover.js and future.js, plus gv-2045 tree data",
+      "effort": "1.5 days, covered by in-flight M5"
+    },
+    {
+      "rank": 3,
+      "difference": "Board roofs combine meadow, walkable routes and legible PV bands; plate roofs are nearly uniform green grids.",
+      "modellingAction": "Tune campus roof masks to approximately 40 per cent planted area, 35 per cent PV and 15 per cent readable paths or terraces on the foreground blocks, leaving service margins.",
+      "system": "roof shader in facades.js and roof allocation in scripts/golden_valley_2045.py",
+      "effort": "0.5 to 1 day"
+    },
+    {
+      "rank": 4,
+      "difference": "No continuous water edge reads in the plate; the board has a reflective channel and pond chain across the foreground.",
+      "modellingAction": "Use existing wetland and route classes to form two or three connected open-water reaches, with sky reflection and soft reed margins.",
+      "system": "gv-2045 land-cover data, ground shader in future.js and water in life.js",
+      "effort": "1 day, partly covered by in-flight M5"
+    },
+    {
+      "rank": 5,
+      "difference": "Plate vegetation uses one angular crown family and a narrow green range; board vegetation has broad, multi-stem and fine orchard forms with deep internal shadow.",
+      "modellingAction": "Replace the shared low-detail crown with four or five instanced silhouettes and tune lit/shaded grades separately. Do not attempt leaf-level geometry at 360 m.",
+      "system": "unitTree in landcover.js and KEYED_GRADE.trees in future.js",
+      "effort": "1 day, covered by in-flight M5"
+    },
+    {
+      "rank": 6,
+      "difference": "Plate ground has hard class boundaries and a uniform lawn cast; board ground is a fine mosaic of meadow, buff paths and planted beds.",
+      "modellingAction": "Soften class edges, add low-frequency meadow variation and separate courtyard hardscape from road asphalt.",
+      "system": "ground shader in future.js and gv-2045-landcover generation",
+      "effort": "0.5 day, covered by in-flight M5"
+    },
+    {
+      "rank": 7,
+      "difference": "The board camera and some block sizes drift from the plate, making the foreground buildings larger and GCHQ more prominent.",
+      "modellingAction": "Do not model this drift. Keep shots.json and the keyless plate geometry authoritative; take only palette, facade depth, roof mix and landscape character from the board.",
+      "system": "camera and geometry lock, no model change",
+      "effort": "none"
+    }
+  ]
+}

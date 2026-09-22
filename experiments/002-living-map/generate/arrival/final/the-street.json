@@ -1,0 +1,28 @@
+{
+  "note": "One arrival plate: the camera a person standing in this place would have, 1.6 m above the measured terrain. Same shape as a composed plate's sidecar, so scripts/test_places.py can check the photograph lands where it was made. Local metres, x east, z south, origin at the box centre.",
+  "camera": {
+    "fov": 48,
+    "size": [
+      1280,
+      720
+    ]
+  },
+  "wave": 1,
+  "from": "the-homes",
+  "frames": [
+    {
+      "file": "the-street-2045.png",
+      "atMetres": 0,
+      "pos": [
+        -230,
+        47.1,
+        -636
+      ],
+      "look": [
+        -150,
+        49.16,
+        -604
+      ]
+    }
+  ]
+}

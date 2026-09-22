@@ -1,0 +1,124 @@
+{
+  "note": "Phase 13 arrival plates: eye at 1.6 m, level, fov 48. Rendered keyless (our model only) because these plates go to a generator.",
+  "shots": [
+    {
+      "id": "courtyards-water",
+      "pillar": "campus across the stormwater channel: water 10 m ahead, four",
+      "pos": [
+        -252,
+        41.55,
+        -200
+      ],
+      "look": [
+        -152,
+        45.08,
+        -200
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "courtyards-water-b",
+      "pillar": "same subject from the south, water 20 m ahead, nearest block",
+      "pos": [
+        -224,
+        43.67,
+        -268
+      ],
+      "look": [
+        -147.4,
+        45.36,
+        -203.7
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "homes-street",
+      "pillar": "the street between facing terraces, 23 m apart, channel in t",
+      "pos": [
+        -214.7,
+        47.5,
+        -628.9
+      ],
+      "look": [
+        -140.7,
+        49.17,
+        -598.9
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "homes-street-close",
+      "pillar": "the same street, standing 20 m back so the near terraces fra",
+      "pos": [
+        -230,
+        47.1,
+        -636
+      ],
+      "look": [
+        -150,
+        49.16,
+        -604
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "panels-to-homes",
+      "pillar": "inside the panel field looking at the new homes: rows in the",
+      "pos": [
+        -500,
+        39.11,
+        -545
+      ],
+      "look": [
+        -365,
+        43.34,
+        -581
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "panels-along-rows",
+      "pillar": "looking along the rows so they recede, crops between them",
+      "pos": [
+        -490,
+        39.96,
+        -500
+      ],
+      "look": [
+        -434,
+        41.9,
+        -639
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "glasshouse-edge",
+      "pillar": "the original design's glasshouse arrival, kept for compariso",
+      "pos": [
+        -410,
+        42.23,
+        -380
+      ],
+      "look": [
+        -338.93,
+        41.82,
+        -321.56
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    }
+  ]
+}

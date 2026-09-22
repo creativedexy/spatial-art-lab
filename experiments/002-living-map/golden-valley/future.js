@@ -20,12 +20,24 @@
 // tool and a much weaker shot, and this is the shot.
 
 import * as THREE from 'three';
-import { applyLife } from './life.js';
-import { loadClassTexture } from './landcover.js';
-import { facadeChunk } from './facades.js';
+import { applyLife, lifeTime } from './life.js';
+import { loadClassTexture, treeScale, treeTint } from './landcover.js';
+import { facadeChunk, PV_GLASS } from './facades.js';
+import { MEASURED_SUN, SUN_DIRECTION, sunFrom } from './look.js';
 
 const url = (f) => new URL(f, import.meta.url).href;
 export const futureMeta = await (await fetch(url('gv-2045-meta.json'))).json();
+
+// Values interpolated into GLSL always carry a decimal point. Apart from
+// preventing int/float overload failures, this keeps the shader and generated
+// metadata tied to one source of truth for every new agrivoltaic dimension.
+function glslFloat(value, places = 6) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) throw new TypeError(`invalid GLSL float: ${value}`);
+  return number.toFixed(places);
+}
+
+const agrivoltaicSpec = futureMeta.agrivoltaics;
 
 const SWEEP_FROM = -1250;     // local metres: the front starts west of the box
 const SWEEP_TO = 1250;
@@ -41,6 +53,62 @@ const RAGGED = 110;           // metres of noise on the front
  * the tiles may not be modified. 0 draws the whole terrain, as it always did.
  */
 export const groundMask = { value: 0 };
+const groundDirect = { value: 0 };
+const groundProbeMask = { value: 0 };
+
+/**
+ * A keyed build's grade for what 2045 paints over the photograph.
+ *
+ * Measured by scripts/probe_light.py, 14 Sep 2026, on the keyed build with the
+ * photograph's sun and a sky environment: our 2045 ground, future trees and
+ * GCHQ's meadow roof against photographed fields and canopy in the same
+ * frames. Saturation is the reliable part — too high in every view that
+ * measured it — and each value is a ratio of photographed to authored median.
+ *
+ *   ground vs fields        saturation 0.68 (0.43-0.72, 4 views)  exposure 0.74
+ *   trees vs canopy         saturation 0.53 (0.47-0.57, 3 views)  exposure 1.16
+ *   meadow roof, field proxy saturation 0.80 (2 views)            exposure 0.55
+ *
+ * First pass. The probe reads saturation off the rendered, tone-mapped frame,
+ * so a factor applied to albedo does not land one-for-one; it is re-measured
+ * after each change, as the lighting was. The keyless map is not graded.
+ */
+export const KEYED_GRADE = {
+  // M6's new solid field palette measured +0.12 saturation on the keyed map;
+  // the M4/M5 value was effectively neutral. The probe's earlier response to
+  // this control puts the next pass at 0.50. Exposure is unchanged.
+  ground: { saturation: 0.50, exposure: 0.74 },
+  // M5's first keyed render measured -0.10 saturation and -0.28 stops against
+  // photographed canopy. 0.47 restores the lost colour; 1.41 is 1.16 * 2^0.28.
+  trees: { saturation: 0.47, exposure: 1.41 },
+  // The M6 roof measured +0.16 against its photographed-field proxy. The
+  // previous 0.80 -> 0.52 probe step moved that delta by 0.165, so 0.25 is
+  // the measured next pass rather than an arbitrary palette edit.
+  meadow: { saturation: 0.25, exposure: 0.55 },
+  // M4 starts each authored material about 0.4 stops below the former pale
+  // boxes in the keyed build. These are deliberately palette compensation,
+  // not a second light: probe_light.py remains the authority on the live map.
+  // M6 changes the authored albedos to the approved darker material palette.
+  // Wall exposure compensates in this one measured grade, while roofs keep
+  // their own restrained PV/meadow values. probe_light.py remains the gate.
+  homes: { saturation: 0.88, exposure: 1.70, roofExposure: 1.02 },
+  campus: { saturation: 0.82, exposure: 1.53, roofExposure: 1.15 },
+  glasshouse: { saturation: 0.70, exposure: 2.40, roofExposure: 1.30 },
+  canopy: { saturation: 0.85, exposure: 0.10, roofExposure: 1.00 },
+};
+const groundGrade = { saturation: { value: 1 }, exposure: { value: 1 } };
+const pvSunDirection = { value: sunFrom(
+  MEASURED_SUN.azimuth, MEASURED_SUN.elevation,
+) };
+
+/** Desaturate a colour toward its own luminance, then scale it. In place. */
+function gradeColour(c, { saturation, exposure }) {
+  const l = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  return c.setRGB(
+    (l + (c.r - l) * saturation) * exposure,
+    (l + (c.g - l) * saturation) * exposure,
+    (l + (c.b - l) * saturation) * exposure);
+}
 
 export const uniforms = {
   uFront: { value: SWEEP_FROM },
@@ -76,14 +144,102 @@ const NOISE = /* glsl */`
  * would arrive fully built with no front at all.
  */
 function share(material, patch, life = {}) {
+  const existing = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
   applyLife(material, life);
-  const previous = material.onBeforeCompile;
-  material.onBeforeCompile = (shader) => {
-    if (previous) previous(shader);
+  const lifePatch = material.onBeforeCompile;
+  material.onBeforeCompile = (shader, ...args) => {
+    if (existing) existing.call(material, shader, ...args);
+    if (lifePatch) lifePatch.call(material, shader, ...args);
     Object.assign(shader.uniforms, uniforms);
     patch(shader);
   };
-  material.customProgramCacheKey = () => `future:${patch.name}`;
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : material.type}:future:${patch.name}`;
+  material.needsUpdate = true;
+  return material;
+}
+
+/** Add the shared low-roughness PV glass response without losing any patch. */
+function pvGlassMaterial(material, key, row = null) {
+  const previous = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  const jointColour = row ? new THREE.Color(row.moduleJointColour) : null;
+  const angle = row ? THREE.MathUtils.degToRad(row.bearingDegrees) : 0;
+  const rowVarying = row ? '\nvarying vec3 vPvWorld;' : '';
+  const rowVertex = row ? `
+        #ifdef USE_INSTANCING
+          vPvWorld = (modelMatrix * instanceMatrix
+                    * vec4(transformed, 1.0)).xyz;
+        #else
+          vPvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        #endif
+        ` : '';
+  const rowFragment = row ? `
+          // The module's own body stays M6b's dark glass; what changes at eye
+          // level is light, not albedo (see rowEmissive below). All this does
+          // is make the row less than perfectly smooth, and give it its module
+          // rhythm: one 36 m segment is still one instance, so the 1.1 m
+          // joints are drawn in world metres in the shader rather than bought
+          // with geometry. They antialias to a stable average from the air.
+          roughnessFactor = mix(roughnessFactor,
+            ${glslFloat(row.grazingResponse.roughness)}, 0.5);
+          vec3 pvEye = normalize(vViewPosition);
+          float pvAlong = dot(vPvWorld.xz,
+            vec2(${glslFloat(Math.cos(angle))}, ${glslFloat(Math.sin(angle))}));
+          float pvJointDistance = abs(fract(
+            pvAlong / ${glslFloat(row.moduleWidthMetres)} + 0.5) - 0.5)
+            * ${glslFloat(row.moduleWidthMetres)};
+          float pvJoint = 1.0 - smoothstep(
+            ${glslFloat(row.moduleJointWidthMetres * 0.5)},
+            ${glslFloat(row.moduleJointWidthMetres * 0.5)}
+              + max(fwidth(pvJointDistance), 0.000001),
+            pvJointDistance);
+          diffuseColor.rgb = mix(diffuseColor.rgb,
+            vec3(${glslFloat(jointColour.r)}, ${glslFloat(jointColour.g)},
+                 ${glslFloat(jointColour.b)}), pvJoint);
+        ` : '';
+  // Reflected sky is LIGHT, not albedo. M6b's PV body is a linear 0.04 at its
+  // brightest, so mixing a sky colour into `diffuseColor` and then lighting it
+  // with a sun that is behind the panel still gives black — which is what the
+  // first eye-level plates showed. Two things are missing, and both are light:
+  // a vertical module's shaded face is lit by half the sky hemisphere, and at
+  // grazing incidence it becomes a mirror of it. Added after lighting, with no
+  // view gate, because a term that only appears when you stand up is a fudge.
+  const rowEmissive = row ? `
+          {
+            vec3 skEye = normalize(vViewPosition);
+            float skGraze = pow(1.0 - abs(dot(normalize(normal), skEye)),
+                                ${glslFloat(row.grazingResponse.fresnelExponent)});
+            totalEmissiveRadiance += pvGlint
+              * (${glslFloat(row.grazingResponse.skyHemisphere)}
+                 + skGraze * ${glslFloat(row.grazingResponse.skyRadiance)});
+          }
+        ` : '';
+  material.onBeforeCompile = (shader, ...args) => {
+    if (previous) previous.call(material, shader, ...args);
+    shader.uniforms.uPvSunDirection = pvSunDirection;
+    if (row) {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>${rowVarying}`)
+        .replace('#include <project_vertex>', `${rowVertex}
+          #include <project_vertex>`);
+    }
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${PV_GLASS}${rowVarying}`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        {
+          float pvRough = roughnessFactor;
+          diffuseColor.rgb = fPvGlass(normal, 0.0, 0.0, pvRough);
+          roughnessFactor = pvRough;
+          metalnessFactor = 0.05;
+          ${rowFragment}
+        }`)
+      .replace('#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>${rowEmissive}`);
+  };
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : material.type}:pv-glass:${key}`;
   material.needsUpdate = true;
   return material;
 }
@@ -98,6 +254,13 @@ function share(material, patch, life = {}) {
  * gains one texture fetch and a mix. Anything else would mean two terrains.
  */
 const groundMaskUniforms = [];
+const groundDirectUniforms = [];
+const groundProbeMaskUniforms = [];
+// Written into GLSL, so always as a float literal: farmland is index 0, and a
+// bare `0` is an int that no overload of gvClassWeight accepts. That one
+// character stopped the whole keyed terrain shader compiling in M5.
+const groundClass = Object.fromEntries(Object.entries(futureMeta.classes)
+  .map(([name, value]) => [name, (value.index / 255).toFixed(6)]));
 
 /** Draw our ground only where 2045 changes it. */
 export function setGroundMasked(on) {
@@ -105,7 +268,92 @@ export function setGroundMasked(on) {
   for (const u of groundMaskUniforms) u.value = groundMask.value;
 }
 
-export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
+export function setGroundDirect(on) {
+  groundDirect.value = on ? 1 : 0;
+  for (const u of groundDirectUniforms) u.value = groundDirect.value;
+}
+
+/** Flat binary output for probe_light.py; never enabled in the live map. */
+export function setGroundProbeMask(on) {
+  groundProbeMask.value = on ? 1 : 0;
+  for (const u of groundProbeMaskUniforms) u.value = groundProbeMask.value;
+}
+
+/** World-space meadow detail for GCHQ's very large annular roof. */
+function meadowRoof(material, amount) {
+  const previous = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.onBeforeCompile = (shader) => {
+    if (previous) previous(shader);
+    shader.uniforms.uMeadowAt = amount;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>',
+        '#include <common>\nvarying vec2 vGchqMeadowWorld;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+         vGchqMeadowWorld = (modelMatrix * vec4(transformed, 1.0)).xz;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform float uMeadowAt;
+        varying vec2 vGchqMeadowWorld;
+        float meadowHash(vec2 p) {
+          return fract(sin(dot(floor(p), vec2(127.1, 311.7))) * 43758.5453);
+        }
+        float meadowNoise(vec2 p) {
+          vec2 i = floor(p), f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(meadowHash(i), meadowHash(i + vec2(1.0, 0.0)), f.x),
+                     mix(meadowHash(i + vec2(0.0, 1.0)),
+                         meadowHash(i + vec2(1.0, 1.0)), f.x), f.y);
+        }
+        float meadowRay(vec2 p, vec2 direction) {
+          float ahead = smoothstep(-1.0, 2.0, dot(p, direction));
+          float off = abs(p.x * direction.y - p.y * direction.x);
+          return ahead * (1.0 - smoothstep(1.25, 2.05, off));
+        }`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        if (uMeadowAt > 0.001) {
+          vec2 p = vGchqMeadowWorld - vec2(141.5, 58.0);
+          float radius = length(vec2(p.x, p.y * 1.035));
+          // Broad 5-20 m changes stop the hectare-scale roof becoming a
+          // single olive band, while the grade still supplies its base hue.
+          float patches = meadowNoise(vGchqMeadowWorld / 18.0) * 0.22
+                        + meadowNoise(vGchqMeadowWorld / 7.0 + 19.0) * 0.12;
+          vec3 meadow = diffuseColor.rgb;
+          vec3 planted = meadow * (0.82 + patches);
+          float flower = meadowHash(vGchqMeadowWorld * 1.35 + 7.0);
+          planted = mix(planted, meadow * vec3(1.62, 1.48, 0.54),
+                        step(0.955, flower) * 0.82);
+          planted = mix(planted, meadow * vec3(1.62, 1.58, 1.42),
+                        step(0.975, flower) * 0.78);
+          planted = mix(planted, meadow * vec3(1.25, 0.72, 1.38),
+                        step(0.989, flower) * 0.72);
+          float rings = 1.0 - smoothstep(1.35, 2.25,
+            min(abs(radius - 61.0), abs(radius - 80.0)));
+          float radials = max(meadowRay(p, normalize(vec2(0.91, 0.42))),
+                           max(meadowRay(p, normalize(vec2(-0.28, 0.96))),
+                               meadowRay(p, normalize(vec2(-0.82, -0.57)))));
+          float mown = clamp(rings + radials, 0.0, 1.0);
+          planted = mix(planted, meadow * vec3(0.84, 0.88, 0.66), mown * 0.90);
+          float edge = 1.0 - smoothstep(0.45, 1.75,
+            min(abs(radius - 43.5), abs(radius - 98.5)));
+          planted = mix(planted, meadow * 0.54, edge * 0.72);
+          diffuseColor.rgb = mix(diffuseColor.rgb, planted, uMeadowAt);
+        }`)
+      .replace('#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+         roughnessFactor = mix(roughnessFactor, 0.98, uMeadowAt);`);
+  };
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : 'gchq'}:meadow-v2`;
+  material.needsUpdate = true;
+}
+
+export function blendGround(
+  mesh, futureTexture, todayClasses, futureClasses, directGround = false,
+) {
+  groundDirect.value = directGround ? 1 : 0;
+  groundGrade.saturation.value = directGround ? KEYED_GRADE.ground.saturation : 1;
+  groundGrade.exposure.value = directGround ? KEYED_GRADE.ground.exposure : 1;
   const m = mesh.material;
   const previous = m.onBeforeCompile;
   m.onBeforeCompile = (shader) => {
@@ -114,11 +362,23 @@ export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
                   { uFutureMap: { value: futureTexture },
                     uTodayClass: { value: todayClasses ?? null },
                     uFutureClass: { value: futureClasses ?? null },
-                    uGroundMask: { value: 0 } });
+                    uGroundTexel: { value: new THREE.Vector2(
+                      1 / (futureTexture.image?.width || 2000),
+                      1 / (futureTexture.image?.height || 2000)) },
+                    uGroundMask: { value: groundMask.value },
+                    uGroundProbeMask: { value: groundProbeMask.value },
+                    // Not uTime: only applyLife declares that, and the keyed
+                    // terrain never gets applyLife, so the shader did not compile.
+                    uGroundTime: lifeTime,
+                    uDirectGround: { value: groundDirect.value },
+                    uGroundSaturation: groundGrade.saturation,
+                    uGroundExposure: groundGrade.exposure });
     // Held so setGroundMasked can move it without recompiling: a shader
     // rebuild on a toggle is a stutter, and on a year change it would be a
     // stutter every frame.
     groundMaskUniforms.push(shader.uniforms.uGroundMask);
+    groundProbeMaskUniforms.push(shader.uniforms.uGroundProbeMask);
+    groundDirectUniforms.push(shader.uniforms.uDirectGround);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
         '#include <common>\nvarying vec3 vFutureWorld;')
@@ -139,13 +399,30 @@ export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
          uniform sampler2D uFutureMap;
          uniform sampler2D uTodayClass;
          uniform sampler2D uFutureClass;
+         uniform vec2 uGroundTexel;
          uniform float uGroundMask;
+         uniform float uGroundProbeMask;
+         uniform float uGroundTime;
+         uniform float uDirectGround;
+         uniform float uGroundSaturation;
+         uniform float uGroundExposure;
          uniform float uFront; uniform float uSoft; uniform float uRagged;
          varying vec3 vFutureWorld;
+         float gvWaterAmount = 0.0;
+         float gvClassEqual(float sampleValue, float classValue) {
+           return 1.0 - step(0.5 / 255.0, abs(sampleValue - classValue));
+         }
+         float gvClassWeight(float classValue, float centre, vec4 around) {
+           return gvClassEqual(centre, classValue) * 0.36
+             + dot(vec4(
+                 gvClassEqual(around.x, classValue),
+                 gvClassEqual(around.y, classValue),
+                 gvClassEqual(around.z, classValue),
+                 gvClassEqual(around.w, classValue)), vec4(0.16));
+         }
          ${NOISE}`)
       .replace('#include <map_fragment>',
-        `#include <map_fragment>
-         {
+        `{
            // Over photogrammetry, our ground is drawn ONLY where 2045
            // actually changes it — an orchard where there was stubble, wet
            // meadow where there was a culverted brook — and never where the
@@ -155,20 +432,191 @@ export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
            // was pointless. The class maps answer it exactly: two indices,
            // and they either differ or they do not.
            //
-           // Discard rather than fade: half our field over a photograph of
-           // the same field is two grounds, and reads as neither.
+           // Self-check: M4's decision is one centre tap from uTodayClass and
+           // one from uFutureClass at the SAME vMapUv, followed by futureAt.
+           // Do not use uGroundTexel, gvClassWeight or the filtered colour in
+           // this block: those are M5 surface detail, not ground ownership.
            if (uGroundMask > 0.5) {
              float wasClass = texture2D(uTodayClass, vMapUv).r;
              float willClass = texture2D(uFutureClass, vMapUv).r;
              bool changed = abs(wasClass - willClass) > 0.002;
              if (!changed || futureAt(vFutureWorld) < 0.5) discard;
            }
+         }
+         #include <map_fragment>`)
+      // The ownership discard above is M4's decision. Keeping M5's filtered
+      // colour, field grain and water in a later chunk makes the ordering
+      // explicit: discarded photographed ground cannot reach this code.
+      .replace('#include <alphatest_fragment>',
+        `#include <alphatest_fragment>
+         vec2 detailStep = uGroundTexel * 3.5;
+         float fc = texture2D(uFutureClass, vMapUv).r;
+         vec4 fa = vec4(
+           texture2D(uFutureClass, vMapUv + vec2(detailStep.x, 0.0)).r,
+           texture2D(uFutureClass, vMapUv - vec2(detailStep.x, 0.0)).r,
+           texture2D(uFutureClass, vMapUv + vec2(0.0, detailStep.y)).r,
+           texture2D(uFutureClass, vMapUv - vec2(0.0, detailStep.y)).r);
+
+         // Keep the seven-metre colour softening between land classes, but
+         // never average water/wetland colour into ordinary fields (or vice
+         // versa). That cross-hydro average was the cyan seen between the PV
+         // rows even where the centre pixel was genuine agrivoltaic pasture.
+         float hydroCentre = min(1.0,
+           gvClassEqual(fc, ${groundClass.water})
+           + gvClassEqual(fc, ${groundClass.wetland}));
+         vec4 hydroAround = vec4(
+           min(1.0, gvClassEqual(fa.x, ${groundClass.water})
+                  + gvClassEqual(fa.x, ${groundClass.wetland})),
+           min(1.0, gvClassEqual(fa.y, ${groundClass.water})
+                  + gvClassEqual(fa.y, ${groundClass.wetland})),
+           min(1.0, gvClassEqual(fa.z, ${groundClass.water})
+                  + gvClassEqual(fa.z, ${groundClass.wetland})),
+           min(1.0, gvClassEqual(fa.w, ${groundClass.water})
+                  + gvClassEqual(fa.w, ${groundClass.wetland})));
+         vec4 keepAround = vec4(1.0) - step(vec4(0.5),
+           abs(hydroAround - vec4(hydroCentre)));
+         vec4 futureTexel = texture2D(uFutureMap, vMapUv) * 0.36;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv + vec2(detailStep.x, 0.0)) * 0.16 * keepAround.x;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv - vec2(detailStep.x, 0.0)) * 0.16 * keepAround.y;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv + vec2(0.0, detailStep.y)) * 0.16 * keepAround.z;
+         futureTexel += texture2D(uFutureMap,
+           vMapUv - vec2(0.0, detailStep.y)) * 0.16 * keepAround.w;
+         futureTexel /= 0.36 + dot(keepAround, vec4(0.16));
+         float futureMix = futureAt(vFutureWorld);
+         if (uDirectGround > 0.5) {
+           diffuseColor.rgb = futureTexel.rgb;
+         }
+         if (uDirectGround < 0.5) {
            // The sampler is sRGB, so the GPU has already linearised this and
            // it can be mixed with diffuseColor directly.
-           vec4 futureTexel = texture2D(uFutureMap, vMapUv);
-           diffuseColor.rgb = mix(diffuseColor.rgb, futureTexel.rgb,
-                                  futureAt(vFutureWorld));
-         }`);
+           diffuseColor.rgb = mix(diffuseColor.rgb, futureTexel.rgb, futureMix);
+         }
+
+         // Class samples share the colour filter's radius. The class image
+         // itself stays lossless and nearest-filtered; averaging membership,
+         // not numeric indices, is what makes a real boundary transition.
+         float grass = gvClassWeight(${groundClass.grass}, fc, fa) * futureMix;
+         float meadow = (gvClassWeight(${groundClass.meadow}, fc, fa)
+                       + gvClassWeight(${groundClass.future_meadow}, fc, fa))
+                      * futureMix;
+         float orchard = gvClassWeight(${groundClass.orchard}, fc, fa) * futureMix;
+         float arable = gvClassWeight(${groundClass.farmland}, fc, fa) * futureMix;
+         float agrivoltaic = gvClassEqual(fc, ${groundClass.agrivoltaic})
+                           * futureMix;
+         float wetland = gvClassWeight(${groundClass.wetland}, fc, fa) * futureMix;
+
+         // The measured field grain is 22 degrees. All frequencies are in
+         // world metres, so the effect neither swims with the camera nor
+         // changes scale when a texture is recompressed.
+         const vec2 gvAlong = vec2(0.927184, 0.374607);
+         const vec2 gvAcross = vec2(-0.374607, 0.927184);
+         float along = dot(vFutureWorld.xz, gvAlong);
+         float across = dot(vFutureWorld.xz, gvAcross);
+         float mown = sin(across * 0.785398) * 0.028;
+         float meadowPatch = (fNoise(vFutureWorld.xz / 16.0)
+                            + fNoise(vFutureWorld.xz / 5.0 + 19.0) * 0.45
+                            - 0.725) * 0.13;
+         float orchardStrip = sin(across * 0.837758) * 0.045
+                            + (fNoise(vec2(along / 22.0, across / 7.5)) - 0.5)
+                              * 0.055;
+         float drills = sin(across * 1.047198) * 0.022
+                      + sin(across * 0.349066) * 0.018;
+
+         // The rows sit on global multiples of the measured 11 m grid. Keep
+         // 0.70 m either side of each panel as its service/uncultivated band,
+         // then run two assumed aggregate drill rhythms along the row. Fine
+         // drills fade to their mean before they can alias; the alternating
+         // inter-row crop exposure remains legible from the aerial cameras.
+         float cropPanelDistance = abs(mod(
+           across + ${glslFloat(agrivoltaicSpec.rowCentresMetres * 0.5)},
+           ${glslFloat(agrivoltaicSpec.rowCentresMetres)})
+           - ${glslFloat(agrivoltaicSpec.rowCentresMetres * 0.5)});
+         float cropWorked = smoothstep(
+           ${glslFloat(agrivoltaicSpec.crop.clearBandFromPanelMetres)},
+           ${glslFloat(agrivoltaicSpec.crop.clearBandFromPanelMetres
+                       + agrivoltaicSpec.crop.edgeBlendMetres)},
+           cropPanelDistance);
+         float cropStrip = floor(across
+           / ${glslFloat(agrivoltaicSpec.rowCentresMetres)});
+         float cropAlternate = mod(abs(cropStrip), 2.0);
+         float cropSpacing = mix(
+           ${glslFloat(agrivoltaicSpec.crop.rowSpacingMetres[0])},
+           ${glslFloat(agrivoltaicSpec.crop.rowSpacingMetres[1])},
+           cropAlternate);
+         float cropPixel = fwidth(across) / cropSpacing;
+         float cropResolved = 1.0 - smoothstep(
+           ${glslFloat(agrivoltaicSpec.crop.detailFadePixels[0])},
+           ${glslFloat(agrivoltaicSpec.crop.detailFadePixels[1])}, cropPixel);
+         float cropPhase = across * 6.283185 / cropSpacing;
+         float cropRows = cos(cropPhase)
+           * ${glslFloat(agrivoltaicSpec.crop.rowContrast)} * cropResolved;
+         float cropRotation = mix(
+           ${glslFloat(agrivoltaicSpec.crop.rotationExposure[0])},
+           ${glslFloat(agrivoltaicSpec.crop.rotationExposure[1])},
+           cropAlternate) - 1.0;
+         float cropAmount = agrivoltaic * cropWorked;
+         float cropNormal = sin(cropPhase)
+           * ${glslFloat(agrivoltaicSpec.crop.rowNormalStrength)}
+           * cropResolved * cropAmount;
+         float groundDetail = mown * grass + meadowPatch * meadow
+                            + meadowPatch * wetland * 0.85
+                            + orchardStrip * orchard + drills * arable
+                            + (cropRows + cropRotation) * cropAmount;
+         diffuseColor.rgb *= max(0.72, 1.0 + groundDetail);
+
+         // Wet meadow remains vegetation except for sparse 10-30 m pools.
+         // Existing water and those pools use the keyed sky environment via
+         // MeshStandardMaterial's low-roughness specular response below.
+         float wetNoise = fNoise(vFutureWorld.xz / 21.0) * 0.68
+                        + fNoise(vFutureWorld.xz / 8.0 + 31.0) * 0.32;
+         // Hydro ownership is centre-texel exact. Filtered membership is fine
+         // for vegetation texture, but made a real water or wetland neighbour
+         // turn pasture, orchard and agrivoltaic centres silver/teal.
+         float wetlandOwner = gvClassEqual(fc, ${groundClass.wetland})
+                            * futureMix;
+         float pools = smoothstep(0.68, 0.79, wetNoise) * wetlandOwner;
+         float futureWater = min(1.0,
+           gvClassEqual(fc, ${groundClass.water}) + pools);
+         float todayWater = gvClassEqual(texture2D(uTodayClass, vMapUv).r,
+                                         ${groundClass.water});
+         gvWaterAmount = mix(todayWater, futureWater, futureMix);
+         float waterLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+         vec3 silver = mix(diffuseColor.rgb, vec3(waterLuma) * 0.72
+                           + vec3(0.055, 0.075, 0.095), 0.62);
+         diffuseColor.rgb = mix(diffuseColor.rgb, silver, gvWaterAmount);
+
+         // Drawn straight over the photograph in a keyed build, so grade the
+         // finished detail rather than changing the established base palette.
+         if (uDirectGround > 0.5) {
+           float gl = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+           diffuseColor.rgb = mix(vec3(gl), diffuseColor.rgb, uGroundSaturation)
+                              * uGroundExposure;
+         }`)
+      .replace('#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+         roughnessFactor = mix(roughnessFactor, 0.18, gvWaterAmount);`)
+      .replace('#include <metalnessmap_fragment>',
+        `#include <metalnessmap_fragment>
+         metalnessFactor = mix(metalnessFactor, 0.06, gvWaterAmount);`)
+      .replace('#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+         vec2 cropGradient = vec2(dFdx(across), dFdy(across));
+         cropGradient /= max(length(cropGradient), 0.000001);
+         normal = normalize(normal
+           + cropNormal * vec3(cropGradient.x, cropGradient.y, 0.0));
+         float gvRippleX = sin(vFutureWorld.x * 0.72
+                             + vFutureWorld.z * 0.31 + uGroundTime * 1.35);
+         float gvRippleY = cos(vFutureWorld.x * -0.28
+                             + vFutureWorld.z * 0.83 + uGroundTime * 1.75);
+         normal = normalize(normal + gvWaterAmount * 0.035
+                            * vec3(gvRippleX, gvRippleY, 0.0));`)
+      .replace('#include <opaque_fragment>',
+        `// The probe needs classification, not the terrain's light or grade.
+         if (uGroundProbeMask > 0.5) outgoingLight = vec3(1.0);
+         #include <opaque_fragment>`);
   };
   m.needsUpdate = true;
 }
@@ -181,14 +629,15 @@ export function blendGround(mesh, futureTexture, todayClasses, futureClasses) {
  * Built here rather than by buildings.js because these have to *rise*, and
  * rising means every vertex needs the base it grows from. The 2045 footprints
  * are convex quads with no holes, so the whole builder is four wall quads and
- * a roof — which is also why it can afford to carry two extra attributes.
+ * a roof, plus the low-cost parapet, eaves and dwelling-scale detail below.
  */
-function futureGeometry(list, palette) {
+function futureGeometry(list, palette, grade = null) {
   const pos = [];
   const base = [];
   const anchor = [];
   const col = [];
-  // Phase 8. Two more attributes, both for the facades.
+  // Facade attributes stay in metres and carry the few categorical choices
+  // that must survive merging a whole family into one draw call.
   //
   // `aFacade` is the surface in METRES — how far along the wall, and how far
   // up it — not the 0..1 a texture usually wants. That is the whole trick: a
@@ -202,10 +651,14 @@ function futureGeometry(list, palette) {
   const surface = [];
   const bays = [];
   const walls = [];
+  const typologies = [];
+  const variants = [];
   let tint = new THREE.Color();
   let kind = 0;
   let bayWidth = 3;
   let wallHeight = 0;
+  let typology = 0;
+  let variant = 0;
   const push = (x, y, z, b, ax, az, u = 0, v = 0) => {
     pos.push(x, y, z);
     base.push(b);
@@ -215,6 +668,8 @@ function futureGeometry(list, palette) {
     surface.push(kind);
     bays.push(bayWidth);
     walls.push(wallHeight);
+    typologies.push(typology);
+    variants.push(variant);
   };
   const quad = (a, b, c, d, bs, ax, az, uvs = null) => {
     const t = uvs ?? [[0, 0], [0, 0], [0, 0], [0, 0]];
@@ -224,16 +679,149 @@ function futureGeometry(list, palette) {
     push(...d, bs, ax, az, ...t[3]);
   };
 
+  const area = (ring) => ring.reduce((sum, p, i) => {
+    const q = ring[(i + 1) % ring.length];
+    return sum + p[0] * q[1] - q[0] * p[1];
+  }, 0) * 0.5;
+  const clockwise = (ring) => {
+    const out = ring.map((p) => [...p]);
+    if (area(out) > 0) out.reverse();
+    return out;
+  };
+  const rotateLongEdgeFirst = (ring) => {
+    let at = 0;
+    let longest = -1;
+    for (let i = 0; i < ring.length; i++) {
+      const q = ring[(i + 1) % ring.length];
+      const d = Math.hypot(q[0] - ring[i][0], q[1] - ring[i][1]);
+      if (d > longest) { longest = d; at = i; }
+    }
+    return [...ring.slice(at), ...ring.slice(0, at)];
+  };
+  const lineIntersection = (a, b, c, d) => {
+    const abx = b[0] - a[0], abz = b[1] - a[1];
+    const cdx = d[0] - c[0], cdz = d[1] - c[1];
+    const den = abx * cdz - abz * cdx;
+    if (Math.abs(den) < 1e-6) return [...b];
+    const t = ((c[0] - a[0]) * cdz - (c[1] - a[1]) * cdx) / den;
+    return [a[0] + abx * t, a[1] + abz * t];
+  };
+  const offsetRing = (ring, distance) => {
+    const cx = ring.reduce((s, p) => s + p[0], 0) / ring.length;
+    const cz = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+    const lines = ring.map((p, i) => {
+      const q = ring[(i + 1) % ring.length];
+      const dx = q[0] - p[0], dz = q[1] - p[1];
+      const len = Math.hypot(dx, dz);
+      let nx = -dz / len, nz = dx / len;
+      if ((cx - p[0]) * nx + (cz - p[1]) * nz < 0) {
+        nx = -nx; nz = -nz;
+      }
+      return [[p[0] + nx * distance, p[1] + nz * distance],
+              [q[0] + nx * distance, q[1] + nz * distance]];
+    });
+    return lines.map((line, i) => {
+      const prev = lines[(i + lines.length - 1) % lines.length];
+      return lineIntersection(prev[0], prev[1], line[0], line[1]);
+    });
+  };
+  const mix2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t,
+                              a[1] + (b[1] - a[1]) * t];
+  const solidPost = (x, z, y0, y1, along, across, bs, ax, az) => {
+    // Still slender at full scale, but wide enough to survive a 340 m view.
+    const half = 0.10;
+    const ring = clockwise([
+      [x - along[0] * half - across[0] * half,
+       z - along[1] * half - across[1] * half],
+      [x + along[0] * half - across[0] * half,
+       z + along[1] * half - across[1] * half],
+      [x + along[0] * half + across[0] * half,
+       z + along[1] * half + across[1] * half],
+      [x - along[0] * half + across[0] * half,
+       z - along[1] * half + across[1] * half],
+    ]);
+    for (let i = 0; i < 4; i++) {
+      const p = ring[i], q = ring[(i + 1) % 4];
+      quad([p[0], y0, p[1]], [q[0], y0, q[1]],
+           [q[0], y1, q[1]], [p[0], y1, p[1]], bs, ax, az);
+    }
+    quad([ring[0][0], y1, ring[0][1]], [ring[1][0], y1, ring[1][1]],
+         [ring[2][0], y1, ring[2][1]], [ring[3][0], y1, ring[3][1]],
+         bs, ax, az);
+  };
+
   for (const b of list) {
     const spec = palette[b.family] ?? { wall: '#e6dcc6', roof: '#7d8f5a' };
     const wallColour = new THREE.Color(spec.wall);
-    const roofColour = new THREE.Color(spec.roof);
+    const roofColour = new THREE.Color(
+      b.typology === 'apartments' ? (spec.flatRoof ?? spec.roof) : spec.roof);
+    if (grade) {
+      gradeColour(wallColour, grade);
+      gradeColour(roofColour, {
+        saturation: grade.saturation,
+        exposure: grade.roofExposure ?? grade.exposure,
+      });
+    }
     tint = wallColour;
-    const ring = b.ring;
+    const ring = rotateLongEdgeFirst(clockwise(b.ring));
     const y0 = b.base - 0.4;
     const ax = ring.reduce((s, p) => s + p[0], 0) / ring.length;
     const az = ring.reduce((s, p) => s + p[1], 0) / ring.length;
-    const eaves = y0 + (b.roof === 'flat' ? b.height : b.eaves);
+    typology = b.typology === 'apartments' ? 1 : 0;
+    variant = b.name === 'OUTPUT' ? 1 : b.name === 'ROUTER' ? 2 : 0;
+
+    // Solar car ports are slabs and posts, not short buildings. The top plane
+    // leans six degrees toward the measured south-east sun; the clear 3.2 m
+    // underside leaves the photographed cars and circulation legible.
+    if (b.family === 'canopy') {
+      const [p, q, r, s] = ring;
+      const length = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      const depth = Math.hypot(s[0] - p[0], s[1] - p[1]);
+      const along = [(q[0] - p[0]) / length, (q[1] - p[1]) / length];
+      const across = [(s[0] - p[0]) / depth, (s[1] - p[1]) / depth];
+      const sun = { x: Math.sin(THREE.MathUtils.degToRad(MEASURED_SUN.azimuth)),
+                    z: -Math.cos(THREE.MathUtils.degToRad(MEASURED_SUN.azimuth)) };
+      const sign = across[0] * sun.x + across[1] * sun.z >= 0 ? 1 : -1;
+      const downSlope = { x: across[0] * sign, z: across[1] * sign };
+      const tilt = Math.tan(THREE.MathUtils.degToRad(b.tiltDegrees ?? 6));
+      const topY = (point) => y0 + 0.4 + (b.underside ?? 3.2)
+        + (b.thickness ?? 0.3) + depth * 0.5 * tilt
+        - ((point[0] - ax) * downSlope.x
+           + (point[1] - az) * downSlope.z) * tilt;
+      const top = ring.map((point) => [point[0], topY(point), point[1]]);
+      const bottom = top.map((point) => [point[0], point[1] - (b.thickness ?? 0.3), point[2]]);
+      bayWidth = 1.7; wallHeight = b.underside ?? 3.2;
+      tint = roofColour; kind = 1;
+      quad(top[0], top[1], top[2], top[3], y0, ax, az,
+           [[0, 0], [length, 0], [length, depth], [0, depth]]);
+      tint = wallColour; kind = 0;
+      quad(bottom[3], bottom[2], bottom[1], bottom[0], y0, ax, az);
+      for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        quad(bottom[i], bottom[j], top[j], top[i], y0, ax, az);
+      }
+      const postCount = Math.max(2, Math.ceil(length / 9));
+      const generatedPosts = b.posts ?? Array.from(
+        { length: postCount }, (_, i) => {
+          const t = postCount === 1 ? 0.5 : 0.07 + i * 0.86 / (postCount - 1);
+          const c = mix2(mix2(p, q, t), mix2(s, r, t), 0.5);
+          return { x: c[0], z: c[1], ground: b.base };
+        });
+      for (const post of generatedPosts) {
+        const c = [post.x, post.z];
+        // Every foot comes from the terrain heightfield at this exact point;
+        // a shared minimum base is what made the old white needles pass up
+        // through GCHQ's roof on sloping/overlapping source polygons.
+        solidPost(c[0], c[1], post.ground,
+                  topY(c) - (b.thickness ?? 0.3),
+                  along, across, post.ground, ax, az);
+      }
+      continue;
+    }
+
+    const roofLevel = y0 + (b.roof === 'flat' ? b.height : b.eaves);
+    const parapet = b.roof === 'flat' ? 0.75 : 0;
+    const eaves = roofLevel + parapet;
 
     kind = 0;
     // `run` is metres travelled around the building, so a bay grid starts at a
@@ -248,7 +836,10 @@ function futureGeometry(list, palette) {
       // a 35.2 m wall gets twelve bays of 2.93 m, not eleven of 3.0 and a
       // sliver. Still metres — the wall's own bay width travels with it, so
       // the shader keeps working in real sizes rather than in fractions.
-      bayWidth = span / Math.max(1, Math.round(span / 3.0));
+      const longSide = i === 0 || i === 2;
+      bayWidth = b.typology === 'terrace' && longSide
+        ? span / Math.max(1, b.dwellings ?? 1)
+        : span / Math.max(1, Math.round(span / 3.0));
       wallHeight = wallTop;
       quad([x1, y0, z1], [x2, y0, z2], [x2, eaves, z2], [x1, eaves, z1],
            y0, ax, az,
@@ -260,31 +851,99 @@ function futureGeometry(list, palette) {
     kind = 1;
     if (b.roof === 'flat') {
       const [p, q, r, s] = ring;
+      const inner = offsetRing(ring, 0.28);
       // The roof is metres too, measured from the building's own corner, so a
       // PV array lands on a grid rather than on a stretched square.
       const ru = (t) => [Math.hypot(t[0] - p[0], t[1] - p[1]), 0];
       const rv = (t) => Math.hypot(t[0] - q[0], t[1] - q[1]);
-      quad([p[0], eaves, p[1]], [q[0], eaves, q[1]],
-           [r[0], eaves, r[1]], [s[0], eaves, s[1]], y0, ax, az,
+      quad([inner[0][0], roofLevel, inner[0][1]],
+           [inner[1][0], roofLevel, inner[1][1]],
+           [inner[2][0], roofLevel, inner[2][1]],
+           [inner[3][0], roofLevel, inner[3][1]], y0, ax, az,
            [[0, 0], [ru(q)[0], 0], [ru(q)[0], rv(r)], [0, rv(s)]]);
+      // A real 750 mm parapet: outer and inner faces with a 280 mm coping.
+      tint = wallColour; kind = 3;
+      for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        quad([ring[i][0], eaves, ring[i][1]],
+             [ring[j][0], eaves, ring[j][1]],
+             [inner[j][0], eaves, inner[j][1]],
+             [inner[i][0], eaves, inner[i][1]], y0, ax, az);
+        quad([inner[j][0], roofLevel, inner[j][1]],
+             [inner[i][0], roofLevel, inner[i][1]],
+             [inner[i][0], eaves, inner[i][1]],
+             [inner[j][0], eaves, inner[j][1]], y0, ax, az);
+      }
     } else {
       // A gable on a quad: the ridge runs between the midpoints of the two
       // ends, which for these blocks is the long axis by construction.
-      const [p, q, r, s] = ring;
+      const overhang = offsetRing(ring, b.family === 'glasshouse' ? -0.3 : -0.4);
+      const [p, q, r, s] = overhang;
       const mid = (a, c) => [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
       const m1 = mid(p, s);
       const m2 = mid(q, r);
-      const ridge = y0 + b.ridge;
-      quad([p[0], eaves, p[1]], [q[0], eaves, q[1]],
-           [m2[0], ridge, m2[1]], [m1[0], ridge, m1[1]], y0, ax, az);
-      quad([r[0], eaves, r[1]], [s[0], eaves, s[1]],
-           [m1[0], ridge, m1[1]], [m2[0], ridge, m2[1]], y0, ax, az);
-      // The two triangular ends.
-      for (const [a, c, m] of [[p, s, m1], [q, r, m2]]) {
-        push(a[0], eaves, a[1], y0, ax, az);
-        push(c[0], eaves, c[1], y0, ax, az);
-        push(m[0], ridge, m[1], y0, ax, az);
+      const dwellings = b.typology === 'terrace' ? Math.max(1, b.dwellings ?? 1) : 1;
+      const roofRun = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      const sun = new THREE.Vector2(
+        Math.sin(THREE.MathUtils.degToRad(MEASURED_SUN.azimuth)),
+        -Math.cos(THREE.MathUtils.degToRad(MEASURED_SUN.azimuth)));
+      const side1 = new THREE.Vector2(p[0] - m1[0], p[1] - m1[1]).normalize();
+      const solarFirst = side1.dot(sun) >= 0;
+      const ridgeAt = (i) => y0 + b.ridge
+        + (b.typology === 'terrace' ? ((Math.floor(i / 2) % 3) - 1) * 0.16 : 0);
+      for (let i = 0; i < dwellings; i++) {
+        const t0 = i / dwellings, t1 = (i + 1) / dwellings;
+        const a = mix2(p, q, t0), bb = mix2(p, q, t1);
+        const d = mix2(s, r, t0), c = mix2(s, r, t1);
+        const rm0 = mid(a, d), rm1 = mid(bb, c);
+        const rh = ridgeAt(i);
+        bayWidth = roofRun / dwellings;
+        kind = solarFirst ? 1 : 2;
+        quad([a[0], roofLevel, a[1]], [bb[0], roofLevel, bb[1]],
+             [rm1[0], rh, rm1[1]], [rm0[0], rh, rm0[1]], y0, ax, az,
+             [[i * bayWidth, 0], [(i + 1) * bayWidth, 0],
+              [(i + 1) * bayWidth, Math.hypot(rm1[0] - bb[0], rm1[1] - bb[1])],
+              [i * bayWidth, Math.hypot(rm0[0] - a[0], rm0[1] - a[1])]]);
+        kind = solarFirst ? 2 : 1;
+        quad([c[0], roofLevel, c[1]], [d[0], roofLevel, d[1]],
+             [rm0[0], rh, rm0[1]], [rm1[0], rh, rm1[1]], y0, ax, az,
+             [[(i + 1) * bayWidth, 0], [i * bayWidth, 0],
+              [i * bayWidth, Math.hypot(rm0[0] - d[0], rm0[1] - d[1])],
+              [(i + 1) * bayWidth, Math.hypot(rm1[0] - c[0], rm1[1] - c[1])]]);
+        // Roof-height changes form a slim party-wall break every two homes.
+        if (i && Math.abs(ridgeAt(i - 1) - rh) > 0.01) {
+          kind = 3; tint = wallColour;
+          const low = Math.min(ridgeAt(i - 1), rh), high = Math.max(ridgeAt(i - 1), rh);
+          for (const edge of [a, d]) {
+            push(edge[0], roofLevel, edge[1], y0, ax, az);
+            push(rm0[0], low, rm0[1], y0, ax, az);
+            push(rm0[0], high, rm0[1], y0, ax, az);
+            push(edge[0], roofLevel, edge[1], y0, ax, az);
+            push(rm0[0], high, rm0[1], y0, ax, az);
+            push(rm0[0], low, rm0[1], y0, ax, az);
+          }
+          tint = roofColour;
+        }
       }
+      // The two triangular ends.
+      tint = wallColour; kind = 0;
+      const endSpan = Math.hypot(ring[3][0] - ring[0][0],
+                                 ring[3][1] - ring[0][1]);
+      bayWidth = endSpan;
+      push(ring[0][0], roofLevel, ring[0][1], y0, ax, az,
+           0, roofLevel - y0);
+      push((ring[0][0] + ring[3][0]) / 2, ridgeAt(0),
+           (ring[0][1] + ring[3][1]) / 2, y0, ax, az,
+           endSpan / 2, ridgeAt(0) - y0);
+      push(ring[3][0], roofLevel, ring[3][1], y0, ax, az,
+           endSpan, roofLevel - y0);
+      push(ring[1][0], roofLevel, ring[1][1], y0, ax, az,
+           0, roofLevel - y0);
+      push(ring[2][0], roofLevel, ring[2][1], y0, ax, az,
+           endSpan, roofLevel - y0);
+      push((ring[1][0] + ring[2][0]) / 2, ridgeAt(dwellings - 1),
+           (ring[1][1] + ring[2][1]) / 2, y0, ax, az,
+           endSpan / 2, ridgeAt(dwellings - 1) - y0);
     }
   }
 
@@ -297,6 +956,8 @@ function futureGeometry(list, palette) {
   g.setAttribute('aSurface', new THREE.Float32BufferAttribute(surface, 1));
   g.setAttribute('aBay', new THREE.Float32BufferAttribute(bays, 1));
   g.setAttribute('aWallTop', new THREE.Float32BufferAttribute(walls, 1));
+  g.setAttribute('aTypology', new THREE.Float32BufferAttribute(typologies, 1));
+  g.setAttribute('aVariant', new THREE.Float32BufferAttribute(variants, 1));
   g.computeVertexNormals();
   return g;
 }
@@ -384,6 +1045,7 @@ function riseMaterial(family) {
   // and the buildings would arrive fully built with no front at all.
   const facade = facadeChunk(family);
   share(m, function future(shader) {
+    if (facade?.pv) shader.uniforms.uPvSunDirection = pvSunDirection;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
                `#include <common>\n${RISE}\n${NOISE}${facade ? `\n${facade.vertex}` : ''}`)
@@ -430,6 +1092,113 @@ export function riseMesh(geometry, family) {
   return mesh;
 }
 
+/** A compact row record becomes four instanced systems, not thousands of meshes. */
+function riseInstances(geometry, material, matrices, name) {
+  const visible = share(material, function riseInstance(shader) {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${GROW}\n${NOISE}`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>\n${GROW_BODY}`);
+  });
+  const mesh = new THREE.InstancedMesh(geometry, visible, matrices.length);
+  mesh.name = name;
+  matrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix));
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.frustumCulled = false;
+  mesh.customDepthMaterial = depthFor(
+    GROW, GROW_BODY, `future:agrivoltaic:depth:${name}`);
+  return mesh;
+}
+
+async function addAgrivoltaics(group, groundAt) {
+  if (!futureMeta.agrivoltaicFile) return null;
+  const rows = await (await fetch(url(futureMeta.agrivoltaicFile))).json();
+  const angle = THREE.MathUtils.degToRad(rows.bearingDegrees);
+  const along = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+  const panelMatrices = [];
+  const railMatrices = [];
+  const topEdgeMatrices = [];
+  const postMatrices = [];
+  const object = new THREE.Object3D();
+  const yaw = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 1, 0), -angle);
+  const matrix = (x, y, z, sx, sy, sz, slope = 0) => {
+    const lean = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 0, 1), slope);
+    object.position.set(x, y, z);
+    object.quaternion.multiplyQuaternions(yaw, lean);
+    object.scale.set(sx, sy, sz);
+    object.updateMatrix();
+    return object.matrix.clone();
+  };
+  for (const [x, z, length] of rows.segments) {
+    const x0 = x - along.x * length * 0.5;
+    const z0 = z - along.y * length * 0.5;
+    const x1 = x + along.x * length * 0.5;
+    const z1 = z + along.y * length * 0.5;
+    const y0 = groundAt(x0, z0), y1 = groundAt(x1, z1);
+    const ground = (y0 + y1) * 0.5;
+    const slope = Math.atan2(y1 - y0, length);
+    panelMatrices.push(matrix(x, ground + rows.panelBottomMetres, z,
+                              length, rows.panelHeightMetres,
+                              rows.panelDepthMetres, slope));
+    railMatrices.push(matrix(
+      x, ground + rows.panelBottomMetres - rows.railHeightMetres * 0.5, z,
+      length, rows.railHeightMetres, rows.railDepthMetres, slope));
+    topEdgeMatrices.push(matrix(
+      x, ground + rows.panelBottomMetres + rows.panelHeightMetres
+        - rows.railHeightMetres * 0.5, z,
+      length, rows.railHeightMetres, rows.railDepthMetres, slope));
+    const posts = Math.max(
+      2, Math.ceil(length / rows.postMaxCentresMetres) + 1,
+    );
+    for (let i = 0; i < posts; i++) {
+      const t = posts === 1 ? 0.0 : i / (posts - 1) - 0.5;
+      const px = x + along.x * length * t;
+      const pz = z + along.y * length * t;
+      postMatrices.push(matrix(px, groundAt(px, pz), pz,
+                               rows.postSectionMetres, rows.panelBottomMetres
+                               + rows.panelHeightMetres,
+                               rows.postSectionMetres));
+    }
+  }
+
+  const unit = () => {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    geometry.translate(0, 0.5, 0);
+    return geometry;
+  };
+  const pv = pvGlassMaterial(new THREE.MeshPhysicalMaterial({
+    color: 0x17242e,
+    roughness: 0.14,
+    metalness: 0.05,
+    clearcoat: 0.72,
+    clearcoatRoughness: 0.10,
+    envMapIntensity: 1.20,
+  }), 'agrivoltaic', rows);
+  const edge = new THREE.MeshStandardMaterial({
+    color: 0x665747, roughness: 0.52, metalness: 0.34,
+  });
+  const topEdge = new THREE.MeshStandardMaterial({
+    color: 0x91a4ab, roughness: 0.28, metalness: 0.42,
+  });
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x665747, roughness: 0.62, metalness: 0.28,
+  });
+  const pvGroup = new THREE.Group();
+  pvGroup.name = 'future:agrivoltaics';
+  pvGroup.add(
+    riseInstances(unit(), pv, panelMatrices, 'future:agrivoltaic:panels'),
+    riseInstances(unit(), edge, railMatrices, 'future:agrivoltaic:frames'),
+    riseInstances(unit(), topEdge, topEdgeMatrices,
+                  'future:agrivoltaic:top-edges'),
+    riseInstances(unit(), postMaterial, postMatrices, 'future:agrivoltaic:posts'),
+  );
+  group.add(pvGroup);
+  return pvGroup;
+}
+
 // --- new trees ---------------------------------------------------------------
 
 function growMaterial(base) {
@@ -452,7 +1221,12 @@ ${GROW_BODY}`);
  * geometry as the surveyed woods — a future that used different trees would
  * announce itself as a different dataset.
  */
-export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds }) {
+export async function addFuture(scene, renderer, {
+  groundAt, unitTree, treeKinds, directGround = false,
+}) {
+  pvSunDirection.value.copy(directGround
+    ? sunFrom(MEASURED_SUN.azimuth, MEASURED_SUN.elevation)
+    : SUN_DIRECTION);
   const group = new THREE.Group();
   group.name = 'future';
 
@@ -470,7 +1244,9 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   const blocks = new Map();
   for (const [family, list] of byFamily) {
     const mesh = new THREE.Mesh(
-      futureGeometry(list, futureMeta.families), riseMaterial(family));
+      futureGeometry(list, futureMeta.families,
+                     directGround ? KEYED_GRADE[family] : null),
+      riseMaterial(family));
     mesh.name = `future:blocks:${family}`;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -480,14 +1256,18 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     blocks.set(family, mesh);
   }
 
-  const trees = await loadFutureTrees(groundAt, unitTree, treeKinds);
+  await addAgrivoltaics(group, groundAt);
+
+  const trees = await loadFutureTrees(groundAt, unitTree, treeKinds,
+    directGround ? KEYED_GRADE.trees : null);
   if (trees) group.add(trees);
 
   scene.add(group);
 
-  // Today's terrain, whichever mesh carries the surveyed ground.
-  const ground = scene.children.find(
-    (o) => o.isMesh && o.material && o.material.map && o.material.vertexColors);
+  // The surveyed terrain is named at construction. In a keyed build it has no
+  // today texture yet: the future map is its direct material until the
+  // measured fallback is prepared, so discovery must not depend on `map`.
+  const ground = scene.getObjectByName('terrain');
   let futureTexture = null;
   if (ground) {
     futureTexture = await new THREE.TextureLoader().loadAsync(
@@ -496,6 +1276,14 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     futureTexture.anisotropy = renderer
       ? renderer.capabilities.getMaxAnisotropy() : 8;
     futureTexture.wrapS = futureTexture.wrapT = THREE.ClampToEdgeWrapping;
+    if (directGround) {
+      ground.material.map = futureTexture;
+      // The colour map supplies the colour directly. The surveyed vertex
+      // grade is prepared only with the measured fallback, while still hidden.
+      ground.material.vertexColors = false;
+      ground.material.roughness = 1;
+      ground.material.needsUpdate = true;
+    }
     // Both class maps, so the shader can answer the only question that
     // matters over photogrammetry: did 2045 CHANGE this square metre? Indices,
     // so nearest filtering and no colour management — a bilinear tap between
@@ -504,7 +1292,7 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
       loadClassTexture(),
       loadClassTexture(futureMeta.classFile),
     ]);
-    blendGround(ground, futureTexture, todayClasses, futureClasses);
+    blendGround(ground, futureTexture, todayClasses, futureClasses, directGround);
   }
 
   // GCHQ's roof is a change to a building that already exists, so it is a
@@ -514,6 +1302,9 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   const gchqRoof = scene.getObjectByName('gchq:roof');
   const gchqFrom = gchqRoof && gchqRoof.material.color.clone();
   const gchqTo = change && new THREE.Color(change.roof);
+  if (gchqTo && directGround) gradeColour(gchqTo, KEYED_GRADE.meadow);
+  const meadowMix = { value: 0 };
+  if (gchqRoof) meadowRoof(gchqRoof.material, meadowMix);
   // How far the front has passed the ring, 0 to 1. Kept because the tiles
   // layer needs it: over photogrammetry our GCHQ roof is the ONLY part of our
   // town still drawn, and it has to arrive with the meadow rather than sit
@@ -534,6 +1325,12 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
     get wave() { return wave; },
     /** Draw our ground only where 2045 changes it: see setGroundMasked. */
     setGroundMasked,
+    /** Use today's base map again once the measured fallback is ready. */
+    setGroundDirect,
+    /** Emit the exact authored-ground classification for probe_light.py. */
+    setGroundProbeMask,
+    /** Shared with the tile shader that clears photographed roof furniture. */
+    get gchqMeadowUniform() { return meadowMix; },
     /**
      * Over photogrammetry, our whole town is hidden except one thing: the
      * ring's 2045 meadow roof, laid over the real building. Overlaying our own
@@ -566,6 +1363,7 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
         // rather than when the toggle is pressed.
         meadowAt = THREE.MathUtils.clamp(
           (uniforms.uFront.value - 123 + SOFT) / (SOFT * 2), 0, 1);
+        meadowMix.value = meadowAt;
         gchqRoof.material.color.copy(gchqFrom).lerp(gchqTo, meadowAt);
         if (overTiles) {
           // Fading rather than switching: the real ring is underneath, and a
@@ -579,7 +1377,7 @@ export async function addFuture(scene, renderer, { groundAt, unitTree, treeKinds
   };
 }
 
-async function loadFutureTrees(groundAt, unitTree, treeKinds) {
+async function loadFutureTrees(groundAt, unitTree, treeKinds, grade = null) {
   const buf = await (await fetch(url(futureMeta.treeFile))).arrayBuffer();
   const view = new DataView(buf);
   const count = buf.byteLength / 8;
@@ -610,7 +1408,8 @@ async function loadFutureTrees(groundAt, unitTree, treeKinds) {
     const mesh = new THREE.InstancedMesh(
       unitTree(kind),
       growMaterial(new THREE.MeshStandardMaterial({
-        color: 0xffffff, roughness: 0.92, flatShading: true })),
+        color: 0xffffff, roughness: 0.94, vertexColors: true,
+        flatShading: true })),
       list.length);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -618,11 +1417,12 @@ async function loadFutureTrees(groundAt, unitTree, treeKinds) {
     list.forEach((t, i) => {
       pos.set(t.x, groundAt(t.x, t.z) - 0.2, t.z);
       q.setFromAxisAngle(axis, t.rot);
-      scale.set(t.h * t.spread, t.h, t.h * t.spread);
-      mesh.setMatrixAt(i, m.compose(pos, q, scale));
-      const v = 0.78 + ((t.rot * 97) % 1) * 0.44;
-      tint.setHex(kind.colour).multiplyScalar(v);
-      tint.offsetHSL(((t.spread * 31) % 1 - 0.5) * 0.06, 0, 0);
+      mesh.setMatrixAt(i, m.compose(pos, q, treeScale(t, scale, kind)));
+      treeTint(t, kind, tint);
+      // Baked into the instance colour, so unlike the ground it stays graded if
+      // the measured fallback takes over below the melt line. A small mismatch
+      // at low camera heights against our ungraded existing trees; noted.
+      if (grade) gradeColour(tint, grade);
       mesh.setColorAt(i, tint);
     });
     mesh.instanceMatrix.needsUpdate = true;

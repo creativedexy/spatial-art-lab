@@ -65,6 +65,8 @@ export function ncicGeometry(site, groundAt) {
   const surface = [];
   const bay = [];
   const wallTop = [];
+  const typology = [];
+  const variant = [];
 
   let kind = 0;
   let tint = new THREE.Color('#e8dfcb');
@@ -79,6 +81,8 @@ export function ncicGeometry(site, groundAt) {
     surface.push(kind);
     bay.push(3);
     wallTop.push(H);
+    typology.push(0);
+    variant.push(0);
   };
   const tri = (a, b, c, ta, tb, tc) => {
     push(a, ...ta); push(b, ...tb); push(c, ...tc);
@@ -127,6 +131,8 @@ export function ncicGeometry(site, groundAt) {
   g.setAttribute('aSurface', new THREE.Float32BufferAttribute(surface, 1));
   g.setAttribute('aBay', new THREE.Float32BufferAttribute(bay, 1));
   g.setAttribute('aWallTop', new THREE.Float32BufferAttribute(wallTop, 1));
+  g.setAttribute('aTypology', new THREE.Float32BufferAttribute(typology, 1));
+  g.setAttribute('aVariant', new THREE.Float32BufferAttribute(variant, 1));
   g.computeVertexNormals();
   g.userData.slope = slope;
   g.userData.yAt = yAt;

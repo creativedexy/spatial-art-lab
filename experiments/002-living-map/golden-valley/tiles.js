@@ -66,17 +66,66 @@ import * as THREE from 'three';
 export const ORIGIN = { lat: 51.900076, lon: -2.126397, geoid: 48.6 };
 
 /**
- * Below this height above the ground, photogrammetry stops being photoreal:
- * it melts, because a camera flying over a town never saw the underside of a
- * hedge or the face of a wall from six metres. Our measured map takes over.
+ * Photogrammetry melts up close: a camera flying over a town never saw the
+ * underside of that hedge or the face of that wall from six metres. Below the
+ * melt our measured map takes over, which is the one thing it is unambiguously
+ * better at.
  *
- * UNMEASURED. There is no key in this container, so this is the local
- * session's number to fill in — `scripts/probe_tiles.py` prints it. Until it
- * does, this is deliberately generous rather than a guess dressed as a
- * finding: the walk rides at 14 m and the low wide 003 camera was already
- * reported as melting, so nothing under 60 m is trusted.
+ * MEASURED, 12 Sep 2026, at GCHQ with a key, on a real GPU, by reading the
+ * screen-space error the visible set actually achieves once loading settles.
+ * Against an errorTarget of 6, the median in-frustum error, by camera height
+ * above the ground beneath it:
+ *
+ *     400 m  4.48      160 m  5.20       70 m   8.61      30 m  16.08
+ *     300 m  4.63      120 m  5.18       55 m  10.94      20 m  18.30
+ *     220 m  4.77       90 m  6.97       40 m  13.90      14 m  19.77
+ *
+ * Crossing the target between 120 m and 90 m: 105 m. Nothing finer exists to
+ * fix it either — Google's deepest tile here is depth 25, reached by about
+ * 70 m, so descending further only stretches the same texels. By eye, 220 m is
+ * a photograph, 90 m is soft but honest, 40 m is smeared facade.
+ *
+ * BUT HEIGHT IS THE WRONG QUESTION, and shipping it as one cost us the two
+ * closest places. Screen-space error is set by how far the camera is from what
+ * it is LOOKING AT, not by how far it is above the ground beneath it. A steep
+ * oblique sits low over one field while framing a building two hundred metres
+ * away, and those tiles are fine. Measured at the five place cameras:
+ *
+ *     place                    height   to subject   median error
+ *     gchq                       67 m       212 m       6.02
+ *     gchq-meadow                79 m       160 m       6.32
+ *     campus-courtyards         190 m       368 m       4.44
+ *     panels-and-glasshouses    210 m       524 m       4.92
+ *     cyber-central             175 m       967 m       4.13
+ *
+ * The two lowest cameras are at the target, not past it — yet a 105 m height
+ * gate switched both to our model, which is what "it regresses to the old map
+ * when you click into locations" was. So the gate is on the distance to what
+ * is at the centre of the frame instead.
+ *
+ * 140 m is where the tiles are given up once they are already on. The ladder's
+ * 105 m of height is 165 m of this distance, and that is the line for turning
+ * them ON (below, with the hysteresis) — so it takes the measured melt distance
+ * to commit to the photograph, and something clearly worse to abandon it.
+ * Between the two sit the closest cameras the piece actually uses: gchq-meadow
+ * at 184 m, which has to reach the real town from cold when you click into it.
  */
-export const MELT_METRES = 60;
+export const MELT_FOCUS_METRES = 140;
+
+/**
+ * And a floor, because distance alone is not enough in one direction.
+ *
+ * The walk rides at 14 m and an arrival stands at 1.6 m. Both look level, down
+ * a path or a street, so the ground at the centre of the frame is far away and
+ * passes the focus test comfortably — while the ground immediately under and
+ * around you, which is most of what you can see, is the melted part. Below
+ * this height the tiles are never trusted, whatever the camera is aimed at.
+ *
+ * 50 m: above the 40 m rung, which measured 13.90 and looks like smeared
+ * facade, and well under the 67 m of the lowest camera that must keep its
+ * photograph.
+ */
+export const MELT_FLOOR_METRES = 50;
 
 /**
  * Metres to lift the photogrammetry so its ground agrees with ours.
@@ -96,21 +145,62 @@ export const MELT_METRES = 60;
  * `theirs − ours` at each point, so what goes here is the NEGATIVE of its
  * median — if their ground reads 0.7 m above ours, the value is −0.7.
  *
- * UNMEASURED, and 0 until it is. The probe samples GCHQ, the campus field,
- * the brook and Princess Elizabeth Way; it will not be one number, so the
- * median goes here and the spread is a residual worth stating rather than
- * hiding. `?tileLift=-0.7` overrides it while that is being worked out.
+ * MEASURED, 12 Sep 2026, by dropping a ray onto the tiles at four named
+ * points and comparing with `heightAtLocal`. `theirs − ours`, in metres:
+ *
+ *     GCHQ, the ring          +0.312
+ *     the brook corridor      +0.214
+ *     the campus field        +0.065
+ *     Princess Elizabeth Way  −0.147
+ *
+ * Median +0.14, spread 0.46 m. So their ground sits a touch above ours and
+ * this is the negative of that median, as the sign note above requires.
+ *
+ * The spread is the residual worth stating: half a metre across two kilometres
+ * is the disagreement between a LiDAR datum and a photogrammetric one, and no
+ * single number removes it. It is well under the height of a kerb, and an
+ * order below the 4 m storey the scheme is built in, so the montage holds.
  */
-export const GROUND_OFFSET_METRES = 0;
+export const GROUND_OFFSET_METRES = -0.14;
 
 /**
- * The melt switch has two thresholds, not one. A single one at the altitude
- * where the tiles give up means a camera hovering there flips the entire town
- * between two versions of itself every few frames — and the walk, which rides
- * at a fixed height over rolling ground, would do exactly that all the way
- * along a route.
+ * Each threshold is really two. A single one at the point where the tiles give
+ * up means a camera sitting on the line flips the entire town between two
+ * versions of itself every few frames — and the walk, which rides at a fixed
+ * height over rolling ground, would do exactly that all the way along a route.
  */
-export const MELT_HYSTERESIS = 15;
+export const MELT_FOCUS_HYSTERESIS = 25;   // so the ON line is the measured 165
+export const MELT_FLOOR_HYSTERESIS = 15;
+
+// Start the measured fallback well before either warm-state melt line. These
+// are warning lines, not a second visibility gate: if a camera jumps straight
+// past them, main.js holds the tiles until the fallback promise has resolved.
+export const FALLBACK_FOCUS_METRES = 300;
+export const FALLBACK_FLOOR_METRES = 100;
+
+/**
+ * The melt gate itself, as a pure function so it can be tested without a key.
+ *
+ * `focusMetres` is the distance to the ground at the centre of the frame, and
+ * `aboveGround` the camera's height over the ground beneath it. Both lines
+ * widen while the tiles are off, so a camera resting on either cannot flip the
+ * town back and forth.
+ */
+export function wantsTiles(showing, aboveGround, focusMetres = Infinity) {
+  const focus = Number.isFinite(focusMetres) ? focusMetres : Infinity;
+  const focusLine = showing
+    ? MELT_FOCUS_METRES
+    : MELT_FOCUS_METRES + MELT_FOCUS_HYSTERESIS;
+  const floorLine = showing
+    ? MELT_FLOOR_METRES
+    : MELT_FLOOR_METRES + MELT_FLOOR_HYSTERESIS;
+  return focus >= focusLine && aboveGround >= floorLine;
+}
+
+export function needsFallback(aboveGround, focusMetres = Infinity) {
+  const focus = Number.isFinite(focusMetres) ? focusMetres : Infinity;
+  return focus < FALLBACK_FOCUS_METRES || aboveGround < FALLBACK_FLOOR_METRES;
+}
 
 const D = THREE.MathUtils.DEG2RAD;
 
@@ -166,6 +256,110 @@ export function intoLocalFrame(b, lift = 0) {
   return m;
 }
 
+const GCHQ_MASK_SIZE = 256;
+
+function pointInRing(x, z, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, zi] = ring[i];
+    const [xj, zj] = ring[j];
+    if ((zi > z) !== (zj > z)
+        && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Rasterise the surveyed ring, including its courtyard hole, once. */
+function makeGchqRoofMask(building) {
+  const outer = building.ring;
+  const holes = building.holes ?? [];
+  const pad = 1;
+  const xs = outer.map((p) => p[0]);
+  const zs = outer.map((p) => p[1]);
+  const minX = Math.min(...xs) - pad;
+  const maxX = Math.max(...xs) + pad;
+  const minZ = Math.min(...zs) - pad;
+  const maxZ = Math.max(...zs) + pad;
+  const data = new Uint8Array(GCHQ_MASK_SIZE * GCHQ_MASK_SIZE * 4);
+
+  for (let iz = 0; iz < GCHQ_MASK_SIZE; iz++) {
+    const z = minZ + (iz + 0.5) / GCHQ_MASK_SIZE * (maxZ - minZ);
+    for (let ix = 0; ix < GCHQ_MASK_SIZE; ix++) {
+      const x = minX + (ix + 0.5) / GCHQ_MASK_SIZE * (maxX - minX);
+      const p = (iz * GCHQ_MASK_SIZE + ix) * 4;
+      const inside = pointInRing(x, z, outer)
+        && !holes.some((hole) => pointInRing(x, z, hole));
+      if (inside) data[p] = data[p + 1] = data[p + 2] = 255;
+      data[p + 3] = 255;
+    }
+  }
+
+  const texture = new THREE.DataTexture(
+    data, GCHQ_MASK_SIZE, GCHQ_MASK_SIZE,
+    THREE.RGBAFormat, THREE.UnsignedByteType,
+  );
+  texture.name = 'gchq-roof-footprint';
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.minFilter = texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.flipY = false;
+  texture.needsUpdate = true;
+
+  return {
+    texture: { value: texture },
+    // xy is the lower corner; zw turns local metres into mask UVs.
+    bounds: {
+      value: new THREE.Vector4(
+        minX, minZ, 1 / (maxX - minX), 1 / (maxZ - minZ),
+      ),
+    },
+    // Match buildings.js flatRoof(): the surveyed building is sunk 0.4 m and
+    // its cap lifted 0.05 m, then start the cut 0.3 m below that meadow plane.
+    roofY: { value: building.base - 0.4 + building.height + 0.05 - 0.3 },
+  };
+}
+
+/** Remove today's photographed roof furniture only where meadow replaces it. */
+function clipTileMaterialAtGchq(material, clip, patched) {
+  if (patched.has(material)) return;
+  patched.add(material);
+  const previous = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.onBeforeCompile = (shader, ...args) => {
+    if (previous) previous.call(material, shader, ...args);
+    shader.uniforms.uGchqMeadowAt = clip.amount;
+    shader.uniforms.uGchqRoofMask = clip.texture;
+    shader.uniforms.uGchqRoofMaskBounds = clip.bounds;
+    shader.uniforms.uGchqRoofClipY = clip.roofY;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>',
+        '#include <common>\nvarying vec3 vGchqTileWorld;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vGchqTileWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform float uGchqMeadowAt;
+        uniform sampler2D uGchqRoofMask;
+        uniform vec4 uGchqRoofMaskBounds;
+        uniform float uGchqRoofClipY;
+        varying vec3 vGchqTileWorld;`)
+      .replace('#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        if (uGchqMeadowAt > 0.001 && vGchqTileWorld.y > uGchqRoofClipY) {
+          vec2 gchqUv = (vGchqTileWorld.xz - uGchqRoofMaskBounds.xy)
+                      * uGchqRoofMaskBounds.zw;
+          bool inGchqMask = all(greaterThanEqual(gchqUv, vec2(0.0)))
+                         && all(lessThanEqual(gchqUv, vec2(1.0)));
+          if (inGchqMask && texture2D(uGchqRoofMask, gchqUv).r > 0.5) discard;
+        }`);
+  };
+  // Every tile receives the same suffix, so equivalent glTF materials reuse
+  // shader programs instead of compiling one copy per decoded tile.
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : material.type}:gchq-roof-clip-v1`;
+  material.needsUpdate = true;
+}
+
 /**
  * Add the layer. Returns null when there is no key, which is not a failure:
  * it is the public map.
@@ -181,12 +375,22 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
   // Imported here and not at module scope, so a map with no key never fetches
   // the library at all. Phase 7 spent a day on the first load; this must not
   // put it back.
-  const [{ TilesRenderer }, { ReorientationPlugin }, { GoogleCloudAuthPlugin }] =
+  const [
+    { TilesRenderer }, { ReorientationPlugin }, { GoogleCloudAuthPlugin }, gchq,
+  ] =
     await Promise.all([
       import('3d-tiles-renderer/three'),
       import('3d-tiles-renderer/three/plugins'),
       import('3d-tiles-renderer/core/plugins'),
+      fetch(new URL('gv-gchq.json', import.meta.url))
+        .then((response) => response.json()).then((rows) => rows[0]),
     ]);
+
+  const clip = makeGchqRoofMask(gchq);
+  // This is the same uniform that colours and fades the meadow roof. At zero
+  // (today) the discard branch is closed, so the photograph is untouched.
+  clip.amount = future?.gchqMeadowUniform ?? { value: 0 };
+  const patchedTileMaterials = new WeakSet();
 
   const tiles = new TilesRenderer();
   tiles.registerPlugin(new GoogleCloudAuthPlugin({
@@ -223,6 +427,27 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
   let placed = false;
   let showing = false;
   let lastError = null;
+  // 3d-tiles-renderer 0.5.2 exposes each decoded glTF through load-model.
+  // Marking its meshes as receivers changes no tile data: it only lets the
+  // one world shadow map darken the photograph where our 2045 geometry stands
+  // between it and the measured sun. The tiles do not cast, because their
+  // photography already contains today's shadows and self-shadowing it again
+  // would print a second, mismatched sun into the image.
+  tiles.addEventListener('load-model', (event) => {
+    const model = event.scene ?? event.model ?? event.content;
+    model?.traverse?.((object) => {
+      if (!object.isMesh) return;
+      object.castShadow = false;
+      object.receiveShadow = true;
+      const materials = Array.isArray(object.material)
+        ? object.material : [object.material];
+      for (const material of materials) {
+        if (material) clipTileMaterialAtGchq(
+          material, clip, patchedTileMaterials,
+        );
+      }
+    });
+  });
   tiles.addEventListener('load-error', (e) => {
     lastError = e.error?.message ?? String(e.error);
   });
@@ -245,6 +470,10 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
     setShowing(on) {
       showing = !!on;
       frame.visible = showing;
+      if (!ours.trees) {
+        ours.trees = scene.getObjectByName('trees');
+        if (ours.trees) wasVisible.trees = ours.trees.visible;
+      }
       for (const [k, o] of Object.entries(ours)) {
         if (o) o.visible = showing ? false : wasVisible[k];
       }
@@ -268,19 +497,24 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
       if (future?.setGroundMasked) future.setGroundMasked(showing);
     },
 
-    /** Metres above the ground, below which the tiles are not trusted. */
-    meltsBelow: MELT_METRES,
+    /** Where the photogrammetry stops being trusted. */
+    meltsBelow: { focus: MELT_FOCUS_METRES, floor: MELT_FLOOR_METRES },
     /** How far the photogrammetry was lifted to meet our datum. */
     lift: offset,
 
     /**
-     * Should the tiles be on at this height above the ground? Two thresholds,
-     * so a camera sitting near the line does not flip the town on and off.
+     * Should the tiles be on for this camera?
+     *
+     * `focusMetres` is the distance to the ground at the centre of the frame —
+     * what you are looking at — and is the thing screen-space error actually
+     * depends on. `aboveGround` is only a floor, for the level views where the
+     * centre of the frame is far away and everything nearer is mush.
+     *
+     * Both thresholds widen while the tiles are off, so a camera resting on
+     * either line cannot flip the town back and forth.
      */
-    wantsShowing(aboveGround) {
-      return showing
-        ? aboveGround >= MELT_METRES
-        : aboveGround >= MELT_METRES + MELT_HYSTERESIS;
+    wantsShowing(aboveGround, focusMetres = Infinity) {
+      return wantsTiles(showing, aboveGround, focusMetres);
     },
 
     update() {

@@ -17,6 +17,7 @@
   "colourFile": "gv-2045-landcover.webp",
   "classFile": "gv-2045-landclass.webp",
   "buildingFile": "gv-2045-buildings.json",
+  "agrivoltaicFile": "gv-2045-agrivoltaics.json",
   "treeFile": "gv-2045-trees.bin",
   "classes": {
     "farmland": {
@@ -25,11 +26,11 @@
     },
     "meadow": {
       "index": 1,
-      "colour": "#93a566"
+      "colour": "#8fa064"
     },
     "grass": {
       "index": 2,
-      "colour": "#8ca767"
+      "colour": "#8fa064"
     },
     "pitch": {
       "index": 3,
@@ -61,7 +62,7 @@
     },
     "water": {
       "index": 10,
-      "colour": "#5c7f8c"
+      "colour": "#8ca5a9"
     },
     "path": {
       "index": 11,
@@ -87,31 +88,88 @@
       "index": 16,
       "colour": "#8d8676"
     },
-    "orchard": {
+    "future_meadow": {
       "index": 17,
-      "colour": "#6d8a4e"
+      "colour": "#8fa064"
+    },
+    "orchard": {
+      "index": 18,
+      "colour": "#7e925f"
     },
     "agrivoltaic": {
-      "index": 18,
-      "colour": "#7a8f63"
+      "index": 19,
+      "colour": "#7e925f"
     },
     "wetland": {
-      "index": 19,
-      "colour": "#86a06e"
+      "index": 20,
+      "colour": "#789067"
     }
   },
   "families": {
     "campus": {
-      "wall": "#e8dfcb",
-      "roof": "#93a469"
+      "wall": "#c49a65",
+      "roof": "#8d9552",
+      "glass": "#687a75",
+      "trim": "#665747",
+      "stone": "#c7b79a"
     },
     "homes": {
-      "wall": "#ece5d8",
-      "roof": "#8a9b60"
+      "wall": "#be986c",
+      "roof": "#17242e",
+      "flatRoof": "#8d9552",
+      "glass": "#687a75",
+      "trim": "#665747"
     },
     "glasshouse": {
-      "wall": "#cfd8d4",
-      "roof": "#dfe8e4"
+      "wall": "#687a75",
+      "roof": "#8ca5a9",
+      "frame": "#c7b79a"
+    },
+    "canopy": {
+      "wall": "#c7b79a",
+      "roof": "#17242e",
+      "frame": "#91a4ab"
+    }
+  },
+  "roofProgramme": {
+    "basis": "projected area of generated home and campus roofs",
+    "targetPercent": {
+      "PV": 40.0,
+      "meadow/green": 29.0,
+      "slate/tile": 22.0,
+      "walkable/terrace": 6.0,
+      "other": 3.0
+    },
+    "achievedPercent": {
+      "PV": 40.0,
+      "meadow/green": 29.0,
+      "slate/tile": 22.0,
+      "walkable/terrace": 6.0,
+      "other": 3.0
+    },
+    "areaM2": 60481,
+    "programmes": {
+      "home-pitch": {
+        "PV": 0.58216,
+        "meadow/green": 0.0,
+        "slate/tile": 0.408628,
+        "walkable/terrace": 0.009212,
+        "other": 0.0
+      },
+      "home-meadow": {
+        "PV": 0.0,
+        "meadow/green": 0.803089,
+        "slate/tile": 0.0,
+        "walkable/terrace": 0.026855,
+        "other": 0.170056
+      },
+      "campus-mixed": {
+        "PV": 0.25,
+        "meadow/green": 0.57,
+        "slate/tile": 0.0,
+        "walkable/terrace": 0.15,
+        "other": 0.03
+      }
     }
   },
   "roofChanges": [
@@ -130,14 +188,108 @@
     "campus": 9.1
   },
   "fields": 29,
-  "newBuildings": 93,
-  "floorHectares": 10.7,
-  "newTrees": 6234,
+  "newBuildings": 147,
+  "canopyCount": 180,
+  "canopyHectares": 2.78,
+  "gchqParkingHectares": 5.92,
+  "gchqEligibleParkingHectares": 5.08,
+  "gchqParkingCoveredHectares": 2.45,
+  "gchqParkingCoverageFraction": 0.414,
+  "gchqParkingLots": 35,
+  "gchqParkingLotsCovered": 35,
+  "dwellings": 1030,
+  "campusFloorM2": 105501,
+  "densityNote": "Scheme-true density: about 1,100 homes and at least 93,000 m2 of campus floor area.",
+  "floorHectares": 23.1,
+  "newTrees": 7806,
   "treeCounts": {
     "hedge": 3157,
     "standard": 166,
-    "orchard": 2595,
-    "street": 316
+    "orchard": 2892,
+    "woodland": 909,
+    "street": 682
+  },
+  "treeKinds": {
+    "0": "broad oak standard",
+    "1": "mixed woodland clump",
+    "2": "hedge",
+    "3": "orchard",
+    "4": "street lime"
+  },
+  "stormwaterChannels": {
+    "count": 18,
+    "lengthMetres": 2790,
+    "widthMetres": 3.5
+  },
+  "pondedReaches": [
+    {
+      "field": [
+        -398,
+        -106
+      ],
+      "lengthMetres": 34.0,
+      "widthMetres": 16.0
+    },
+    {
+      "field": [
+        -853,
+        -101
+      ],
+      "lengthMetres": 28.0,
+      "widthMetres": 13.0
+    },
+    {
+      "field": [
+        -656,
+        -588
+      ],
+      "lengthMetres": 22.0,
+      "widthMetres": 11.0
+    }
+  ],
+  "agrivoltaics": {
+    "file": "gv-2045-agrivoltaics.json",
+    "fields": 3,
+    "rows": 39,
+    "segments": 195,
+    "bearingDegrees": 22.0,
+    "rowCentresMetres": 11.0,
+    "panelHeightMetres": 2.0,
+    "panelBottomMetres": 0.35,
+    "panelDepthMetres": 0.08,
+    "moduleWidthMetres": 1.1,
+    "moduleJointWidthMetres": 0.03,
+    "postMaxCentresMetres": 3.6,
+    "postSectionMetres": 0.12,
+    "railHeightMetres": 0.06,
+    "railDepthMetres": 0.12,
+    "crop": {
+      "basis": "assumption for legible aggregate worked-crop rows; not individual plant spacing",
+      "rotation": "alternate neighbouring 11 m inter-row strips",
+      "rowSpacingMetres": [
+        0.6,
+        0.8
+      ],
+      "clearBandFromPanelMetres": 0.7,
+      "edgeBlendMetres": 0.25,
+      "rowContrast": 0.16,
+      "rowNormalStrength": 0.045,
+      "rotationExposure": [
+        0.88,
+        1.12
+      ],
+      "detailFadePixels": [
+        0.35,
+        0.85
+      ]
+    },
+    "grazingResponse": {
+      "fresnelExponent": 3.0,
+      "skyHemisphere": 0.1,
+      "skyRadiance": 0.45,
+      "roughness": 0.06,
+      "basis": "a vertical module is lit by half the sky hemisphere and mirrors it at grazing incidence; both are added after lighting, because M6b's dark body under a sun that is behind the panel is black however it is mixed"
+    }
   },
   "sources": [
     "Environment Agency LiDAR (OGL v3)",

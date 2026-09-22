@@ -77,8 +77,12 @@ def encode_heights(a, bits=BITS):
     hi = (z >> 8).astype(np.uint8).tobytes()
     # mtime=0 so the same heightmap always gives the same file: a build that
     # is not reproducible cannot be checked against itself, which is the whole
-    # of test_heightmap.py's last assertion.
-    return gzip.compress(lo + hi, 9, mtime=0), q
+    # of test_heightmap.py's last assertion. Python 3.13 changed gzip.compress
+    # to write 255 rather than zlib's platform OS byte; pin the shipped Unix
+    # value too so the wrapper stays reproducible across Python versions.
+    encoded = bytearray(gzip.compress(lo + hi, 9, mtime=0))
+    encoded[9] = 3
+    return bytes(encoded), q
 
 
 def decoded_error(a, q, bits=BITS):

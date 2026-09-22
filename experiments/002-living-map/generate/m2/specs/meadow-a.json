@@ -1,0 +1,148 @@
+{
+  "id": "meadow-a",
+  "approvedVariant": "adventurous",
+  "approvedOn": "2026-09-22",
+  "basis": "Visual estimate from meadow-a-adventurous.png against meadow-a-2045.png. GCHQ's surveyed ring and aperture in the plate remain authoritative.",
+  "roofMix": {
+    "PV": 24,
+    "meadow/green": 56,
+    "slate/tile": 12,
+    "walkable/terrace": 4,
+    "other": 4,
+    "reading": "The ring roof is the dominant wildflower meadow, crossed by concentric mown walks. PV belongs mainly to the car-park canopies. Existing suburban roofs remain conventional."
+  },
+  "wallMaterials": [
+    {
+      "material": "GCHQ dark reflective glazing",
+      "litHex": "#6C7D79",
+      "shadedHex": "#25383B",
+      "share": 39
+    },
+    {
+      "material": "warm vertical timber or bronze fins",
+      "litHex": "#B98B5B",
+      "shadedHex": "#674A34",
+      "share": 22
+    },
+    {
+      "material": "pale buff concrete or stone annexes",
+      "litHex": "#C8BBA2",
+      "shadedHex": "#817765",
+      "share": 29
+    },
+    {
+      "material": "dark plinth and metal trim",
+      "litHex": "#55534A",
+      "shadedHex": "#292B29",
+      "share": 10
+    }
+  ],
+  "windowRhythm": {
+    "storeyHeightMetres": "3.3 to 3.5 on the ring; annexes read as one tall industrial or civic storey",
+    "windowWidthMetres": "2.0 to 2.8 glazing between narrow vertical fins",
+    "windowProportion": "About 0.65 to 0.85 width:height for each ring bay, combined into a continuous glazed band",
+    "revealDepthImpression": "Medium to strong, 250 to 400 mm behind a vertical fin line and roof edge.",
+    "rhythm": "Fine regular vertical bays around the curve, with continuous dark glazing. Annex walls are deliberately calm and almost blank."
+  },
+  "groundCover": {
+    "lawn": 13,
+    "meadow": 27,
+    "hardLandscape": 45,
+    "hardLandscapeColour": "#77766F worn car-park asphalt and #A79A82 buff pedestrian routes",
+    "water": 2,
+    "gardens": 13,
+    "reading": "Parking remains extensive but is broken by solar canopies, tree avenues and planted edges. The central ring courtyard is dry planted ground, never water."
+  },
+  "water": {
+    "visible": "Only small drainage and planted retention glints at car-park edges. The ring courtyard is dry and the roof aperture is not a pond.",
+    "channelWidthMetres": "1.5 to 3 where visible",
+    "pondSize": "No major pond in the focal area",
+    "reflectivity": "Small silver-blue fragments, #8FA6AA lit and #314B4E shaded, with reeds and tree shadow dominating.",
+    "buildability": "Do not enlarge or relocate water to imitate the board's incidental glints. The meadow roof and canopies carry this view."
+  },
+  "trees": {
+    "forms": [
+      "broad mature oak",
+      "upright lime avenue",
+      "rounded car-park shade tree",
+      "mixed woodland belt",
+      "low wetland willow or alder"
+    ],
+    "heightMetres": {
+      "veteranOak": "17 to 23",
+      "avenueTree": "10 to 15",
+      "parkingTree": "8 to 13",
+      "woodlandMix": "11 to 19",
+      "wetlandTree": "7 to 12"
+    },
+    "canopyColour": {
+      "litHex": "#72863F",
+      "shadedHex": "#273E24"
+    },
+    "density": "Medium around the ring and high in perimeter belts. Car parks retain open visibility below the canopies.",
+    "arrangement": "Long avenues at car-park edges, irregular clumps around annexes, mature woodland beyond, and several trees in the dry inner courtyard."
+  },
+  "sustainableFeatures": {
+    "PVGlint": "Carport roofs are blue-black #17232C with restrained edge glints #8C9FA7. Cars and asphalt must remain visible between rows.",
+    "canopies": "The defining secondary feature. Slender paired or single rows over all usable GCHQ parking, about 3.2 to 3.8 m underside height and roughly 40 per cent parking coverage.",
+    "agrivoltaicRows": "Not part of this focal scene.",
+    "glasshouses": "Not visible and should not be added.",
+    "other": "The 3.6 ha ring is a botanically varied meadow with two concentric mown routes, radial access cuts, darker outer planting and tiny walkers."
+  },
+  "people/vehicles": {
+    "people": "Sparse walkers on roof paths, at the main entrance and between annexes. Roof figures are especially useful for proving the meadow is walkable.",
+    "vehicles": "Orderly parked cars remain visible beneath solar canopies, plus occasional moving vehicles on the perimeter road.",
+    "scopeNote": "The aerial plan currently omits people and cars. Existing photographed cars may remain under tile mode; new low-detail instances are optional only if canopy scale is unclear."
+  },
+  "gapsVsPlate": [
+    {
+      "rank": 1,
+      "difference": "The plate meadow roof is a flat olive disc with fine yellow speckle; the board has deep, varied late-summer planting, clear paths and a darker planted edge.",
+      "modellingAction": "Increase multi-scale meadow variation, strengthen both concentric mown paths and radial cuts, and separate the edge planting by value rather than extra geometry.",
+      "system": "GCHQ roof shader in future.js and roof grade",
+      "effort": "0.5 day"
+    },
+    {
+      "rank": 2,
+      "difference": "Plate carports are dark repeated slats that merge into the asphalt; board canopies read as elevated photovoltaic planes with cars, posts and gaps below.",
+      "modellingAction": "Lift canopy readability with a lighter underside, explicit slim posts, accurate terrain-following heights and restrained PV glint. Preserve about 41 per cent parking coverage rather than filling every gap.",
+      "system": "canopy geometry in scripts/golden_valley_2045.py and futureGeometry in future.js",
+      "effort": "0.5 to 1 day"
+    },
+    {
+      "rank": 3,
+      "difference": "The plate ring facade is a smooth blue-grey cylinder; the board has fine vertical timber or bronze bays and reflective glazing.",
+      "modellingAction": "Add a curved facade material with regular vertical fins, a dark glazed band and a grounded plinth while preserving the exact surveyed ring outline and aperture.",
+      "system": "GCHQ model and facade materials in models.js or a dedicated material branch",
+      "effort": "1 day"
+    },
+    {
+      "rank": 4,
+      "difference": "Plate trees are small angular repeats and leave the parking landscape exposed; board trees form mature avenues and dense perimeter masses.",
+      "modellingAction": "Use taller avenue trees at measured edges, broaden veteran crowns and deepen canopy shadow. Keep clear sightlines to the ring.",
+      "system": "tree geometry/grade in landcover.js and future.js, plus gv-2045 tree data",
+      "effort": "1 day, covered by in-flight M5"
+    },
+    {
+      "rank": 5,
+      "difference": "The plate asphalt and lawns are flat and dark; the board separates worn parking, buff walks, meadow verges and planted islands.",
+      "modellingAction": "Separate parking from pedestrian hardscape in colour and roughness, soften verge edges and add broad low-frequency wear variation.",
+      "system": "gv-2045 land-cover data and ground shader in future.js",
+      "effort": "0.5 day, covered by in-flight M5"
+    },
+    {
+      "rank": 6,
+      "difference": "The board has visible cars and roof walkers; the plate has almost no scale cues.",
+      "modellingAction": "Defer detailed people. If needed at M7, add a few roof sprites and ensure photographed or instanced cars remain readable under the canopies.",
+      "system": "optional life.js extension and tile visibility checks",
+      "effort": "0.5 day, outside current aerial scope"
+    },
+    {
+      "rank": 7,
+      "difference": "The board subtly changes the ring profile, annex forms and surrounding town despite the geometry lock.",
+      "modellingAction": "Do not reproduce those changes. The plate's GCHQ outline, aperture, annex positions and camera are the hard constraints.",
+      "system": "geometry lock, no model change",
+      "effort": "none"
+    }
+  ]
+}

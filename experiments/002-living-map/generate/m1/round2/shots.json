@@ -1,0 +1,202 @@
+[
+  {
+    "id": "homes-a",
+    "pillar": "homes streets",
+    "pos": [
+      -513.6,
+      157.2,
+      -451.6
+    ],
+    "above": 118,
+    "slant": 380,
+    "bearing": 40,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "homes-c",
+    "pillar": "homes streets",
+    "pos": [
+      -407.3,
+      147.9,
+      -465.1
+    ],
+    "above": 107,
+    "slant": 330,
+    "bearing": 20,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "campus-b",
+    "pillar": "campus around IDEA",
+    "pos": [
+      -401.3,
+      147.3,
+      -393.7
+    ],
+    "above": 106,
+    "slant": 360,
+    "bearing": 140,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "campus-a",
+    "pillar": "campus around IDEA",
+    "pos": [
+      -532.8,
+      146.8,
+      -35.5
+    ],
+    "above": 112,
+    "slant": 380,
+    "bearing": 75,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "meadow-a",
+    "pillar": "meadow roof + solar car parks",
+    "pos": [
+      -101.6,
+      165.7,
+      296.6
+    ],
+    "above": 128,
+    "slant": 340,
+    "bearing": 44,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "meadow-b",
+    "pillar": "meadow roof + solar car parks",
+    "pos": [
+      -119.1,
+      171.8,
+      -178.1
+    ],
+    "above": 128,
+    "slant": 360,
+    "bearing": 135,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "panels-b",
+    "pillar": "panels and glasshouses",
+    "pos": [
+      -345.7,
+      150.5,
+      -811.5
+    ],
+    "above": 105,
+    "slant": 380,
+    "bearing": 200,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "panels-c",
+    "pillar": "panels and glasshouses",
+    "pos": [
+      -192.3,
+      145.6,
+      -627.9
+    ],
+    "above": 99,
+    "slant": 340,
+    "bearing": 230,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "scheme-a",
+    "pillar": "the whole scheme to GCHQ",
+    "pos": [
+      -602.5,
+      174.9,
+      -53.2
+    ],
+    "above": 141,
+    "slant": 450,
+    "bearing": 55,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  },
+  {
+    "id": "scheme-b",
+    "pillar": "the whole scheme to GCHQ",
+    "pos": [
+      -726,
+      164.5,
+      -174.9
+    ],
+    "above": 132,
+    "slant": 450,
+    "bearing": 80,
+    "today": {
+      "showing": true,
+      "settled": true
+    },
+    "2045": {
+      "showing": true,
+      "settled": true
+    }
+  }
+]

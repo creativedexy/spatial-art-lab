@@ -1,0 +1,1066 @@
+Reading prompt from stdin...
+OpenAI Codex v0.153.4
+--------
+workdir: /Users/user/Projects/3D Design
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0ca5f-0649-7161-aa3c-b8cd7c7984fa
+--------
+user
+Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
+
+INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
+INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
+INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
+
+Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
+
+Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
+
+THIS PLACE: The courtyards (2045). Camera [-380, 225.664, 60] looking at [-190, 47.341, -200].
+What the place copy says, so the photograph must show it: Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.
+
+codex
+I’m using the image-generation skill because this is a geometry-preserving sketch-to-render task. I’ll first inspect the supplied files and locate the referenced target board, then generate, resize without cropping if needed, and visually check geometry before deciding on a correction pass.
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/user/.codex/skills/.system/imagegen/SKILL.md && printf '\\nFILES\\n' && find experiments/002-living-map/generate/m7 -maxdepth 3 -type f -print | sort && printf '\\nNEARBY BOARDS\\n' && find experiments/002-living-map/generate -type f \\( -iname '*board*' -o -iname '*target*' -o -iname '*precedent*' -o -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \\) | rg -i 'm7|board|target|precedent' | head -100" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for image generation, editing, and transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for or confirms the CLI/API/model path. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- For transparent images, ask built-in `image_gen` for a transparent background and preserve the generated alpha.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`; ask the user first unless they explicitly requested `gpt-image-1.5`.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including transparent-output requests; fallback CLI only if explicitly requested or confirmed.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, ask built-in `image_gen` for a transparent background and preserve the generated alpha channel.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Ask built-in `image_gen` for actual transparency.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+Style/medium: <photo/illustration/3D/etc>
+Composition/framing: <wide/close/top-down; placement>
+Lighting/mood: <lighting + mood>
+Color palette: <palette notes>
+Materials/textures: <surface details>
+Text (verbatim): "<exact text>"
+Constraints: <must keep/must avoid>
+Avoid: <negative constraints>
+```
+
+Notes:
+- `Asset type` and `Input images` are prompt scaffolding, not dedicated CLI flags.
+- `Scene/backdrop` refers to the visual setting. It is not the same as the fallback CLI `background` parameter, which controls output transparency behavior.
+- Fallback-only execution notes such as `Quality:`, `Input fidelity:`, masks, output format, and output paths belong in the CLI path only. Do not treat them as built-in `image_gen` tool arguments.
+
+Augmentation rules:
+- Keep it short.
+- Add only the details needed to improve the prompt materially.
+- For edits, explicitly list invariants (`change only X; keep Y unchanged`).
+- If any critical detail is missing and blocks success, ask a question; otherwise proceed.
+
+## Examples
+
+### Generation example (hero image)
+```text
+Use case: product-mockup
+Asset type: landing page hero
+Primary request: a minimal hero image of a ceramic coffee mug
+Style/medium: clean product photography
+Composition/framing: wide composition with usable negative space for page copy if needed
+Lighting/mood: soft studio lighting
+Constraints: no logos, no text, no watermark
+```
+
+### Edit example (invariants)
+```text
+Use case: precise-object-edit
+Asset type: product photo background replacement
+Primary request: replace only the background with a warm sunset gradient
+Constraints: change only the background; keep the product and its edges unchanged; no text; no watermark
+```
+
+## Prompting best practices
+- Structure prompt as scene/backdrop -> subject -> details -> constraints.
+- Include intended use (ad, UI mock, infographic) to set the mode and polish level.
+- Use camera/composition language for photorealism.
+- Only use SVG/vector stand-ins when the user explicitly asked for vector output or a non-image placeholder.
+- Quote exact text and specify typography + placement.
+- For tricky words, spell them letter-by-letter and require verbatim rendering.
+- For multi-image inputs, reference images by index and describe how they should be used.
+- For edits, repeat invariants every iteration to reduce drift.
+- Iterate with single-change follow-ups.
+- If the prompt is generic, add only the extra detail that will materially help.
+- If the prompt is already detailed, normalize it instead of expanding it.
+- For CLI fallback only, see `references/cli.md` and `references/image-api.md` for model, `quality`, `input_fidelity`, masks, output format, and output-path guidance.
+- For transparent images, ask built-in `image_gen` for actual transparency and preserve its alpha.
+
+More principles shared by both modes: `references/prompting.md`.
+Copy/paste specs shared by both modes: `references/sample-prompts.md`.
+
+
+FILES
+experiments/002-living-map/generate/m7/out/campus-courtyards.log
+experiments/002-living-map/generate/m7/out/gchq-meadow.log
+experiments/002-living-map/generate/m7/out/panels-and-glasshouses.log
+experiments/002-living-map/generate/m7/plates/campus-courtyards-2045.png
+experiments/002-living-map/generate/m7/plates/campus-courtyards-today.png
+experiments/002-living-map/generate/m7/plates/candidates.json
+experiments/002-living-map/generate/m7/plates/contact-sheet.jpg
+experiments/002-living-map/generate/m7/plates/cyber-central-2045.png
+experiments/002-living-map/generate/m7/plates/cyber-central-today.png
+experiments/002-living-map/generate/m7/plates/gchq-2045.png
+experiments/002-living-map/generate/m7/plates/gchq-meadow-2045.png
+experiments/002-living-map/generate/m7/plates/gchq-meadow-today.png
+experiments/002-living-map/generate/m7/plates/gchq-today.png
+experiments/002-living-map/generate/m7/plates/panels-and-glasshouses-2045.png
+experiments/002-living-map/generate/m7/plates/panels-and-glasshouses-today.png
+experiments/002-living-map/generate/m7/plates/shots.json
+experiments/002-living-map/generate/m7/prompts/campus-courtyards.md
+experiments/002-living-map/generate/m7/prompts/campus-courtyards.refs
+experiments/002-living-map/generate/m7/prompts/cyber-central.md
+experiments/002-living-map/generate/m7/prompts/cyber-central.refs
+experiments/002-living-map/generate/m7/prompts/gchq-meadow.md
+experiments/002-living-map/generate/m7/prompts/gchq-meadow.refs
+experiments/002-living-map/generate/m7/prompts/panels-and-glasshouses.md
+experiments/002-living-map/generate/m7/prompts/panels-and-glasshouses.refs
+experiments/002-living-map/generate/m7/run_replate.sh
+
+NEARBY BOARDS
+experiments/002-living-map/generate/m7/plates/gchq-2045.png
+experiments/002-living-map/generate/m7/plates/panels-and-glasshouses-today.png
+experiments/002-living-map/generate/m7/plates/cyber-central-2045.png
+experiments/002-living-map/generate/m7/plates/campus-courtyards-today.png
+experiments/002-living-map/generate/m7/plates/cyber-central-today.png
+experiments/002-living-map/generate/m7/plates/gchq-today.png
+experiments/002-living-map/generate/m7/plates/gchq-meadow-2045.png
+experiments/002-living-map/generate/m7/plates/panels-and-glasshouses-2045.png
+experiments/002-living-map/generate/m7/plates/contact-sheet.jpg
+experiments/002-living-map/generate/m7/plates/gchq-meadow-today.png
+experiments/002-living-map/generate/m7/plates/campus-courtyards-2045.png
+experiments/002-living-map/generate/m2/run_boards.sh
+experiments/002-living-map/generate/m2/boards/panels-b-adventurous.png
+experiments/002-living-map/generate/m2/boards/kit-sheet.png
+experiments/002-living-map/generate/m2/boards/meadow-a-measured.png
+experiments/002-living-map/generate/m2/boards/campus-b-adventurous.png
+experiments/002-living-map/generate/m2/boards/homes-a-measured.png
+experiments/002-living-map/generate/m2/boards/panels-b-measured.png
+experiments/002-living-map/generate/m2/boards/meadow-a-adventurous.png
+experiments/002-living-map/generate/m2/boards/scheme-a-adventurous.png
+experiments/002-living-map/generate/m2/boards/meadow-a-bold.png
+experiments/002-living-map/generate/m2/boards/homes-a-adventurous.png
+experiments/002-living-map/generate/m2/boards/homes-a-bold.png
+experiments/002-living-map/generate/m2/boards/campus-b-bold.png
+experiments/002-living-map/generate/m2/boards/scheme-a-bold.png
+experiments/002-living-map/generate/m2/boards/campus-b-measured.png
+experiments/002-living-map/generate/m2/boards/panels-b-bold.png
+experiments/002-living-map/generate/m2/boards/scheme-a-measured.png
+
+exec
+/bin/zsh -lc "sed -n '1,260p' /Users/user/.codex/skills/.system/imagegen/references/prompting.md && printf '\\n--- CAMPUS PROMPT ---\\n' && sed -n '1,260p' experiments/002-living-map/generate/m7/prompts/campus-courtyards.md && printf '\\n--- REFS ---\\n' && sed -n '1,120p' experiments/002-living-map/generate/m7/prompts/campus-courtyards.refs && printf '\\n--- LOG ---\\n' && sed -n '1,240p' experiments/002-living-map/generate/m7/out/campus-courtyards.log" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+# Prompting best practices
+
+These prompting principles are shared by both top-level modes of the skill:
+- built-in `image_gen` tool (default)
+- explicit `scripts/image_gen.py` CLI fallback
+
+This file is about prompt structure, specificity, and iteration. Fallback-only execution controls such as `quality`, `input_fidelity`, masks, output format, and output paths live in the fallback docs.
+
+## Contents
+- [Structure](#structure)
+- [Specificity policy](#specificity-policy)
+- [Allowed and disallowed augmentation](#allowed-and-disallowed-augmentation)
+- [Composition and layout](#composition-and-layout)
+- [Constraints and invariants](#constraints-and-invariants)
+- [Text in images](#text-in-images)
+- [Input images and references](#input-images-and-references)
+- [Iterate deliberately](#iterate-deliberately)
+- [Transparent images](#transparent-images)
+- [Fallback-only execution controls](#fallback-only-execution-controls)
+- [Use-case tips](#use-case-tips)
+- [Where to find copy/paste recipes](#where-to-find-copypaste-recipes)
+
+## Structure
+- Use a consistent order: scene/backdrop -> subject -> key details -> constraints -> output intent.
+- Include intended use (ad, UI mock, infographic) to set the level of polish.
+- For complex requests, use short labeled lines instead of one long paragraph.
+
+## Specificity policy
+- If the user prompt is already specific and detailed, normalize it into a clean spec without adding creative requirements.
+- If the prompt is generic, you may add tasteful detail when it materially improves the output.
+- Treat examples in `sample-prompts.md` as fully-authored recipes, not as the default amount of augmentation to add to every request.
+- For photorealism, include `photorealistic` directly when that is the goal, plus concrete real-world texture such as pores, wrinkles, fabric wear, material grain, or imperfect everyday detail.
+
+## Allowed and disallowed augmentation
+
+Allowed augmentation for generic prompts:
+- composition and framing cues
+- intended-use or polish-level hints
+- practical layout guidance
+- reasonable scene concreteness that supports the request
+
+Do not add:
+- extra characters, props, or objects that are not implied
+- brand palettes, slogans, or story beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Composition and layout
+- Specify framing and viewpoint (close-up, wide, top-down) and placement only when it materially helps.
+- Call out negative space if the asset clearly needs room for UI or copy.
+- Avoid making left/right layout decisions unless the user or surrounding layout supports them.
+- For people, describe body framing, scale, gaze, and object interactions when they matter (`full body visible`, `looking down at the book`, `hands naturally gripping the handlebars`).
+
+## Constraints and invariants
+- State what must not change (`keep background unchanged`).
+- For edits, say `change only X; keep Y unchanged` and repeat invariants on every iteration to reduce drift.
+
+## Text in images
+- Put literal text in quotes or ALL CAPS and specify typography (font style, size, color, placement).
+- Spell uncommon words letter-by-letter if accuracy matters.
+- For in-image copy, require verbatim rendering and no extra characters.
+- In CLI fallback mode, use `medium` or `high` quality for small text, dense infographics, data-heavy slides, multi-font layouts, legends, axes, and footnotes.
+
+## Input images and references
+- Do not assume that every provided image is an edit target.
+- Label each image by index and role (`Image 1: edit target`, `Image 2: style reference`).
+- If the user provides images for style, composition, or mood guidance and does not ask to modify them, treat the request as generation with references.
+- If the user asks to preserve an existing image while changing specific parts, treat the request as an edit.
+- For compositing, describe how the images interact (`place the subject from Image 2 into Image 1`).
+
+## Iterate deliberately
+- Start with a clean base prompt, then make small single-change edits.
+- Re-specify critical constraints when you iterate.
+- Prefer one targeted follow-up at a time over rewriting the whole prompt.
+
+## Transparent images
+- Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Fallback-only execution controls
+- `quality`, `input_fidelity`, explicit masks, output format, and output paths are fallback-only execution controls.
+- Do not assume they are built-in `image_gen` tool arguments.
+- If the user explicitly chooses CLI fallback, see `references/cli.md` and `references/image-api.md` for those controls.
+- In CLI fallback mode, `gpt-image-2` is the default. It supports `quality=low|medium|high|auto`; use `low` for fast drafts and thumbnails, and move to `medium`, `high`, or `auto` for final assets.
+- `gpt-image-2` always uses high fidelity for image inputs, so do not set `input_fidelity` with that model.
+- CLI `gpt-image-2` does not support `background=transparent`; ask before using `gpt-image-1.5` unless the user explicitly requested that model.
+- If the user asks for 4K-style output with `gpt-image-2`, use `3840x2160` for landscape or `2160x3840` for portrait.
+
+## Use-case tips
+Generate:
+- photorealistic-natural: Prompt as if a real photo is captured in the moment; use photography language (lens, lighting, framing); call for real texture; avoid over-stylized polish unless requested.
+- product-mockup: Describe the product/packaging and materials; ensure clean silhouette and label clarity; if in-image text is needed, require verbatim rendering and specify typography.
+- ui-mockup: Describe the target fidelity first (shippable mockup or low-fi wireframe), then focus on layout, hierarchy, and practical UI elements; avoid concept-art language.
+- infographic-diagram: Define the audience and layout flow; label parts explicitly; require verbatim text; prefer higher quality in CLI mode for dense labels.
+- logo-brand: Keep it simple and scalable; ask for a strong silhouette and balanced negative space; avoid decorative flourishes unless requested.
+- ads-marketing: Write like a creative brief; include brand positioning, audience, desired vibe, scene, and exact tagline if text must appear.
+- productivity-visual: Name the exact artifact (slide, chart, workflow diagram), define the canvas and hierarchy, provide real labels/data, and ask for readable typography and polished spacing.
+- scientific-educational: Define audience, lesson objective, required labels, scientific constraints, arrows, and scan-friendly whitespace.
+- illustration-story: Define panels or scene beats; keep each action concrete.
+- stylized-concept: Specify style cues, material finish, and rendering approach (3D, painterly, clay) without inventing new story elements.
+- historical-scene: State the location/date and required period accuracy; constrain clothing, props, and environment to match the era.
+
+Edit:
+- text-localization: Change only the text; preserve layout, typography, spacing, and hierarchy; no extra words or reflow unless needed.
+- identity-preserve: Lock identity (face, body, pose, hair, expression); change only the specified elements; match lighting and shadows.
+- precise-object-edit: Specify exactly what to remove/replace; preserve surrounding texture and lighting; keep everything else unchanged.
+- lighting-weather: Change only environmental conditions (light, shadows, atmosphere, precipitation); keep geometry, framing, and subject identity.
+- background-extraction: Request a clean cutout on a genuinely transparent background; preserve fine edges and label text; no halos or restyling.
+- style-transfer: Specify style cues to preserve (palette, texture, brushwork) and what must change; add `no extra elements` to prevent drift.
+- compositing: Reference inputs by index; specify what moves where; match lighting, perspective, and scale; keep the base framing unchanged.
+- sketch-to-render: Preserve layout, proportions, and perspective; choose materials and lighting that support the supplied sketch without adding new elements.
+
+## Where to find copy/paste recipes
+For copy/paste prompt specs (examples only), see `references/sample-prompts.md`. This file focuses on principles, specificity, and iteration patterns.
+
+--- CAMPUS PROMPT ---
+Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
+
+INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
+INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
+INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
+
+Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
+
+Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
+
+THIS PLACE: The courtyards (2045). Camera [-380, 225.664, 60] looking at [-190, 47.341, -200].
+What the place copy says, so the photograph must show it: Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.
+
+--- REFS ---
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/plates/campus-courtyards-2045.png
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/golden-valley-2045/out/b-the-campus-photo.png
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m2/boards/campus-b-adventurous.png
+--- LOG ---
+Reading prompt from stdin...
+OpenAI Codex v0.153.4
+--------
+workdir: /Users/user/Projects/3D Design
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0ca5f-0649-7161-aa3c-b8cd7c7984fa
+--------
+user
+Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
+
+INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
+INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
+INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
+
+Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
+
+Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
+
+THIS PLACE: The courtyards (2045). Camera [-380, 225.664, 60] looking at [-190, 47.341, -200].
+What the place copy says, so the photograph must show it: Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.
+
+codex
+I’m using the image-generation skill because this is a geometry-preserving sketch-to-render task. I’ll first inspect the supplied files and locate the referenced target board, then generate, resize without cropping if needed, and visually check geometry before deciding on a correction pass.
+exec
+/bin/zsh -lc "sed -n '1,240p' /Users/user/.codex/skills/.system/imagegen/SKILL.md && printf '\\nFILES\\n' && find experiments/002-living-map/generate/m7 -maxdepth 3 -type f -print | sort && printf '\\nNEARBY BOARDS\\n' && find experiments/002-living-map/generate -type f \\( -iname '*board*' -o -iname '*target*' -o -iname '*precedent*' -o -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \\) | rg -i 'm7|board|target|precedent' | head -100" in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+---
+name: "imagegen"
+description: "Generate or edit raster images when the task benefits from AI-created bitmap visuals such as photos, illustrations, textures, sprites, mockups, or transparent-background cutouts. Use when Codex should create a brand-new image, transform an existing image, or derive visual variants from references, and the output should be a bitmap asset rather than repo-native code or vector. Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas."
+---
+
+# Image Generation Skill
+
+Generates or edits images for the current project (for example website assets, game assets, UI mockups, product mockups, wireframes, logo design, photorealistic images, or infographics).
+
+## Top-level modes and rules
+
+This skill has exactly two top-level modes:
+
+- **Default built-in tool mode (preferred):** built-in `image_gen` tool for image generation, editing, and transparent-image requests. Does not require `OPENAI_API_KEY`.
+- **Fallback CLI mode:** `scripts/image_gen.py` CLI. Use when the user explicitly asks for or confirms the CLI/API/model path. Requires `OPENAI_API_KEY`.
+
+Within CLI fallback, the CLI exposes three subcommands:
+
+- `generate`
+- `edit`
+- `generate-batch`
+
+Rules:
+- Use the built-in `image_gen` tool by default for normal image generation and editing requests.
+- Do not switch to CLI fallback for ordinary quality, size, or file-path control.
+- For transparent images, ask built-in `image_gen` for a transparent background and preserve the generated alpha.
+- Never silently switch from built-in `image_gen` or CLI `gpt-image-2` to CLI `gpt-image-1.5`; ask the user first unless they explicitly requested `gpt-image-1.5`.
+- The word `batch` by itself does not mean CLI fallback. If the user asks for many assets or says to batch-generate assets without explicitly asking for CLI/API/model controls, stay on the built-in path and issue one built-in call per requested asset or variant.
+- If the built-in tool fails or is unavailable, tell the user the CLI fallback exists and that it requires `OPENAI_API_KEY`. Proceed only if the user explicitly asks for that fallback.
+- If the user explicitly asks for CLI mode, use the bundled `scripts/image_gen.py` workflow. Do not create one-off SDK runners.
+- Never modify `scripts/image_gen.py`. If something is missing, ask the user before doing anything else.
+
+Built-in save-path policy:
+- In built-in tool mode, Codex saves generated images under `$CODEX_HOME/*` by default.
+- Do not describe or rely on OS temp as the default built-in destination.
+- Do not describe or rely on a destination-path argument (if any) on the built-in `image_gen` tool. If a specific location is needed, generate first and then move or copy the selected output from `$CODEX_HOME/generated_images/...`.
+- Save-path precedence in built-in mode:
+  1. If the user names a destination, move or copy the selected output there.
+  2. If the image is meant for the current project, move or copy the final selected image into the workspace before finishing.
+  3. If the image is only for preview or brainstorming, render it inline; the underlying file can remain at the default `$CODEX_HOME/*` path.
+- Never leave a project-referenced asset only at the default `$CODEX_HOME/*` path.
+- Do not overwrite an existing asset unless the user explicitly asked for replacement; otherwise create a sibling versioned filename such as `hero-v2.png` or `item-icon-edited.png`.
+
+Shared prompt guidance for both modes lives in `references/prompting.md` and `references/sample-prompts.md`.
+
+Fallback-only docs/resources for CLI mode:
+- `references/cli.md`
+- `references/image-api.md`
+- `references/codex-network.md`
+- `scripts/image_gen.py`
+
+## When to use
+- Generate a new image (concept art, product shot, cover, website hero)
+- Generate a new image using one or more reference images for style, composition, or mood
+- Edit an existing image (inpainting, lighting or weather transformations, background replacement, object removal, compositing, transparent background)
+- Produce many assets or variants for one task
+
+## When not to use
+- Extending or matching an existing SVG/vector icon set, logo system, or illustration library inside the repo
+- Creating simple shapes, diagrams, wireframes, or icons that are better produced directly in SVG, HTML/CSS, or canvas
+- Making a small project-local asset edit when the source file already exists in an editable native format
+- Any task where the user clearly wants deterministic code-native output instead of a generated bitmap
+
+## Decision tree
+
+Think about two separate questions:
+
+1. **Intent:** is this a new image or an edit of an existing image?
+2. **Execution strategy:** is this one asset or many assets/variants?
+
+Intent:
+- If the user wants to modify an existing image while preserving parts of it, treat the request as **edit**.
+- If the user provides images only as references for style, composition, mood, or subject guidance, treat the request as **generate**.
+- If the user provides no images, treat the request as **generate**.
+
+Built-in edit semantics:
+- Built-in edit mode is for images already visible in the conversation context, such as attached images or images generated earlier in the thread.
+- If the user wants to edit a local image file with the built-in tool, first load it with built-in `view_image` tool so the image is visible in the conversation context, then proceed with the built-in edit flow.
+- Do not promise arbitrary filesystem-path editing through the built-in tool.
+- If a local file still needs direct file-path control, masks, or other explicit CLI-only parameters, use the explicit CLI fallback only when the user asks for it.
+- For edits, preserve invariants aggressively and save non-destructively by default.
+
+Execution strategy:
+- In the built-in default path, produce many assets or variants by issuing one `image_gen` call per requested asset or variant.
+- In the CLI fallback path, use the CLI `generate-batch` subcommand only when the user explicitly chose CLI mode and needs many prompts/assets.
+- For many distinct assets, do not use `n` as a substitute for separate prompts. `n` is for variants of one prompt; distinct assets need distinct built-in calls or distinct CLI `generate-batch` jobs.
+
+Assume the user wants a new image unless they clearly ask to change an existing one.
+
+## Workflow
+1. Decide the top-level mode: built-in by default, including transparent-output requests; fallback CLI only if explicitly requested or confirmed.
+2. Decide the intent: `generate` or `edit`.
+3. Decide whether the output is preview-only or meant to be consumed by the current project.
+4. Decide the execution strategy: single asset vs repeated built-in calls vs CLI `generate-batch`.
+5. Collect inputs up front: prompt(s), exact text (verbatim), constraints/avoid list, and any input images.
+6. For every input image, label its role explicitly:
+   - reference image
+   - edit target
+   - supporting insert/style/compositing input
+7. If the edit target is only on the local filesystem and you are staying on the built-in path, inspect it with `view_image` first so the image is available in conversation context.
+8. If the user asked for a photo, illustration, sprite, product image, banner, or other explicitly raster-style asset, use `image_gen` rather than substituting SVG/HTML/CSS placeholders. If the request is for an icon, logo, or UI graphic that should match existing repo-native SVG/vector/code assets, prefer editing those directly instead.
+9. Augment the prompt based on specificity:
+   - If the user's prompt is already specific and detailed, normalize it into a clear spec without adding creative requirements.
+   - If the user's prompt is generic, add tasteful augmentation only when it materially improves output quality.
+10. Use the built-in `image_gen` tool by default.
+11. For transparent-output requests, ask built-in `image_gen` for a transparent background and preserve the generated alpha channel.
+12. Inspect outputs and validate: subject, style, composition, text accuracy, and invariants/avoid items.
+13. Iterate with a single targeted change, then re-check.
+14. For preview-only work, render the image inline; the underlying file may remain at the default `$CODEX_HOME/generated_images/...` path.
+15. For project-bound work, move or copy the selected artifact into the workspace and update any consuming code or references. Never leave a project-referenced asset only at the default `$CODEX_HOME/generated_images/...` path.
+16. For batches or multi-asset requests, persist every requested deliverable final in the workspace unless the user explicitly asked to keep outputs preview-only. Discarded variants do not need to be kept unless requested.
+17. If the user explicitly chooses or confirms the CLI fallback, then use the fallback-only docs for model, quality, size, `input_fidelity`, masks, output format, output paths, and network setup.
+18. Always report the final saved path(s) for any workspace-bound asset(s), plus the final prompt or prompt set and whether the built-in tool or fallback CLI mode was used.
+
+## Transparent image requests
+
+Ask built-in `image_gen` for a genuinely transparent background and preserve its alpha.
+
+## Prompt augmentation
+
+Reformat user prompts into a structured, production-oriented spec. Make the user's goal clearer and more actionable, but do not blindly add detail.
+
+Treat this as prompt-shaping guidance, not a closed schema. Use only the lines that help, and add a short extra labeled line when it materially improves clarity.
+
+### Specificity policy
+
+Use the user's prompt specificity to decide how much augmentation is appropriate:
+
+- If the prompt is already specific and detailed, preserve that specificity and only normalize/structure it.
+- If the prompt is generic, you may add tasteful augmentation when it will materially improve the result.
+
+Allowed augmentations:
+- composition or framing hints
+- polish level or intended-use hints
+- practical layout guidance
+- reasonable scene concreteness that supports the stated request
+
+Not allowed augmentations:
+- extra characters or objects that are not implied by the request
+- brand names, slogans, palettes, or narrative beats that are not implied
+- arbitrary side-specific placement unless the surrounding layout supports it
+
+## Use-case taxonomy (exact slugs)
+
+Classify each request into one of these buckets and keep the slug consistent across prompts and references.
+
+Generate:
+- photorealistic-natural — candid/editorial lifestyle scenes with real texture and natural lighting.
+- product-mockup — product/packaging shots, catalog imagery, merch concepts.
+- ui-mockup — app/web interface mockups and wireframes; specify the desired fidelity.
+- infographic-diagram — diagrams/infographics with structured layout and text.
+- scientific-educational — classroom explainers, scientific diagrams, and learning visuals with required labels and accuracy constraints.
+- ads-marketing — campaign concepts and ad creatives with audience, brand position, scene, and exact tagline/copy.
+- productivity-visual — slide, chart, workflow, and data-heavy business visuals.
+- logo-brand — logo/mark exploration, vector-friendly.
+- illustration-story — comics, children’s book art, narrative scenes.
+- stylized-concept — style-driven concept art, 3D/stylized renders.
+- historical-scene — period-accurate/world-knowledge scenes.
+
+Edit:
+- text-localization — translate/replace in-image text, preserve layout.
+- identity-preserve — try-on, person-in-scene; lock face/body/pose.
+- precise-object-edit — remove/replace a specific element (including interior swaps).
+- lighting-weather — time-of-day/season/atmosphere changes only.
+- background-extraction — transparent background / clean cutout. Ask built-in `image_gen` for actual transparency.
+- style-transfer — apply reference style while changing subject/scene.
+- compositing — multi-image insert/merge with matched lighting/perspective.
+- sketch-to-render — drawing/line art to photoreal render.
+
+## Shared prompt schema
+
+Use the following labeled spec as shared prompt scaffolding for both top-level modes:
+
+```text
+Use case: <taxonomy slug>
+Asset type: <where the asset will be used>
+Primary request: <user's main prompt>
+Input images: <Image 1: role; Image 2: role> (optional)
+Scene/backdrop: <environment>
+Subject: <main subject>
+Style/medium: <photo/illustration/3D/etc>
+Composition/framing: <wide/close/top-down; placement>
+Lighting/mood: <lighting + mood>
+Color palette: <palette notes>
+Materials/textures: <surface details>
+Text (verbatim): "<exact text>"
+Constraints: <must keep/must avoid>
+Avoid: <negative constraints>
+```
+
+Notes:
+- `Asset type` and `Input images` are prompt scaffolding, not dedicated CLI flags.
+- `Scene/backdrop` refers to the visual setting. It is not the same as the fallback CLI `background` parameter, which controls output transparency behavior.
+- Fallback-only execution notes such as `Quality:`, `Input fidelity:`, masks, output format, and output paths belong in the CLI path only. Do not treat them as built-in `image_gen` tool arguments.
+
+Augmentation rules:
+- Keep it short.
+- Add only the details needed to improve the prompt materially.
+- For edits, explicitly list invariants (`change only X; keep Y unchanged`).
+- If any critical detail is missing and blocks success, ask a question; otherwise proceed.
+
+## Examples
+
+### Generation example (hero image)
+```text
+Use case: product-mockup
+Asset type: landing page hero
+Primary request: a minimal hero image of a ceramic coffee mug
+Style/medium: clean product photography
+
+codex
+The adventurous board reinforces a timber-framed, planted-campus character with wetland edges and roof PV, while the model plate is much stricter and more orthogonal. I’m locking the first pass to the model’s full-frame camera and silhouettes, using the other two images only for surface treatment and photographic finish.
+codex
+The first generation is still rendering. Once it returns, I’ll compare the campus block envelopes, left-side landscape bands, right-side roads, and distant housing against the geometry plate rather than judging only overall plausibility.
+codex
+The first pass is unusually close on the three main courtyard envelopes, their spacing, the right-hand road system, the residential background, and the broad orchard/woodland structure. I can see local interpretation drift—especially added stream detail in the lower-left wet meadow and some softened/merged distant solar and housing detail—but a second generative pass would risk degrading the strong building alignment, so I’m keeping this pass and recording those limitations honestly.
+exec
+/bin/zsh -lc 'mkdir -p experiments/002-living-map/generate/m7/out && sips -g pixelWidth -g pixelHeight /Users/user/.codex/generated_images/01a0ca5f-0649-7161-aa3c-b8cd7c7984fa/exec-0e73616e-a69a-43b4-811a-c24c94977d9f.png && cp /Users/user/.codex/generated_images/01a0ca5f-0649-7161-aa3c-b8cd7c7984fa/exec-0e73616e-a69a-43b4-811a-c24c94977d9f.png /private/tmp/campus-courtyards-source.png && sips --resampleHeightWidth 720 1280 /private/tmp/campus-courtyards-source.png --out experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png >/dev/null && sips -g pixelWidth -g pixelHeight experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png && file experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png' in /Users/user/Projects/3D Design
+ succeeded in 148ms:
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png
+  pixelWidth: 1280
+  pixelHeight: 720
+experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png: PNG image data, 1280 x 720, 8-bit/color RGB, non-interlaced
+
+apply patch
+patch: completed
+/Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+diff --git a/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8b875c245c5aa5554469094a3680ad6d39ddd309
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+@@ -0,0 +1,73 @@
++# Campus courtyards photograph — generation notes
++
++## Method
++
++- Tool: built-in `image_gen`
++- Mode: `sketch-to-render`
++- Passes used: 1 generation, 0 correction passes
++- Generated source: 1672 × 941 PNG (16:9)
++- Delivery: whole-frame resample to 1280 × 720; no crop, extension, or reframing
++
++## User prompt (verbatim)
++
++```text
++Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
++
++INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
++INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
++INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
++
++Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
++
++Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
++
++THIS PLACE: The courtyards (2045). Camera [-380, 225.664, 60] looking at [-190, 47.341, -200].
++What the place copy says, so the photograph must show it: Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.
++```
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved place photograph, 1280×720 landscape master
++Primary request: REMAKE the approved place photograph as a highly realistic aerial architectural photograph of “The courtyards (2045),” while matching the current 3D model geometry exactly.
++Input images:
++- Image 1 is the absolute geometry master and camera master. Preserve the entire frame, viewpoint, perspective, horizon, and every visible building, street, path, tree belt, orchard row, solar row, canopy, field boundary, open space, and landform in its exact position, footprint, orientation, and height, within about 15 pixels at 1280×720. Follow Image 1 for all spatial content. Do not import or retain any layout from Image 2 or Image 3.
++- Image 2 is an OLD approved photograph. Use it ONLY for photographic realism, late-summer afternoon sunlight, colour, haze, atmospheric depth, natural texture, and level of detail. Its spatial layout is obsolete and must not influence geometry.
++- Image 3 is the approved adventurous target board. Use it ONLY for materials and architectural character: buff brick, honey-coloured timber, clear PV glass, biodiverse meadow roofs, rich planting, glazed active ground floors.
++Scene/backdrop: The current 2045 campus and surrounding district exactly as Image 1. The dominant foreground and middle-ground campus buildings are perimeter courtyard blocks rather than freestanding office slabs in car parks. Designed ground between them includes sett plazas cutting through wildflower planting, retained mature oaks, and small-scale seating beside glazed ground floors. On the left, the brook is open rather than culverted and occupies a broad 15.5-hectare wet-meadow corridor. Keep the extensive terraces and timber housing blocks, orchards, woodland belts, vertical bifacial solar rows over pasture, solar canopies over GCHQ car parks, roads and existing suburban fabric wherever Image 1 places them.
++Subject: Straight down onto the campus from camera [-380, 225.664, 60] looking at [-190, 47.341, -200]. Every visible building follows the same siting logic: campus within reach of GCHQ and a road.
++Style/medium: convincingly real, high-resolution professional aerial place photography; built-precedent credibility inspired by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, and Next2Sun. Natural construction detail and mild real-world imperfection. Never an illustration and never a glossy corporate-office-park visualisation.
++Composition/framing: exact full-frame composition of Image 1; no crop, no warp, no reframing, no camera move. Maintain all massing silhouettes and occlusion relationships.
++Lighting/mood: late-summer afternoon, exactly the sun direction and warm natural light character of Image 2, with believable shadows, haze and aerial atmospheric perspective.
++Color palette: warm buff masonry, honey timber, muted meadow greens, dark blue-grey PV glass, natural asphalt and stone; restrained photographic saturation.
++Materials/textures: buff brick and honey timber façades with plausible bays and windows; meadow roofs and PV where indicated; realistic wet grass, reeds, orchard crowns, retained oaks, hedgerows, water, sett paving and glazing.
++Text: none.
++Constraints: Geometry is more important than beautification. Retain Image 1’s count and exact arrangement of courtyard blocks, housing, streets, vegetation belts, orchards, solar infrastructure and field edges. People and vehicles only at true aerial scale. Preserve every feature visible in Image 1 even if Image 2 differs. Whole frame must remain landscape 16:9 for a final 1280×720 resize.
++Avoid: any layout from Image 2 or Image 3; invented buildings; missing buildings; moved roads; altered courtyards; changed rooflines; enlarged trees that hide geometry; office-campus lawns or surface car parks replacing designed public realm; generic corporate office park; toy-town look; isometric illustration; video-game render; excessive HDR; oversaturated foliage; fake repeated windows; malformed cars or people; labels, signs, logos, text, borders or watermark.
++```
++
++## Passes and selection
++
++Pass 1 was selected as final. A correction pass was not used because the three primary campus blocks, their courtyards, the gaps between them, the adjacent north–south road, the right-side housing and the broad left-side orchard/woodland bands all remained strongly registered to the geometry plate. Another generative edit was judged more likely to move those large, successful envelopes than to improve the smaller discrepancies.
++
++## Honest visual inspection
++
++### Geometry and content
++
++- The three principal campus blocks retain the plate's staggered alignment, approximate footprints, heights and courtyard voids. The middle block's internal diagonal landscape/paving gesture is preserved, although it is more detailed and slightly softened.
++- The foreground block, central block and rear block remain in their intended order and sit against the correct right-hand road corridor. Their façades and planted/PV roofs are interpretive photographic detail rather than literal model texture.
++- The main right-side suburban roads, curved solar-canopy car park and background housing remain in the correct broad locations. At small scale, individual distant houses and road junctions are regularised and cannot be claimed within a strict 15 px feature-by-feature tolerance.
++- The left-side woodland/orchard bands follow the plate's broad boundaries. Individual orchard crowns and rows have been naturalised, so exact tree-by-tree registration drifts.
++- The lower-left open brook and wet-meadow channels are more visibly articulated than in the geometry plate. This supports the place copy, but the precise meanders, pools and reed edges are generative additions and visibly drift from the simplified source geometry.
++- The far-left linear solar rows are retained in the correct zone, but their count, spacing and panel morphology are simplified. Some other small PV arrays appear on roofs or near orchard edges as material interpretation rather than exact plate objects.
++- Some distant terrace/timber-block groups merge into more generic repeated housing as atmospheric detail increases toward the horizon.
++
++### Photographic realism / residual CGI tells
++
++- The overall aerial light, haze, vegetation variation and material response read as a plausible late-summer photograph.
++- Repetition in façade bays, roof PV modules, orchard trees and distant houses still carries a mild procedural/CGI signature.
++- A few tiny cars and pedestrians are only impressionistic at this scale; close inspection may reveal soft or inconsistent shapes.
++- Courtyard meadow texture is lush and coherent but slightly too evenly distributed, and some roof planting/PV junctions are cleaner than real construction.
++- The image contains no visible text or watermark.
++
+
+diff --git a/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8b875c245c5aa5554469094a3680ad6d39ddd309
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+@@ -0,0 +1,73 @@
++# Campus courtyards photograph — generation notes
++
++## Method
++
++- Tool: built-in `image_gen`
++- Mode: `sketch-to-render`
++- Passes used: 1 generation, 0 correction passes
++- Generated source: 1672 × 941 PNG (16:9)
++- Delivery: whole-frame resample to 1280 × 720; no crop, extension, or reframing
++
++## User prompt (verbatim)
++
++```text
++Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
++
++INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
++INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
++INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
++
++Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
++
++Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
++
++THIS PLACE: The courtyards (2045). Camera [-380, 225.664, 60] looking at [-190, 47.341, -200].
++What the place copy says, so the photograph must show it: Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.
++```
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved place photograph, 1280×720 landscape master
++Primary request: REMAKE the approved place photograph as a highly realistic aerial architectural photograph of “The courtyards (2045),” while matching the current 3D model geometry exactly.
++Input images:
++- Image 1 is the absolute geometry master and camera master. Preserve the entire frame, viewpoint, perspective, horizon, and every visible building, street, path, tree belt, orchard row, solar row, canopy, field boundary, open space, and landform in its exact position, footprint, orientation, and height, within about 15 pixels at 1280×720. Follow Image 1 for all spatial content. Do not import or retain any layout from Image 2 or Image 3.
++- Image 2 is an OLD approved photograph. Use it ONLY for photographic realism, late-summer afternoon sunlight, colour, haze, atmospheric depth, natural texture, and level of detail. Its spatial layout is obsolete and must not influence geometry.
++- Image 3 is the approved adventurous target board. Use it ONLY for materials and architectural character: buff brick, honey-coloured timber, clear PV glass, biodiverse meadow roofs, rich planting, glazed active ground floors.
++Scene/backdrop: The current 2045 campus and surrounding district exactly as Image 1. The dominant foreground and middle-ground campus buildings are perimeter courtyard blocks rather than freestanding office slabs in car parks. Designed ground between them includes sett plazas cutting through wildflower planting, retained mature oaks, and small-scale seating beside glazed ground floors. On the left, the brook is open rather than culverted and occupies a broad 15.5-hectare wet-meadow corridor. Keep the extensive terraces and timber housing blocks, orchards, woodland belts, vertical bifacial solar rows over pasture, solar canopies over GCHQ car parks, roads and existing suburban fabric wherever Image 1 places them.
++Subject: Straight down onto the campus from camera [-380, 225.664, 60] looking at [-190, 47.341, -200]. Every visible building follows the same siting logic: campus within reach of GCHQ and a road.
++Style/medium: convincingly real, high-resolution professional aerial place photography; built-precedent credibility inspired by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, and Next2Sun. Natural construction detail and mild real-world imperfection. Never an illustration and never a glossy corporate-office-park visualisation.
++Composition/framing: exact full-frame composition of Image 1; no crop, no warp, no reframing, no camera move. Maintain all massing silhouettes and occlusion relationships.
++Lighting/mood: late-summer afternoon, exactly the sun direction and warm natural light character of Image 2, with believable shadows, haze and aerial atmospheric perspective.
++Color palette: warm buff masonry, honey timber, muted meadow greens, dark blue-grey PV glass, natural asphalt and stone; restrained photographic saturation.
++Materials/textures: buff brick and honey timber façades with plausible bays and windows; meadow roofs and PV where indicated; realistic wet grass, reeds, orchard crowns, retained oaks, hedgerows, water, sett paving and glazing.
++Text: none.
++Constraints: Geometry is more important than beautification. Retain Image 1’s count and exact arrangement of courtyard blocks, housing, streets, vegetation belts, orchards, solar infrastructure and field edges. People and vehicles only at true aerial scale. Preserve every feature visible in Image 1 even if Image 2 differs. Whole frame must remain landscape 16:9 for a final 1280×720 resize.
++Avoid: any layout from Image 2 or Image 3; invented buildings; missing buildings; moved roads; altered courtyards; changed rooflines; enlarged trees that hide geometry; office-campus lawns or surface car parks replacing designed public realm; generic corporate office park; toy-town look; isometric illustration; video-game render; excessive HDR; oversaturated foliage; fake repeated windows; malformed cars or people; labels, signs, logos, text, borders or watermark.
++```
++
++## Passes and selection
++
++Pass 1 was selected as final. A correction pass was not used because the three primary campus blocks, their courtyards, the gaps between them, the adjacent north–south road, the right-side housing and the broad left-side orchard/woodland bands all remained strongly registered to the geometry plate. Another generative edit was judged more likely to move those large, successful envelopes than to improve the smaller discrepancies.
++
++## Honest visual inspection
++
++### Geometry and content
++
++- The three principal campus blocks retain the plate's staggered alignment, approximate footprints, heights and courtyard voids. The middle block's internal diagonal landscape/paving gesture is preserved, although it is more detailed and slightly softened.
++- The foreground block, central block and rear block remain in their intended order and sit against the correct right-hand road corridor. Their façades and planted/PV roofs are interpretive photographic detail rather than literal model texture.
++- The main right-side suburban roads, curved solar-canopy car park and background housing remain in the correct broad locations. At small scale, individual distant houses and road junctions are regularised and cannot be claimed within a strict 15 px feature-by-feature tolerance.
++- The left-side woodland/orchard bands follow the plate's broad boundaries. Individual orchard crowns and rows have been naturalised, so exact tree-by-tree registration drifts.
++- The lower-left open brook and wet-meadow channels are more visibly articulated than in the geometry plate. This supports the place copy, but the precise meanders, pools and reed edges are generative additions and visibly drift from the simplified source geometry.
++- The far-left linear solar rows are retained in the correct zone, but their count, spacing and panel morphology are simplified. Some other small PV arrays appear on roofs or near orchard edges as material interpretation rather than exact plate objects.
++- Some distant terrace/timber-block groups merge into more generic repeated housing as atmospheric detail increases toward the horizon.
++
++### Photographic realism / residual CGI tells
++
++- The overall aerial light, haze, vegetation variation and material response read as a plausible late-summer photograph.
++- Repetition in façade bays, roof PV modules, orchard trees and distant houses still carries a mild procedural/CGI signature.
++- A few tiny cars and pedestrians are only impressionistic at this scale; close inspection may reveal soft or inconsistent shapes.
++- Courtyard meadow texture is lush and coherent but slightly too evenly distributed, and some roof planting/PV junctions are cleaner than real construction.
++- The image contains no visible text or watermark.
++
+
+exec
+/bin/zsh -lc 'test -s experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md && wc -c experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md && git status --short -- experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md' in /Users/user/Projects/3D Design
+ succeeded in 0ms:
+ 2158061 experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png
+    9686 experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+ 2167747 total
+?? experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+?? experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png
+
+diff --git a/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8b875c245c5aa5554469094a3680ad6d39ddd309
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+@@ -0,0 +1,73 @@
++# Campus courtyards photograph — generation notes
++
++## Method
++
++- Tool: built-in `image_gen`
++- Mode: `sketch-to-render`
++- Passes used: 1 generation, 0 correction passes
++- Generated source: 1672 × 941 PNG (16:9)
++- Delivery: whole-frame resample to 1280 × 720; no crop, extension, or reframing
++
++## User prompt (verbatim)
++
++```text
++Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
++
++INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
++INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
++INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
++
++Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
++
++Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
++
++THIS PLACE: The courtyards (2045). Camera [-380, 225.664, 60] looking at [-190, 47.341, -200].
++What the place copy says, so the photograph must show it: Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.
++```
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved place photograph, 1280×720 landscape master
++Primary request: REMAKE the approved place photograph as a highly realistic aerial architectural photograph of “The courtyards (2045),” while matching the current 3D model geometry exactly.
++Input images:
++- Image 1 is the absolute geometry master and camera master. Preserve the entire frame, viewpoint, perspective, horizon, and every visible building, street, path, tree belt, orchard row, solar row, canopy, field boundary, open space, and landform in its exact position, footprint, orientation, and height, within about 15 pixels at 1280×720. Follow Image 1 for all spatial content. Do not import or retain any layout from Image 2 or Image 3.
++- Image 2 is an OLD approved photograph. Use it ONLY for photographic realism, late-summer afternoon sunlight, colour, haze, atmospheric depth, natural texture, and level of detail. Its spatial layout is obsolete and must not influence geometry.
++- Image 3 is the approved adventurous target board. Use it ONLY for materials and architectural character: buff brick, honey-coloured timber, clear PV glass, biodiverse meadow roofs, rich planting, glazed active ground floors.
++Scene/backdrop: The current 2045 campus and surrounding district exactly as Image 1. The dominant foreground and middle-ground campus buildings are perimeter courtyard blocks rather than freestanding office slabs in car parks. Designed ground between them includes sett plazas cutting through wildflower planting, retained mature oaks, and small-scale seating beside glazed ground floors. On the left, the brook is open rather than culverted and occupies a broad 15.5-hectare wet-meadow corridor. Keep the extensive terraces and timber housing blocks, orchards, woodland belts, vertical bifacial solar rows over pasture, solar canopies over GCHQ car parks, roads and existing suburban fabric wherever Image 1 places them.
++Subject: Straight down onto the campus from camera [-380, 225.664, 60] looking at [-190, 47.341, -200]. Every visible building follows the same siting logic: campus within reach of GCHQ and a road.
++Style/medium: convincingly real, high-resolution professional aerial place photography; built-precedent credibility inspired by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, and Next2Sun. Natural construction detail and mild real-world imperfection. Never an illustration and never a glossy corporate-office-park visualisation.
++Composition/framing: exact full-frame composition of Image 1; no crop, no warp, no reframing, no camera move. Maintain all massing silhouettes and occlusion relationships.
++Lighting/mood: late-summer afternoon, exactly the sun direction and warm natural light character of Image 2, with believable shadows, haze and aerial atmospheric perspective.
++Color palette: warm buff masonry, honey timber, muted meadow greens, dark blue-grey PV glass, natural asphalt and stone; restrained photographic saturation.
++Materials/textures: buff brick and honey timber façades with plausible bays and windows; meadow roofs and PV where indicated; realistic wet grass, reeds, orchard crowns, retained oaks, hedgerows, water, sett paving and glazing.
++Text: none.
++Constraints: Geometry is more important than beautification. Retain Image 1’s count and exact arrangement of courtyard blocks, housing, streets, vegetation belts, orchards, solar infrastructure and field edges. People and vehicles only at true aerial scale. Preserve every feature visible in Image 1 even if Image 2 differs. Whole frame must remain landscape 16:9 for a final 1280×720 resize.
++Avoid: any layout from Image 2 or Image 3; invented buildings; missing buildings; moved roads; altered courtyards; changed rooflines; enlarged trees that hide geometry; office-campus lawns or surface car parks replacing designed public realm; generic corporate office park; toy-town look; isometric illustration; video-game render; excessive HDR; oversaturated foliage; fake repeated windows; malformed cars or people; labels, signs, logos, text, borders or watermark.
++```
++
++## Passes and selection
++
++Pass 1 was selected as final. A correction pass was not used because the three primary campus blocks, their courtyards, the gaps between them, the adjacent north–south road, the right-side housing and the broad left-side orchard/woodland bands all remained strongly registered to the geometry plate. Another generative edit was judged more likely to move those large, successful envelopes than to improve the smaller discrepancies.
++
++## Honest visual inspection
++
++### Geometry and content
++
++- The three principal campus blocks retain the plate's staggered alignment, approximate footprints, heights and courtyard voids. The middle block's internal diagonal landscape/paving gesture is preserved, although it is more detailed and slightly softened.
++- The foreground block, central block and rear block remain in their intended order and sit against the correct right-hand road corridor. Their façades and planted/PV roofs are interpretive photographic detail rather than literal model texture.
++- The main right-side suburban roads, curved solar-canopy car park and background housing remain in the correct broad locations. At small scale, individual distant houses and road junctions are regularised and cannot be claimed within a strict 15 px feature-by-feature tolerance.
++- The left-side woodland/orchard bands follow the plate's broad boundaries. Individual orchard crowns and rows have been naturalised, so exact tree-by-tree registration drifts.
++- The lower-left open brook and wet-meadow channels are more visibly articulated than in the geometry plate. This supports the place copy, but the precise meanders, pools and reed edges are generative additions and visibly drift from the simplified source geometry.
++- The far-left linear solar rows are retained in the correct zone, but their count, spacing and panel morphology are simplified. Some other small PV arrays appear on roofs or near orchard edges as material interpretation rather than exact plate objects.
++- Some distant terrace/timber-block groups merge into more generic repeated housing as atmospheric detail increases toward the horizon.
++
++### Photographic realism / residual CGI tells
++
++- The overall aerial light, haze, vegetation variation and material response read as a plausible late-summer photograph.
++- Repetition in façade bays, roof PV modules, orchard trees and distant houses still carries a mild procedural/CGI signature.
++- A few tiny cars and pedestrians are only impressionistic at this scale; close inspection may reveal soft or inconsistent shapes.
++- Courtyard meadow texture is lush and coherent but slightly too evenly distributed, and some roof planting/PV junctions are cleaner than real construction.
++- The image contains no visible text or watermark.
++
+
+codex
+Completed with one built-in `image_gen` pass and no correction pass; the strong geometry alignment was retained.
+
+- [Final 1280×720 photograph](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png>)
+- [Prompts, pass record, and honest inspection](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md>)
+
+The final was whole-frame resized from the generated 16:9 source without cropping or reframing.
+diff --git a/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..8b875c245c5aa5554469094a3680ad6d39ddd309
+--- /dev/null
++++ b/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md
+@@ -0,0 +1,73 @@
++# Campus courtyards photograph — generation notes
++
++## Method
++
++- Tool: built-in `image_gen`
++- Mode: `sketch-to-render`
++- Passes used: 1 generation, 0 correction passes
++- Generated source: 1672 × 941 PNG (16:9)
++- Delivery: whole-frame resample to 1280 × 720; no crop, extension, or reframing
++
++## User prompt (verbatim)
++
++```text
++Use the built-in image_gen tool, sketch-to-render, to REMAKE an approved place photograph so it agrees with the 3D model as it now stands.
++
++INPUT 1 is the geometry master: a render of our own current 3D model from exactly the camera this photograph is taken at. Every building, street, tree belt, orchard row, solar row, canopy and field boundary must keep its position, footprint and height, within about 15 px at 1280x720. The model has changed a great deal since the old photograph: about 1,100 homes as terraces and timber blocks (was 70), campus courtyard blocks, vertical bifacial solar rows over pasture, solar canopies over GCHQ's car parks, mature orchards and woodland belts, open stormwater channels. Follow the plate, never the old photograph, for what is where.
++INPUT 2 is the OLD approved photograph at this camera: use it ONLY for photographic look, light, colour, haze and level of detail. Its layout is out of date.
++INPUT 3 is the approved adventurous target board for this part of the site: use it for materials and character (buff brick and honey timber, PV glass, meadow roofs, planting).
++
++Design direction: design excellence and realism, built precedents only (Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, Next2Sun), never corporate office park, never illustration, no text or watermark, people and vehicles at true scale. Late summer afternoon, the same sun as INPUT 2.
++
++Output 1280x720 (whole-frame resize only, no crop or warp) to experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png. One generation plus at most one correction pass if geometry drifts. Write experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md with the prompts verbatim, passes, and an honest inspection (drift you can see, anything that reads as CGI).
++
++THIS PLACE: The courtyards (2045). Camera [-380, 225.664, 60] looking at [-190, 47.341, -200].
++What the place copy says, so the photograph must show it: Straight down onto the campus. The blocks make perimeter courtyards rather than sitting in car parks, and the ground between them is designed: sett plazas cut through wildflower, retained oaks, seating at the glazed ground floors. The brook corridor on the left is let out of its culvert into 15.5 hectares of wet meadow. Every building you can see was placed by the same rule — campus within reach of GCHQ and a road — and none of them by hand.
++```
++
++## Pass 1 prompt (verbatim)
++
++```text
++Use case: sketch-to-render
++Asset type: approved place photograph, 1280×720 landscape master
++Primary request: REMAKE the approved place photograph as a highly realistic aerial architectural photograph of “The courtyards (2045),” while matching the current 3D model geometry exactly.
++Input images:
++- Image 1 is the absolute geometry master and camera master. Preserve the entire frame, viewpoint, perspective, horizon, and every visible building, street, path, tree belt, orchard row, solar row, canopy, field boundary, open space, and landform in its exact position, footprint, orientation, and height, within about 15 pixels at 1280×720. Follow Image 1 for all spatial content. Do not import or retain any layout from Image 2 or Image 3.
++- Image 2 is an OLD approved photograph. Use it ONLY for photographic realism, late-summer afternoon sunlight, colour, haze, atmospheric depth, natural texture, and level of detail. Its spatial layout is obsolete and must not influence geometry.
++- Image 3 is the approved adventurous target board. Use it ONLY for materials and architectural character: buff brick, honey-coloured timber, clear PV glass, biodiverse meadow roofs, rich planting, glazed active ground floors.
++Scene/backdrop: The current 2045 campus and surrounding district exactly as Image 1. The dominant foreground and middle-ground campus buildings are perimeter courtyard blocks rather than freestanding office slabs in car parks. Designed ground between them includes sett plazas cutting through wildflower planting, retained mature oaks, and small-scale seating beside glazed ground floors. On the left, the brook is open rather than culverted and occupies a broad 15.5-hectare wet-meadow corridor. Keep the extensive terraces and timber housing blocks, orchards, woodland belts, vertical bifacial solar rows over pasture, solar canopies over GCHQ car parks, roads and existing suburban fabric wherever Image 1 places them.
++Subject: Straight down onto the campus from camera [-380, 225.664, 60] looking at [-190, 47.341, -200]. Every visible building follows the same siting logic: campus within reach of GCHQ and a road.
++Style/medium: convincingly real, high-resolution professional aerial place photography; built-precedent credibility inspired by Goldsmith Street, Solarsiedlung, Sara Kulturhus, Powerhouse Brattorkaia, Augustenborg, and Next2Sun. Natural construction detail and mild real-world imperfection. Never an illustration and never a glossy corporate-office-park visualisation.
++Composition/framing: exact full-frame composition of Image 1; no crop, no warp, no reframing, no camera move. Maintain all massing silhouettes and occlusion relationships.
++Lighting/mood: late-summer afternoon, exactly the sun direction and warm natural light character of Image 2, with believable shadows, haze and aerial atmospheric perspective.
++Color palette: warm buff masonry, honey timber, muted meadow greens, dark blue-grey PV glass, natural asphalt and stone; restrained photographic saturation.
++Materials/textures: buff brick and honey timber façades with plausible bays and windows; meadow roofs and PV where indicated; realistic wet grass, reeds, orchard crowns, retained oaks, hedgerows, water, sett paving and glazing.
++Text: none.
++Constraints: Geometry is more important than beautification. Retain Image 1’s count and exact arrangement of courtyard blocks, housing, streets, vegetation belts, orchards, solar infrastructure and field edges. People and vehicles only at true aerial scale. Preserve every feature visible in Image 1 even if Image 2 differs. Whole frame must remain landscape 16:9 for a final 1280×720 resize.
++Avoid: any layout from Image 2 or Image 3; invented buildings; missing buildings; moved roads; altered courtyards; changed rooflines; enlarged trees that hide geometry; office-campus lawns or surface car parks replacing designed public realm; generic corporate office park; toy-town look; isometric illustration; video-game render; excessive HDR; oversaturated foliage; fake repeated windows; malformed cars or people; labels, signs, logos, text, borders or watermark.
++```
++
++## Passes and selection
++
++Pass 1 was selected as final. A correction pass was not used because the three primary campus blocks, their courtyards, the gaps between them, the adjacent north–south road, the right-side housing and the broad left-side orchard/woodland bands all remained strongly registered to the geometry plate. Another generative edit was judged more likely to move those large, successful envelopes than to improve the smaller discrepancies.
++
++## Honest visual inspection
++
++### Geometry and content
++
++- The three principal campus blocks retain the plate's staggered alignment, approximate footprints, heights and courtyard voids. The middle block's internal diagonal landscape/paving gesture is preserved, although it is more detailed and slightly softened.
++- The foreground block, central block and rear block remain in their intended order and sit against the correct right-hand road corridor. Their façades and planted/PV roofs are interpretive photographic detail rather than literal model texture.
++- The main right-side suburban roads, curved solar-canopy car park and background housing remain in the correct broad locations. At small scale, individual distant houses and road junctions are regularised and cannot be claimed within a strict 15 px feature-by-feature tolerance.
++- The left-side woodland/orchard bands follow the plate's broad boundaries. Individual orchard crowns and rows have been naturalised, so exact tree-by-tree registration drifts.
++- The lower-left open brook and wet-meadow channels are more visibly articulated than in the geometry plate. This supports the place copy, but the precise meanders, pools and reed edges are generative additions and visibly drift from the simplified source geometry.
++- The far-left linear solar rows are retained in the correct zone, but their count, spacing and panel morphology are simplified. Some other small PV arrays appear on roofs or near orchard edges as material interpretation rather than exact plate objects.
++- Some distant terrace/timber-block groups merge into more generic repeated housing as atmospheric detail increases toward the horizon.
++
++### Photographic realism / residual CGI tells
++
++- The overall aerial light, haze, vegetation variation and material response read as a plausible late-summer photograph.
++- Repetition in façade bays, roof PV modules, orchard trees and distant houses still carries a mild procedural/CGI signature.
++- A few tiny cars and pedestrians are only impressionistic at this scale; close inspection may reveal soft or inconsistent shapes.
++- Courtyard meadow texture is lush and coherent but slightly too evenly distributed, and some roof planting/PV junctions are cleaner than real construction.
++- The image contains no visible text or watermark.
++
+
+tokens used
+32,999
+Completed with one built-in `image_gen` pass and no correction pass; the strong geometry alignment was retained.
+
+- [Final 1280×720 photograph](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/campus-courtyards-photo.png>)
+- [Prompts, pass record, and honest inspection](</Users/user/Projects/3D Design/experiments/002-living-map/generate/m7/out/campus-courtyards-notes.md>)
+
+The final was whole-frame resized from the generated 16:9 source without cropping or reframing.

@@ -14,6 +14,8 @@ repository's — the repository has the models in it.
 
   python3 scripts/test_public_build.py
 """
+import json
+import re
 import argparse
 import http.server
 import socketserver
@@ -97,7 +99,27 @@ def main():
         page.goto(f"http://127.0.0.1:{args.port}/", wait_until="load",
                   timeout=900000)
         page.wait_for_function("window.__terrainReady === true", timeout=900000)
-        page.wait_for_timeout(2000)
+        # This counter is a FLOOR, not the payload figure. It counts whichever
+        # responses have started by the moment it stops watching, and the map
+        # defers half its load on purpose, so the moment matters: adding a
+        # 0.27 MB horizon moved it from 6.71 MB to 5.25, because the extra work
+        # on the main thread pushed later requests past the cutoff. Waiting for
+        # quiet and then some helps and does not cure it — this still reads
+        # about 1.3 MB under what `measure_payload.py --site dist` measures on
+        # a gzip-serving host, which is the number to quote. What this check is
+        # for is the ceiling: it catches a build that ships something enormous,
+        # and it cannot be trusted to notice a build that ships slightly more.
+        try:
+            page.wait_for_load_state("networkidle", timeout=120000)
+        except Exception:
+            pass
+        # AND the grace period, not instead of it. Replacing it made the count
+        # fall again — networkidle was already satisfied, so waiting "until
+        # quiet" stopped the clock sooner than the fixed wait did and counted
+        # less. Whatever is still arriving after that is the deferred half of
+        # the load, and this number is a budget ceiling: it may only ever be
+        # made to count more.
+        page.wait_for_timeout(3000)
         state = page.evaluate("""() => ({
           placed: window.__map.models?.placed ?? {},
           built: window.__map.models?.built ?? {},
@@ -131,13 +153,34 @@ def main():
           f"{state['built'].get('ncic')}")
     check("no key, so no tiles and no library fetched",
           not state["tiles"], "the measured map, as the public sees it")
+
+    # And nothing in the folder carries one. The runtime check above says the
+    # page did not USE a key; this says the folder does not CONTAIN one, which
+    # is the thing that would matter after it is uploaded. `golden-valley/*.js`
+    # matched the gitignored key.js and copied it, and only the null stub
+    # written afterwards put it right — an ordering, not a guarantee.
+    keyish = re.compile(rb"AIza[0-9A-Za-z_\-]{20,}")
+    carrying = [f.relative_to(dist) for f in sorted(dist.rglob("*"))
+                if f.is_file() and f.stat().st_size < 4_000_000
+                and keyish.search(f.read_bytes())]
+    check("no file in the built folder carries an API key",
+          not carrying, "nothing key-shaped" if not carrying
+          else "FOUND IN: " + ", ".join(str(c) for c in carrying))
+    stub = (dist / "golden-valley" / "key.js").read_text()
+    check("the key stub says null and nothing else",
+          "null" in stub and not keyish.search(stub.encode()),
+          f"{len(stub)} bytes")
     check("the campus keeps its extrusions instead",
           state["blocks"].get("campus") is True,
           ", ".join(f"{k}={v}" for k, v in state["blocks"].items()))
-    check("every place is still on the map", state["markers"] == 5,
-          f"{state['markers']} markers, {state['hotspots']} hotspots")
+    # Counted from places.json rather than written here: phase 13 added three
+    # arrivals, and a number typed into a test is a number that goes stale.
+    want = len(json.loads((ROOT / "experiments" / "002-living-map" / "golden-valley"
+                           / "places.json").read_text())["places"])
+    check("every place is still on the map", state["markers"] == want,
+          f"{state['markers']} markers of {want}, {state['hotspots']} hotspots")
     check("2045 still arrives", wave == 1, f"wave {wave}")
-    check(f"first load is under {BUDGET_MB:.0f} MB",
+    check(f"first load is under {BUDGET_MB:.0f} MB (a floor — see the comment)",
           bytes_in / 1048576 < BUDGET_MB, f"{bytes_in / 1048576:.2f} MB")
 
     print(f"\n{sum(checks)}/{len(checks)} checks passed")

@@ -1,0 +1,148 @@
+{
+  "id": "homes-a",
+  "approvedVariant": "adventurous",
+  "approvedOn": "2026-09-22",
+  "basis": "Visual estimate from homes-a-adventurous.png against homes-a-2045.png. Percentages are targets, not measured quantities.",
+  "roofMix": {
+    "PV": 61,
+    "meadow/green": 12,
+    "slate/tile": 21,
+    "walkable/terrace": 4,
+    "other": 2,
+    "reading": "New two-storey terraces read as near-continuous blue-black PV roof planes. Flat apartment roofs are planted, with only small paths and terraces. Existing housing beyond remains a mixed grey slate and muted clay roofscape."
+  },
+  "wallMaterials": [
+    {
+      "material": "warm buff brick or mineral masonry",
+      "litHex": "#C39A6A",
+      "shadedHex": "#76583E",
+      "share": 48
+    },
+    {
+      "material": "honey-toned timber frame and infill",
+      "litHex": "#C79A63",
+      "shadedHex": "#705039",
+      "share": 27
+    },
+    {
+      "material": "dark bronze or weathered timber accents",
+      "litHex": "#7B674E",
+      "shadedHex": "#40362C",
+      "share": 10
+    },
+    {
+      "material": "recessed reflective glazing",
+      "litHex": "#667875",
+      "shadedHex": "#263A3B",
+      "share": 15
+    }
+  ],
+  "windowRhythm": {
+    "storeyHeightMetres": "2.9 to 3.1 on terraces; 3.2 to 3.4 on apartment blocks",
+    "windowWidthMetres": "0.9 to 1.2 on terraces; 1.8 to 2.2 per structural bay on blocks",
+    "windowProportion": "Terrace openings about 0.55 to 0.70 width:height; apartment glazing about 1.25 to 1.55 width:height",
+    "revealDepthImpression": "Strong. Approximately 180 to 250 mm on masonry homes and 300 to 450 mm behind the expressed timber frame on blocks.",
+    "rhythm": "One opening per dwelling bay, party-wall breaks and a legible floor band. Avoid a uniform office grid on the homes."
+  },
+  "groundCover": {
+    "lawn": 18,
+    "meadow": 12,
+    "hardLandscape": 37,
+    "hardLandscapeColour": "#A69A83 warm buff-grey paving, with #62635D asphalt streets",
+    "water": 4,
+    "gardens": 29,
+    "reading": "The spaces are garden streets and planted courts, not leftover lawn. Private and communal gardens occupy nearly a third of the visible gaps."
+  },
+  "water": {
+    "visible": "Narrow linked rain gardens and stormwater rills along streets, with occasional small holding basins at court ends.",
+    "channelWidthMetres": "1.5 to 3.5, locally widening to 6 at basins",
+    "pondSize": "Small, generally below 15 m across",
+    "reflectivity": "Broken silver-blue sky reflection, #8AA0A3 lit and #324D50 shaded, roughness impression about 0.20 to 0.35 with reeds interrupting the surface.",
+    "buildability": "The exact ornamental complexity in the board is not supportable from current land-class data. Model a few continuous, correctly drained routes rather than every visible glint."
+  },
+  "trees": {
+    "forms": [
+      "broad domed veteran oak",
+      "upright lime or hornbeam street tree",
+      "small rounded orchard tree",
+      "irregular mixed woodland edge",
+      "clipped native hedge"
+    ],
+    "heightMetres": {
+      "veteranOak": "16 to 22",
+      "streetTree": "9 to 14",
+      "orchardTree": "4 to 7",
+      "woodlandMix": "10 to 18",
+      "hedge": "1.8 to 3"
+    },
+    "canopyColour": {
+      "litHex": "#708341",
+      "shadedHex": "#263D24"
+    },
+    "density": "High within the development, about 30 to 40 per cent canopy cover at maturity; the orchard is denser and regularly spaced.",
+    "arrangement": "Single and paired avenue trees on streets, one or two large retained trees in each court, orchard rows to the west, and a continuous mixed woodland belt at the rural edge. Deliberately vary crown size and spacing."
+  },
+  "sustainableFeatures": {
+    "PVGlint": "Blue-black modules, base #17232D, with sparse desaturated blue-grey glints #91A2AA on upper-left edges. Glint must not turn roofs cyan.",
+    "canopies": "Only small parking or communal canopies are visible in this shot; keep them secondary to the whole-roof residential PV.",
+    "agrivoltaicRows": "Not a foreground feature. If caught at the far left edge, use vertical 2 m bifacial panels at roughly 11 m centres with green crop visible between.",
+    "glasshouses": "Not legible in this camera and should not be added for the sake of this shot.",
+    "other": "Planted apartment roofs, rain gardens, permeable buff paving and deep garden plots are as important to the reading as the PV."
+  },
+  "people/vehicles": {
+    "people": "Tiny 1.7 m figures in pairs and small groups on main paths and court thresholds. At this camera they are one to three pixels and are scale cues, not characters.",
+    "vehicles": "A sparse mix of parked cars on streets and a few moving cars, approximately 4.3 to 4.8 m long. Keep shared courts largely car-free.",
+    "scopeNote": "The current plan cuts people and cars from aerial delivery. Do not spend geometry budget on them before M7; a restrained sprite or instanced pass could be added later if still needed."
+  },
+  "gapsVsPlate": [
+    {
+      "rank": 1,
+      "difference": "The plate reads as isolated rows and boxes in broad empty green strips; the board reads as a dense network of garden streets, courts and planted thresholds.",
+      "modellingAction": "Refine parcel infill and internal street/court allocation while retaining the approved 1,030-dwelling total. Add garden polygons and narrow planted thresholds to every home row.",
+      "system": "scripts/golden_valley_2045.py and gv-2045 data",
+      "effort": "1 to 2 days"
+    },
+    {
+      "rank": 2,
+      "difference": "Plate trees are repeated faceted cones with large gaps; the board has mature, overlapping avenue, orchard and woodland crowns.",
+      "modellingAction": "Introduce four or five crown silhouettes, wider spread variation, clumped woodland edges and continuous street avenues. Preserve enough gaps to see the streets.",
+      "system": "tree geometry/grade in landcover.js and future.js, plus gv-2045-trees.bin generation",
+      "effort": "1.5 to 2 days, covered by in-flight M5"
+    },
+    {
+      "rank": 3,
+      "difference": "The board's pitched home roofs are almost continuous photovoltaic surfaces; the plate roofs are uniformly near-black and do not resolve as modules.",
+      "modellingAction": "Raise whole-roof PV allocation to about 60 per cent of visible roof area, keep 45 degree planes, and add module seams plus restrained directional glint.",
+      "system": "roof shader in facades.js and roof programme in scripts/golden_valley_2045.py",
+      "effort": "0.5 to 1 day"
+    },
+    {
+      "rank": 4,
+      "difference": "Plate facades are flat beige with shallow punched dots; the board has warm masonry, expressed timber bays and deep shadowed openings.",
+      "modellingAction": "Tune home and apartment facade branches separately, darken reveals, vary brick/timber by block and keep party-wall breaks visible.",
+      "system": "futureGeometry in future.js and facade materials in facades.js",
+      "effort": "1 day"
+    },
+    {
+      "rank": 5,
+      "difference": "No water or rain-garden chain reads in the plate; thin silver lines organise several board streets.",
+      "modellingAction": "Generate only the principal connected SuDS routes, widen them to a minimum readable 1.5 m and give classified water sky reflection with reed-darkened edges.",
+      "system": "scripts/golden_valley_2045.py, ground shader in future.js and water treatment in life.js",
+      "effort": "1 day, partly covered by in-flight M5"
+    },
+    {
+      "rank": 6,
+      "difference": "The plate ground is a few flat green classes; the board separates gardens, meadow, buff paving, roads and planting beds.",
+      "modellingAction": "Add sub-parcel garden and court classes, soften land-cover edges and introduce low-frequency colour and roughness variation without adding fine geometry.",
+      "system": "gv-2045 land-cover data and ground shader in future.js",
+      "effort": "0.5 to 1 day, covered by in-flight M5"
+    },
+    {
+      "rank": 7,
+      "difference": "The board contains tiny occupants, bicycles and cars that make the streets feel inhabited; the plate is empty.",
+      "modellingAction": "Defer. If M7 still needs scale cues, instance a very small number of billboard people and low-detail vehicles only on primary routes.",
+      "system": "optional life.js extension",
+      "effort": "0.5 day, outside current aerial scope"
+    }
+  ]
+}

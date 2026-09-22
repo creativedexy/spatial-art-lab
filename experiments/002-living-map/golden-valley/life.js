@@ -46,6 +46,10 @@ const uniforms = {
   uWaterIndex: { value: 10 },
 };
 
+// The world clock, for shaders that are not given applyLife (the keyed
+// terrain): their own uniform name, the same value object, so no redeclaration.
+export const lifeTime = uniforms.uTime;
+
 // Two octaves of value noise. Three looked better and cost a third of the
 // frame on a machine with no GPU; the shadows are soft-edged anyway.
 const NOISE = /* glsl */`
@@ -294,7 +298,9 @@ export function bringToLife(scene, { groundAt, classMap, waterIndex }) {
   scene.traverse((obj) => {
     const m = obj.isMesh && obj.material;
     if (!m || !m.isMeshStandardMaterial) return;
-    if (m.vertexColors && m.map) applyLife(m, { water: true });         // the ground
+    if (obj.name === 'terrain' || (m.vertexColors && m.map)) {
+      applyLife(m, { water: true });                                    // the ground
+    }
     else if (obj.parent && obj.parent.name === 'trees') applyLife(m, { wind: 0.05 });
     else applyLife(m);
   });

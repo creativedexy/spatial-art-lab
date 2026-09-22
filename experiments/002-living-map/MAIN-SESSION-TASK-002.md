@@ -159,8 +159,15 @@ axes are measured, not trusted.
 
 ### The two numbers
 
-`MELT_METRES = 60` and `GROUND_OFFSET_METRES = 0` are **placeholders, marked as
-such in the source**. There is no key in the cloud session and there should not
+**Both measured, 12 Sep 2026** — see "Phase 12, step 1" in
+[the piece plan](../../plans/living-map-the-piece.md). `GROUND_OFFSET_METRES`
+is `-0.14`, and the melt is no longer a height at all: it is
+`MELT_FOCUS_METRES`, the distance to what the camera is looking at, with
+`MELT_FLOOR_METRES` underneath it. The paragraph below describes the probe as
+it was written; what follows is kept because the method still stands.
+
+~~`MELT_METRES = 60` and `GROUND_OFFSET_METRES = 0` are **placeholders, marked as
+such in the source**.~~ There is no key in the cloud session and there should not
 be one. `scripts/probe_tiles.py` is the measurement: it drops a ray onto the
 tiles at GCHQ, the campus field, the brook and Princess Elizabeth Way and
 prints the offset at each plus the value to paste, then walks a camera down
@@ -184,3 +191,18 @@ is −z.
 Run `python3 scripts/probe_tiles.py` with the key in place, paste both numbers
 into `golden-valley/tiles.js`, and say what the spread was — a single vertical
 shift is an approximation and the residual is worth stating rather than hiding.
+
+
+---
+
+## Step 1 is done, and the rest of the context moved — 12 Sep 2026
+
+The local session measured both numbers (`MELT_METRES = 105`,
+`GROUND_OFFSET_METRES = -0.14`, spread 0.46 m) and they are in `tiles.js`.
+
+Meanwhile phase 11 landed and the map grew a horizon, and both touch this task:
+the interface, the camera and the atmosphere are not what this brief was
+written against. See
+[the handover](HANDOFF-to-local-session.md) — in particular that our far field
+now hides wherever the tiles show, which is a swap nobody has watched happen
+with a key in place.

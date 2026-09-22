@@ -416,9 +416,11 @@ def blocked_mask(lab, lines):
         if l["cls"] in ("road", "road_minor", "rail", "water"):
             d.line(l["pts"], fill=1, width=max(1, round(l["width"] + 3)),
                    joint="curve")
-    for b in json.loads((OUT / "gv-buildings.json").read_text()):
-        # gv-buildings.json is in local metres from the box centre; the raster
-        # is metres from the north-west corner, and z already runs south.
+    buildings = (json.loads((OUT / "gv-buildings.json").read_text())
+                 + json.loads((OUT / "gv-gchq.json").read_text()))
+    for b in buildings:
+        # Both footprint files are in local metres from the box centre; the
+        # raster is metres from the north-west corner, and z already runs south.
         d.polygon([(x + W / 2, z + W / 2) for x, z in b["ring"]], fill=1)
     blocked = np.array(img, dtype=bool)
     arr = np.array(lab)
