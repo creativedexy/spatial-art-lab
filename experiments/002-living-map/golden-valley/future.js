@@ -71,10 +71,13 @@ export const KEYED_GRADE = {
   // M4 starts each authored material about 0.4 stops below the former pale
   // boxes in the keyed build. These are deliberately palette compensation,
   // not a second light: probe_light.py remains the authority on the live map.
-  homes: { saturation: 0.88, exposure: 1.02 },
-  campus: { saturation: 0.82, exposure: 1.48 },
-  glasshouse: { saturation: 0.70, exposure: 1.22 },
-  canopy: { saturation: 0.85, exposure: 1.00 },
+  // M6 changes the authored albedos to the approved darker material palette.
+  // Wall exposure compensates in this one measured grade, while roofs keep
+  // their own restrained PV/meadow values. probe_light.py remains the gate.
+  homes: { saturation: 0.88, exposure: 1.70, roofExposure: 1.02 },
+  campus: { saturation: 0.82, exposure: 1.53, roofExposure: 1.15 },
+  glasshouse: { saturation: 0.70, exposure: 2.40, roofExposure: 1.30 },
+  canopy: { saturation: 0.85, exposure: 0.10, roofExposure: 1.00 },
 };
 const groundGrade = { saturation: { value: 1 }, exposure: { value: 1 } };
 
@@ -364,7 +367,9 @@ export function blendGround(
            texture2D(uFutureClass, vMapUv + vec2(0.0, detailStep.y)).r,
            texture2D(uFutureClass, vMapUv - vec2(0.0, detailStep.y)).r);
          float grass = gvClassWeight(${groundClass.grass}, fc, fa) * futureMix;
-         float meadow = gvClassWeight(${groundClass.meadow}, fc, fa) * futureMix;
+         float meadow = (gvClassWeight(${groundClass.meadow}, fc, fa)
+                       + gvClassWeight(${groundClass.future_meadow}, fc, fa))
+                      * futureMix;
          float orchard = gvClassWeight(${groundClass.orchard}, fc, fa) * futureMix;
          float arable = gvClassWeight(${groundClass.farmland}, fc, fa) * futureMix;
          float wetland = gvClassWeight(${groundClass.wetland}, fc, fa) * futureMix;
@@ -542,7 +547,8 @@ function futureGeometry(list, palette, grade = null) {
   const mix2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t,
                               a[1] + (b[1] - a[1]) * t];
   const solidPost = (x, z, y0, y1, along, across, bs, ax, az) => {
-    const half = 0.075;
+    // Still slender at full scale, but wide enough to survive a 340 m view.
+    const half = 0.10;
     const ring = clockwise([
       [x - along[0] * half - across[0] * half,
        z - along[1] * half - across[1] * half],
@@ -570,7 +576,10 @@ function futureGeometry(list, palette, grade = null) {
       b.typology === 'apartments' ? (spec.flatRoof ?? spec.roof) : spec.roof);
     if (grade) {
       gradeColour(wallColour, grade);
-      gradeColour(roofColour, grade);
+      gradeColour(roofColour, {
+        saturation: grade.saturation,
+        exposure: grade.roofExposure ?? grade.exposure,
+      });
     }
     tint = wallColour;
     const ring = rotateLongEdgeFirst(clockwise(b.ring));
@@ -901,6 +910,95 @@ export function riseMesh(geometry, family) {
   return mesh;
 }
 
+/** A compact row record becomes three instanced systems, not hundreds of meshes. */
+function riseInstances(geometry, material, matrices, name) {
+  const visible = share(material, function riseInstance(shader) {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${GROW}\n${NOISE}`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>\n${GROW_BODY}`);
+  });
+  const mesh = new THREE.InstancedMesh(geometry, visible, matrices.length);
+  mesh.name = name;
+  matrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix));
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.frustumCulled = false;
+  mesh.customDepthMaterial = depthFor(
+    GROW, GROW_BODY, `future:agrivoltaic:depth:${name}`);
+  return mesh;
+}
+
+async function addAgrivoltaics(group, groundAt) {
+  if (!futureMeta.agrivoltaicFile) return null;
+  const rows = await (await fetch(url(futureMeta.agrivoltaicFile))).json();
+  const angle = THREE.MathUtils.degToRad(rows.bearingDegrees);
+  const along = new THREE.Vector2(Math.cos(angle), Math.sin(angle));
+  const panelMatrices = [];
+  const railMatrices = [];
+  const postMatrices = [];
+  const object = new THREE.Object3D();
+  const yaw = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 1, 0), -angle);
+  const matrix = (x, y, z, sx, sy, sz, slope = 0) => {
+    const lean = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 0, 1), slope);
+    object.position.set(x, y, z);
+    object.quaternion.multiplyQuaternions(yaw, lean);
+    object.scale.set(sx, sy, sz);
+    object.updateMatrix();
+    return object.matrix.clone();
+  };
+  for (const [x, z, length] of rows.segments) {
+    const x0 = x - along.x * length * 0.5;
+    const z0 = z - along.y * length * 0.5;
+    const x1 = x + along.x * length * 0.5;
+    const z1 = z + along.y * length * 0.5;
+    const y0 = groundAt(x0, z0), y1 = groundAt(x1, z1);
+    const ground = (y0 + y1) * 0.5;
+    const slope = Math.atan2(y1 - y0, length);
+    panelMatrices.push(matrix(x, ground + rows.panelBottomMetres, z,
+                              length, rows.panelHeightMetres, 0.08, slope));
+    for (const lift of [rows.panelBottomMetres - 0.03,
+                        rows.panelBottomMetres + rows.panelHeightMetres - 0.03]) {
+      railMatrices.push(matrix(x, ground + lift, z, length, 0.06, 0.12, slope));
+    }
+    const posts = Math.max(2, Math.ceil(length / 7.0) + 1);
+    for (let i = 0; i < posts; i++) {
+      const t = posts === 1 ? 0.0 : i / (posts - 1) - 0.5;
+      const px = x + along.x * length * t;
+      const pz = z + along.y * length * t;
+      postMatrices.push(matrix(px, groundAt(px, pz), pz,
+                               0.10, rows.panelBottomMetres
+                               + rows.panelHeightMetres, 0.10));
+    }
+  }
+
+  const unit = () => {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    geometry.translate(0, 0.5, 0);
+    return geometry;
+  };
+  const pv = new THREE.MeshStandardMaterial({
+    color: 0x17242e, roughness: 0.18, metalness: 0.16,
+  });
+  const edge = new THREE.MeshStandardMaterial({
+    color: 0x91a4ab, roughness: 0.42, metalness: 0.58,
+  });
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x665747, roughness: 0.62, metalness: 0.28,
+  });
+  const pvGroup = new THREE.Group();
+  pvGroup.name = 'future:agrivoltaics';
+  pvGroup.add(
+    riseInstances(unit(), pv, panelMatrices, 'future:agrivoltaic:panels'),
+    riseInstances(unit(), edge, railMatrices, 'future:agrivoltaic:frames'),
+    riseInstances(unit(), postMaterial, postMatrices, 'future:agrivoltaic:posts'),
+  );
+  group.add(pvGroup);
+  return pvGroup;
+}
+
 // --- new trees ---------------------------------------------------------------
 
 function growMaterial(base) {
@@ -954,6 +1052,8 @@ export async function addFuture(scene, renderer, {
     group.add(mesh);
     blocks.set(family, mesh);
   }
+
+  await addAgrivoltaics(group, groundAt);
 
   const trees = await loadFutureTrees(groundAt, unitTree, treeKinds,
     directGround ? KEYED_GRADE.trees : null);

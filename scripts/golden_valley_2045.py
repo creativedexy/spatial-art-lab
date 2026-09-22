@@ -30,6 +30,7 @@ crosses the map blends between them:
   gv-2045-landcover.png   ground colour, changes only inside the allocation
   gv-2045-landclass.png   the same as class indices
   gv-2045-buildings.json  only what is NEW; today's 4,033 are still there
+  gv-2045-agrivoltaics.json compact vertical PV row segments
   gv-2045-trees.bin       new hedge, orchard and street trees, same 8-byte record
   gv-2045-meta.json       what changed, in hectares, and the rules that did it
 
@@ -65,19 +66,26 @@ SPACING_B = 210.0             # across it
 # New ground classes. APPENDED, never inserted: the class raster is an index
 # image and everything already written against it would shift by one.
 NEW_CLASSES = {
-    "orchard":     0x6d8a4e,
+    # Every changed field gets a future-only class, even when its visible
+    # colour is meadow. The keyed terrain's ownership test deliberately
+    # discards equal present/future class IDs. Reusing today's `grass` index
+    # therefore cut aerial-photo-shaped holes through new courts and fields.
+    "future_meadow": 0x8FA064,
+    "orchard":     0x7E925F,
     # Barely different from farmland on purpose. Agrivoltaics is a field with
     # panel rows over it, not a solar farm: the crop is still the ground, and
     # painting it as a dark slab is the difference between a landscape that
     # gained an industry and one that lost a field.
-    "agrivoltaic": 0x7a8f63,
+    "agrivoltaic": 0x7E925F,
     # Damp meadow, not open water. The brook is already in the raster and stays
     # where it is; this is the ground either side of it letting go.
-    "wetland":     0x86a06e,
+    "wetland":     0x789067,
 }
-PANEL = 0x59636b               # the panel rows themselves
-PANEL_WIDTH = 2.2
 PANEL_SPACING = 11.0
+PANEL_HEIGHT = 2.0
+PANEL_END_SETBACK = 14.0
+PANEL_ACCESS_GAP = 4.0
+PANEL_SEGMENT = 36.0
 GCHQ = (123.0, 64.0)
 CANOPY_RADIUS = 400.0
 CANOPY_DEPTHS = (11.0, 5.5)  # paired bays first, then single perimeter bays
@@ -88,12 +96,12 @@ CANOPY_MIN_PARKING = 0.75
 # shader now supplies use-specific detail in world metres, so class colour is
 # opaque here and has one unambiguous median for KEYED_GRADE to preserve.
 FILL_ALPHA = 255
-CHANNEL_WIDTH = 2.5
+CHANNEL_WIDTH = 3.5
 
 # What the ground of a built cell is made of, before buildings go on it.
 # Courtyards and plazas, not "gardens and roofs averaged together":
 # the buildings themselves are geometry standing on top of this.
-BUILT_GROUND = "grass"
+BUILT_GROUND = "future_meadow"
 
 # A storey is kept explicit because both the dwelling and campus-area checks
 # are programme checks, not estimates recovered from rounded mesh heights.
@@ -645,6 +653,148 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
     return out
 
 
+def make_agrivoltaics(cells):
+    """Vertical bifacial PV rows over pasture, on the measured 22 degree grain.
+
+    Records describe row segments rather than panels. The renderer instances a
+    two-metre glass fence, its light frame and slim posts from each record.
+    Four-metre breaks every 36 m retain cross-field access, and the 14 m inset
+    leaves the replanted hedge and its standard trees clear at every row end.
+    """
+    segments = []
+    row_count = 0
+    field_count = 0
+    for field_id, c in enumerate(cells):
+        if c["use"] != "agrivoltaic":
+            continue
+        ring = inset(c["poly"], PANEL_END_SETBACK)
+        if ring is None:
+            continue
+        q = [to_grid(*p) for p in ring]
+        u0, u1 = min(p[0] for p in q), max(p[0] for p in q)
+        v0, v1 = min(p[1] for p in q), max(p[1] for p in q)
+        rows_here = 0
+        first_v = math.ceil(v0 / PANEL_SPACING) * PANEL_SPACING
+        for row_id, v in enumerate(np.arange(first_v, v1, PANEL_SPACING)):
+            made = False
+            u = u0
+            segment_id = 0
+            while u < u1 - 2.0:
+                end = min(u + PANEL_SEGMENT, u1)
+                length = end - u
+                if length >= 8.0:
+                    x, z = from_grid((u + end) / 2, v)
+                    segments.append([
+                        round(x, 2), round(z, 2), round(length, 2),
+                        field_id, row_id, segment_id,
+                    ])
+                    made = True
+                    segment_id += 1
+                u = end + PANEL_ACCESS_GAP
+            if made:
+                rows_here += 1
+        if rows_here:
+            field_count += 1
+            row_count += rows_here
+    return {
+        "bearingDegrees": BEARING,
+        "rowCentresMetres": PANEL_SPACING,
+        "panelHeightMetres": PANEL_HEIGHT,
+        "panelBottomMetres": 0.35,
+        "endSetbackMetres": PANEL_END_SETBACK,
+        "accessGapMetres": PANEL_ACCESS_GAP,
+        "fieldCount": field_count,
+        "rowCount": row_count,
+        "segmentCount": len(segments),
+        "record": ["x", "z", "length", "field", "row", "segment"],
+        "segments": segments,
+    }
+
+
+def roof_programme(buildings):
+    """Assign and measure the approved 40/29/22/6/3 roof programme.
+
+    Percentages use projected roof area, the quantity visible in the aerial
+    boards. Glasshouses and solar carports are productive structures in their
+    own right, and GCHQ is a separately measured retrofit, so this programme
+    covers the generated homes and campus blocks. The renderer uses the same
+    three typology names for its broad roof masks.
+    """
+    categories = ("PV", "meadow/green", "slate/tile",
+                  "walkable/terrace", "other")
+    target = dict(zip(categories, (0.40, 0.29, 0.22, 0.06, 0.03)))
+
+    def area(b):
+        ring = b["ring"]
+        return abs(sum(a[0] * q[1] - q[0] * a[1]
+                       for a, q in zip(ring, ring[1:] + ring[:1]))) / 2
+
+    groups = {
+        "home-pitch": [b for b in buildings
+                       if b["family"] == "homes"
+                       and b.get("typology") == "terrace"],
+        "home-meadow": [b for b in buildings
+                        if b["family"] == "homes"
+                        and b.get("typology") == "apartments"],
+        "campus-mixed": [b for b in buildings if b["family"] == "campus"],
+    }
+    group_area = {name: sum(area(b) for b in values)
+                  for name, values in groups.items()}
+    total = sum(group_area.values())
+    if not total:
+        raise ValueError("roof programme has no homes or campus roofs")
+
+    # Campus roofs carry legible PV bands, meadow strips and broad paths.
+    # Residual shares are solved against the fixed whole-programme target, so
+    # rounding or a future footprint refinement cannot quietly drift the mix.
+    campus = {
+        "PV": 0.25, "meadow/green": 0.57, "slate/tile": 0.0,
+        "walkable/terrace": 0.15, "other": 0.03,
+    }
+    remaining = {k: target[k] * total - campus[k] * group_area["campus-mixed"]
+                 for k in categories}
+    # Taller residential blocks take the remaining meadow and service area;
+    # the small balance is a walkable path through the planting.
+    cap = group_area["home-meadow"]
+    apartments = {k: 0.0 for k in categories}
+    apartments["meadow/green"] = remaining["meadow/green"] / max(cap, 1.0)
+    apartments["other"] = remaining["other"] / max(cap, 1.0)
+    apartments["walkable/terrace"] = 1.0 \
+        - apartments["meadow/green"] - apartments["other"]
+    for k in categories:
+        remaining[k] -= apartments[k] * cap
+
+    terraces = {k: remaining[k] / max(group_area["home-pitch"], 1.0)
+                for k in categories}
+    programmes = {
+        "home-pitch": terraces,
+        "home-meadow": apartments,
+        "campus-mixed": campus,
+    }
+    for name, mix in programmes.items():
+        if any(v < -1e-6 or v > 1.0 + 1e-6 for v in mix.values()) \
+                or abs(sum(mix.values()) - 1.0) > 1e-6:
+            raise ValueError(f"impossible roof programme for {name}: {mix}")
+        for b in groups[name]:
+            b["roofProgramme"] = name
+
+    achieved_area = {k: sum(group_area[name] * mix[k]
+                             for name, mix in programmes.items())
+                     for k in categories}
+    achieved = {k: round(achieved_area[k] / total * 100, 1)
+                for k in categories}
+    return {
+        "basis": "projected area of generated home and campus roofs",
+        "targetPercent": {k: round(v * 100, 1) for k, v in target.items()},
+        "achievedPercent": achieved,
+        "areaM2": round(total),
+        "programmes": {
+            name: {k: round(v, 6) for k, v in mix.items()}
+            for name, mix in programmes.items()
+        },
+    }
+
+
 def point_in_poly(point, poly):
     """Even-odd containment for the small convex footprints in this dataset."""
     x, z = point
@@ -1124,7 +1274,7 @@ RGB = lambda v: ((v >> 16) & 255, (v >> 8) & 255, v & 255)
 
 
 def stormwater_channels(cells, parcel_1m, W):
-    """One 2.5 m open channel on the wetland side of every home street.
+    """One readable open channel on the wetland side of every home street.
 
     The masterplan has no pipe network to pretend to know. Direction is the
     honest piece we can derive: choose the side and outfall end nearest the
@@ -1160,6 +1310,30 @@ def stormwater_channels(cells, parcel_1m, W):
     return channels
 
 
+def ponded_reaches(cells):
+    """Three shallow, mapped-wetland pools, aligned to the field grain."""
+    wet = sorted((c for c in cells if c["use"] == "wetland"),
+                 key=lambda c: (-c["areaM2"], c["centre"]))[:3]
+    ponds = []
+    for i, c in enumerate(wet):
+        cx, cz = c["centre"]
+        length = (34.0, 28.0, 22.0)[i]
+        width = (16.0, 13.0, 11.0)[i]
+        points = []
+        for j in range(32):
+            a = j / 32 * math.tau
+            # A slight deterministic asymmetry avoids three diagrammatic ovals.
+            wobble = 1.0 + 0.08 * math.sin(a * 3 + i)
+            u = math.cos(a) * length / 2 * wobble
+            v = math.sin(a) * width / 2 * (2.0 - wobble)
+            x, z = from_grid(to_grid(cx, cz)[0] + u,
+                             to_grid(cx, cz)[1] + v)
+            points.append((x, z))
+        ponds.append({"field": c["centre"], "length": length,
+                      "width": width, "poly": points})
+    return ponds
+
+
 def paint(cells, lines, cover, index, parcel_1m, W, palette):
     """A colour overlay and a class overlay, both only inside the allocation."""
     big = W * SS
@@ -1189,35 +1363,9 @@ def paint(cells, lines, cover, index, parcel_1m, W, palette):
         if c["use"] in ground:
             poly(c["poly"], ground[c["use"]])
 
-    # Panel rows, drawn across the grain so they read as rows from altitude
-    # rather than as a flat wash — and clipped to their own field, which the
-    # first version was not: unclipped rows striped a third of the vale.
-    t = math.radians(BEARING + 90)
-    for c in cells:
-        if c["use"] != "agrivoltaic":
-            continue
-        rows_img = Image.new("RGBA", (W * SS, W * SS), (0, 0, 0, 0))
-        dr = ImageDraw.Draw(rows_img)
-        xs = [p[0] for p in c["poly"]]
-        zs = [p[1] for p in c["poly"]]
-        r = math.hypot(max(xs) - min(xs), max(zs) - min(zs))
-        cx, cz = c["centre"]
-        for k in np.arange(-r / 2, r / 2, PANEL_SPACING):
-            ax = cx + math.cos(t) * -r / 2 - math.sin(t) * k
-            az = cz + math.sin(t) * -r / 2 + math.cos(t) * k
-            bx = cx + math.cos(t) * r / 2 - math.sin(t) * k
-            bz = cz + math.sin(t) * r / 2 + math.cos(t) * k
-            dr.line([((ax + W / 2) * SS, (az + W / 2) * SS),
-                     ((bx + W / 2) * SS, (bz + W / 2) * SS)],
-                    fill=RGB(PANEL) + (225,), width=int(PANEL_WIDTH * SS))
-        clip = Image.new("L", (W * SS, W * SS), 0)
-        ImageDraw.Draw(clip).polygon(
-            [((x + W / 2) * SS, (z + W / 2) * SS) for x, z in c["poly"]], fill=255)
-        rows_img.putalpha(Image.fromarray(
-            (np.array(rows_img.getchannel("A")) *
-             (np.array(clip) > 0)).astype(np.uint8), "L"))
-        colour.alpha_composite(rows_img)
-        dc = ImageDraw.Draw(colour)
+    # Agrivoltaics is pasture here. Its former dark stripes were baked colour,
+    # which made flat cyan marks even when the intended panel shader failed.
+    # M6 emits actual vertical rows instead; the ground stays evenly grazed.
 
     # The 14/18 m internal streets are part of the same measured grid as the
     # field cells. Block interiors remain grass gardens and shared courts.
@@ -1232,6 +1380,9 @@ def paint(cells, lines, cover, index, parcel_1m, W, palette):
     channels = stormwater_channels(cells, parcel_1m, W)
     for a, b, width in channels:
         line(a, b, "water", width)
+    ponds = ponded_reaches(cells)
+    for pond in ponds:
+        poly(pond["poly"], "water")
 
     # Nothing outside the allocation changes. That is what makes the wave
     # honest: the future differs only where somebody designed it.
@@ -1245,7 +1396,8 @@ def paint(cells, lines, cover, index, parcel_1m, W, palette):
     return colour, Image.fromarray(ka, "L"), mask, {
         "count": len(channels), "lengthMetres": round(channel_length),
         "widthMetres": CHANNEL_WIDTH,
-    }
+    }, [{"field": p["field"], "lengthMetres": p["length"],
+         "widthMetres": p["width"]} for p in ponds]
 
 
 def main():
@@ -1303,12 +1455,14 @@ def main():
     buildings = make_buildings(cells, heights, meta, parcel_1m, W,
                                road, named_routes)
     buildings += make_glasshouses(cells, heights, meta, parcel_1m, W)
+    agrivoltaics = make_agrivoltaics(cells)
     present = today_obstacles()
     canopy_obstacles = present + buildings
     canopies, canopy_stats = make_canopies(
         cls, index, heights, meta, canopy_obstacles, today_trees())
     assert_canopy_clearance(canopies, present, heights, meta)
     buildings += canopies
+    roofs = roof_programme(buildings)
 
     def footprint_area(b):
         r = b["ring"]
@@ -1328,6 +1482,10 @@ def main():
         print(f"   {k:<12} {v:>4}")
     print(f"   dwellings    {dwellings:>4}")
     print(f"   campus floor {campus_floor:>7,} m2")
+    print("   roof mix     " + ", ".join(
+        f"{k} {v:.1f}%" for k, v in roofs["achievedPercent"].items()))
+    print(f"   agrivoltaics {agrivoltaics['rowCount']} rows in "
+          f"{agrivoltaics['segmentCount']} access-separated segments")
     canopy_area = sum(footprint_area(b) for b in canopies)
     print(f"   canopy area  {canopy_area / 10000:7.2f} ha")
     print(f"   parking      {canopy_stats['parkingAreaM2'] / 10000:7.2f} ha found; "
@@ -1347,6 +1505,10 @@ def main():
 
     palette = {k: int(v["colour"].lstrip("#"), 16)
                for k, v in cover["classes"].items()}
+    # M6's authored ground palette. These overrides affect only the future
+    # overlay, never today's surveyed land-cover texture.
+    palette.update({"grass": 0x8FA064, "meadow": 0x8FA064,
+                    "water": 0x8CA5A9})
     palette.update(NEW_CLASSES)
     next_index = max(index.values()) + 1
     for name in NEW_CLASSES:
@@ -1354,7 +1516,7 @@ def main():
             index[name] = next_index
             next_index += 1
 
-    colour, klass, _, channel_stats = paint(
+    colour, klass, _, channel_stats, ponds = paint(
         cells, lines, cover, index, parcel_1m, W, palette)
 
     if args.dry_run:
@@ -1372,6 +1534,8 @@ def main():
 
     (out / "gv-2045-buildings.json").write_text(
         json.dumps(buildings, separators=(",", ":")))
+    (out / "gv-2045-agrivoltaics.json").write_text(
+        json.dumps(agrivoltaics, separators=(",", ":")))
     rec = np.array(trees, dtype=[("x", "<i2"), ("z", "<i2"), ("h", "u1"),
                                  ("r", "u1"), ("k", "u1"), ("s", "u1")])
     (out / "gv-2045-trees.bin").write_bytes(rec.tobytes())
@@ -1392,16 +1556,23 @@ def main():
         "colourFile": "gv-2045-landcover.png",
         "classFile": "gv-2045-landclass.png",
         "buildingFile": "gv-2045-buildings.json",
+        "agrivoltaicFile": "gv-2045-agrivoltaics.json",
         "treeFile": "gv-2045-trees.bin",
         "classes": {k: {"index": index[k], "colour": f"#{palette[k]:06x}"}
                     for k in list(cover["classes"]) + list(NEW_CLASSES)},
         "families": {
-            "campus": {"wall": "#aaa397", "roof": "#697456"},
-            "homes": {"wall": "#d8c6a5", "roof": "#293139",
-                      "flatRoof": "#6b7658"},
-            "glasshouse": {"wall": "#9eafb2", "roof": "#b8c9cc"},
-            "canopy": {"wall": "#34383a", "roof": "#17222c"},
+            "campus": {"wall": "#c49a65", "roof": "#8d9552",
+                       "glass": "#687a75", "trim": "#665747",
+                       "stone": "#c7b79a"},
+            "homes": {"wall": "#be986c", "roof": "#17242e",
+                      "flatRoof": "#8d9552", "glass": "#687a75",
+                      "trim": "#665747"},
+            "glasshouse": {"wall": "#687a75", "roof": "#8ca5a9",
+                           "frame": "#c7b79a"},
+            "canopy": {"wall": "#c7b79a", "roof": "#17242e",
+                       "frame": "#91a4ab"},
         },
+        "roofProgramme": roofs,
         "roofChanges": [{
             "name": "Government Communications Headquarters",
             "roof": "#93a469",
@@ -1436,13 +1607,23 @@ def main():
             "2": "hedge", "3": "orchard", "4": "street lime",
         },
         "stormwaterChannels": channel_stats,
+        "pondedReaches": ponds,
+        "agrivoltaics": {
+            "file": "gv-2045-agrivoltaics.json",
+            "fields": agrivoltaics["fieldCount"],
+            "rows": agrivoltaics["rowCount"],
+            "segments": agrivoltaics["segmentCount"],
+            "bearingDegrees": agrivoltaics["bearingDegrees"],
+            "rowCentresMetres": agrivoltaics["rowCentresMetres"],
+        },
         "sources": ["Environment Agency LiDAR (OGL v3)",
                     "OpenStreetMap contributors (ODbL)",
                     "everything else invented by this script"],
     }
     (out / "gv-2045-meta.json").write_text(json.dumps(doc, indent=2) + "\n")
     for f in ("gv-2045-landcover.png", "gv-2045-landclass.png",
-              "gv-2045-buildings.json", "gv-2045-trees.bin",
+              "gv-2045-buildings.json", "gv-2045-agrivoltaics.json",
+              "gv-2045-trees.bin",
               "gv-2045-meta.json"):
         print(f"  wrote {(out / f).relative_to(ROOT)}  "
               f"{(out / f).stat().st_size / 1024:.0f} KB")

@@ -371,3 +371,48 @@ Valley SPD; `inspiration/golden-valley/README.md`.
 - Sized orchard crowns directly from the 7.5 m planting grid: 6.4-7.1 m
   irregular crowns now nearly touch down each row while preserving the wider
   inter-row gaps and the established keyed planting colour grade.
+
+## M6, what changed
+
+- Traced the field camouflage to the source data. Lossy WebP error was about
+  one RGB level within the solid orchard and wetland fills, so it was not the
+  visible fault. The main holes came from new courts reusing today's `grass`
+  class index: M4's exact ownership discard correctly exposed the photograph
+  wherever the two class IDs matched. The agrivoltaic texture also still held
+  dark painted panel stripes. Added a future-only meadow class, kept every
+  changed field on a future-only class, and removed all panel paint from the
+  colour raster. M4's centre-texel ownership test itself is unchanged.
+- Set the authored ground colours to meadow `#8FA064`, pasture `#7E925F` and
+  wet meadow `#789067`. The new WebP has uniform in-class medians and the
+  existing world-metre surface variation remains in the shader.
+- Added a compact `gv-2045-agrivoltaics.json`: 39 vertical rows across the
+  three mapped fields, split into 195 terrain-following segments. Rows follow
+  the measured 22 degree grain at 11 m centres, stand 2 m high, stop 14 m
+  short of hedges and have 4 m access breaks. The renderer uses instanced
+  blue-black glass, light frame rails and slim posts, with the existing 2045
+  rise and shadow programmes applied to visible and depth materials.
+- Calculated the roof programme over 60,481 m2 of projected generated home and
+  campus roof. Achieved PV 40.0%, meadow or green 29.0%, slate or tile 22.0%,
+  walkable terrace 6.0% and other 3.0%. Home pitches now read as near-whole
+  PV or slate roofs, taller home blocks as meadow, and campus roofs as broad
+  planted, PV, path and service bands.
+- Changed the data palette to buff masonry `#BE986C`, honey timber `#C49A65`,
+  pale stone `#C7B79A`, reflective glazing `#687A75`, bronze trim `#665747`
+  and roof meadow `#8D9552`. Home and campus facade rules remain separate.
+  Campus openings now have darker, deeper reveals and stronger timber bays.
+- Moved keyed wall compensation into `KEYED_GRADE`: homes exposure 1.70 with
+  roof 1.02, campus 1.53 with roof 1.15, glasshouses 2.40 with roof 1.30, and
+  canopies 0.10 with roof 1.00. These values compensate for the darker palette
+  without adding exposure in GLSL. The keyed probe remains the live gate.
+- Widened all 18 stormwater channels from 2.5 m to 3.5 m, retaining their
+  2,790 m mapped length, and added three shallow ponded reaches within the
+  three largest wetland cells. Water uses `#8CA5A9` with the existing low
+  roughness sky response; filtered class edges provide soft reed margins.
+- Made GCHQ canopy undersides pale and increased the still-slim posts from
+  150 mm to 200 mm so the mapped circulation gaps and supports survive the
+  340 m view. Glasshouses now use finer 1.8 m frames, brighter roof panes and
+  stronger top-to-bottom pane contrast.
+- Kept 1,030 dwellings, 105,501 m2 of campus floor, the GCHQ tile clip, M5
+  trees and the M4 ownership discard unchanged. The compact row file is
+  6.1 KB raw and 2.1 KB gzipped; the regenerated future payload is 13.0 KB
+  smaller gzipped overall, comfortably inside the 300 KB growth limit.

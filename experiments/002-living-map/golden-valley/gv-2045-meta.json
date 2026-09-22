@@ -17,6 +17,7 @@
   "colourFile": "gv-2045-landcover.webp",
   "classFile": "gv-2045-landclass.webp",
   "buildingFile": "gv-2045-buildings.json",
+  "agrivoltaicFile": "gv-2045-agrivoltaics.json",
   "treeFile": "gv-2045-trees.bin",
   "classes": {
     "farmland": {
@@ -25,11 +26,11 @@
     },
     "meadow": {
       "index": 1,
-      "colour": "#93a566"
+      "colour": "#8fa064"
     },
     "grass": {
       "index": 2,
-      "colour": "#8ca767"
+      "colour": "#8fa064"
     },
     "pitch": {
       "index": 3,
@@ -61,7 +62,7 @@
     },
     "water": {
       "index": 10,
-      "colour": "#5c7f8c"
+      "colour": "#8ca5a9"
     },
     "path": {
       "index": 11,
@@ -87,36 +88,88 @@
       "index": 16,
       "colour": "#8d8676"
     },
-    "orchard": {
+    "future_meadow": {
       "index": 17,
-      "colour": "#6d8a4e"
+      "colour": "#8fa064"
+    },
+    "orchard": {
+      "index": 18,
+      "colour": "#7e925f"
     },
     "agrivoltaic": {
-      "index": 18,
-      "colour": "#7a8f63"
+      "index": 19,
+      "colour": "#7e925f"
     },
     "wetland": {
-      "index": 19,
-      "colour": "#86a06e"
+      "index": 20,
+      "colour": "#789067"
     }
   },
   "families": {
     "campus": {
-      "wall": "#aaa397",
-      "roof": "#697456"
+      "wall": "#c49a65",
+      "roof": "#8d9552",
+      "glass": "#687a75",
+      "trim": "#665747",
+      "stone": "#c7b79a"
     },
     "homes": {
-      "wall": "#d8c6a5",
-      "roof": "#293139",
-      "flatRoof": "#6b7658"
+      "wall": "#be986c",
+      "roof": "#17242e",
+      "flatRoof": "#8d9552",
+      "glass": "#687a75",
+      "trim": "#665747"
     },
     "glasshouse": {
-      "wall": "#9eafb2",
-      "roof": "#b8c9cc"
+      "wall": "#687a75",
+      "roof": "#8ca5a9",
+      "frame": "#c7b79a"
     },
     "canopy": {
-      "wall": "#34383a",
-      "roof": "#17222c"
+      "wall": "#c7b79a",
+      "roof": "#17242e",
+      "frame": "#91a4ab"
+    }
+  },
+  "roofProgramme": {
+    "basis": "projected area of generated home and campus roofs",
+    "targetPercent": {
+      "PV": 40.0,
+      "meadow/green": 29.0,
+      "slate/tile": 22.0,
+      "walkable/terrace": 6.0,
+      "other": 3.0
+    },
+    "achievedPercent": {
+      "PV": 40.0,
+      "meadow/green": 29.0,
+      "slate/tile": 22.0,
+      "walkable/terrace": 6.0,
+      "other": 3.0
+    },
+    "areaM2": 60481,
+    "programmes": {
+      "home-pitch": {
+        "PV": 0.58216,
+        "meadow/green": 0.0,
+        "slate/tile": 0.408628,
+        "walkable/terrace": 0.009212,
+        "other": 0.0
+      },
+      "home-meadow": {
+        "PV": 0.0,
+        "meadow/green": 0.803089,
+        "slate/tile": 0.0,
+        "walkable/terrace": 0.026855,
+        "other": 0.170056
+      },
+      "campus-mixed": {
+        "PV": 0.25,
+        "meadow/green": 0.57,
+        "slate/tile": 0.0,
+        "walkable/terrace": 0.15,
+        "other": 0.03
+      }
     }
   },
   "roofChanges": [
@@ -166,7 +219,41 @@
   "stormwaterChannels": {
     "count": 18,
     "lengthMetres": 2790,
-    "widthMetres": 2.5
+    "widthMetres": 3.5
+  },
+  "pondedReaches": [
+    {
+      "field": [
+        -398,
+        -106
+      ],
+      "lengthMetres": 34.0,
+      "widthMetres": 16.0
+    },
+    {
+      "field": [
+        -853,
+        -101
+      ],
+      "lengthMetres": 28.0,
+      "widthMetres": 13.0
+    },
+    {
+      "field": [
+        -656,
+        -588
+      ],
+      "lengthMetres": 22.0,
+      "widthMetres": 11.0
+    }
+  ],
+  "agrivoltaics": {
+    "file": "gv-2045-agrivoltaics.json",
+    "fields": 3,
+    "rows": 39,
+    "segments": 195,
+    "bearingDegrees": 22.0,
+    "rowCentresMetres": 11.0
   },
   "sources": [
     "Environment Agency LiDAR (OGL v3)",
