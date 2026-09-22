@@ -48,7 +48,7 @@ from pathlib import Path
 import numpy as np
 
 from heightfield import load_heights
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 GV = ROOT / "experiments" / "002-living-map" / "golden-valley"
@@ -78,6 +78,10 @@ NEW_CLASSES = {
 PANEL = 0x59636b               # the panel rows themselves
 PANEL_WIDTH = 2.2
 PANEL_SPACING = 11.0
+GCHQ = (123.0, 64.0)
+CANOPY_RADIUS = 400.0
+CANOPY_DEPTHS = (11.0, 5.5)  # paired bays first, then single perimeter bays
+CANOPY_MIN_PARKING = 0.75
 # The new ground is painted over today's, not instead of it: at less than full
 # opacity the tramlines, the mown stripes and the slope shading underneath
 # still come through, so a changed field still reads as that field.
@@ -503,10 +507,13 @@ def building_record(foot, family, cell, heights, meta, storeys, roof,
     if roof == "flat":
         b.update(roof="flat", axis=None, eaves=h, ridge=h)
     else:
+        depth = min(math.dist(a, q)
+                    for a, q in zip(foot, foot[1:] + foot[:1]))
+        eaves = max(2.0, storeys - 0.5) * STOREY
+        ridge = eaves + depth / 2              # 45-degree Passivhaus roof
         b.update(roof="gable", axis=round(axis, 1),
-                 # One storey of rise over a 9-10 m-deep terrace is a roughly
-                 # 35-degree pitch: visibly steep from the aerial views.
-                 eaves=round(h - STOREY, 2), ridge=h)
+                 eaves=round(eaves, 2), ridge=round(ridge, 2),
+                 height=round(ridge, 2), roofPitchDegrees=45)
     b.update(extra)
     return b
 
@@ -620,7 +627,7 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
         if ring is None:
             continue
         a, b = ring[0], ring[1]
-        for foot, _ in blocks_along(a, b, *c["centre"], 62, 13, 14):
+        for foot, axis in blocks_along(a, b, *c["centre"], 62, 13, 14):
             if not all(parcel_1m[
                     min(max(int(z + W / 2), 0), W - 1),
                     min(max(int(x + W / 2), 0), W - 1)] for x, z in foot):
@@ -628,9 +635,341 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
             base = round(min(ground_at(heights, meta, x, z) for x, z in foot), 2)
             out.append({"ring": [[round(x, 2), round(z, 2)] for x, z in foot],
                         "holes": [], "base": base, "height": 6.5,
-                        "family": "glasshouse", "roof": "flat", "axis": None,
-                        "eaves": 6.5, "ridge": 6.5, "cell": c["centre"]})
+                        "family": "glasshouse", "roof": "gable",
+                        "axis": round(math.degrees(math.atan2(
+                            axis[1], axis[0])), 1),
+                        "eaves": 4.2, "ridge": 6.5, "cell": c["centre"]})
     return out
+
+
+def point_in_poly(point, poly):
+    """Even-odd containment for the small convex footprints in this dataset."""
+    x, z = point
+    inside = False
+    for a, b in zip(poly, poly[1:] + poly[:1]):
+        if (a[1] > z) != (b[1] > z):
+            at = a[0] + (z - a[1]) * (b[0] - a[0]) / (b[1] - a[1])
+            if x < at:
+                inside = not inside
+    return inside
+
+
+def segments_cross(a, b, c, d):
+    if max(a[0], b[0]) < min(c[0], d[0]) \
+            or max(c[0], d[0]) < min(a[0], b[0]) \
+            or max(a[1], b[1]) < min(c[1], d[1]) \
+            or max(c[1], d[1]) < min(a[1], b[1]):
+        return False
+    def side(p, q, r):
+        return (q[0] - p[0]) * (r[1] - p[1]) \
+            - (q[1] - p[1]) * (r[0] - p[0])
+    return side(a, b, c) * side(a, b, d) <= 0 \
+        and side(c, d, a) * side(c, d, b) <= 0
+
+
+def polygons_overlap(a, b):
+    if any(point_in_poly(p, b) for p in a) \
+            or any(point_in_poly(p, a) for p in b):
+        return True
+    return any(segments_cross(p, q, r, s)
+               for p, q in zip(a, a[1:] + a[:1])
+               for r, s in zip(b, b[1:] + b[:1]))
+
+
+def point_segment_distance(p, a, b):
+    """Euclidean distance from a point to a finite segment."""
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    n = dx * dx + dz * dz
+    if n < 1e-12:
+        return math.dist(p, a)
+    t = max(0.0, min(1.0,
+                     ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / n))
+    return math.dist(p, (a[0] + dx * t, a[1] + dz * t))
+
+
+def polygon_distance(a, b):
+    """Minimum edge distance between two polygons; zero when they overlap."""
+    if polygons_overlap(a, b):
+        return 0.0
+    return min(
+        min(point_segment_distance(p, r, s)
+            for p in a for r, s in zip(b, b[1:] + b[:1])),
+        min(point_segment_distance(p, r, s)
+            for p in b for r, s in zip(a, a[1:] + a[:1])),
+    )
+
+
+def bbox_distance(a, b):
+    """Minimum distance between polygon bounding boxes (a cheap reject)."""
+    ax0, ax1 = min(p[0] for p in a), max(p[0] for p in a)
+    az0, az1 = min(p[1] for p in a), max(p[1] for p in a)
+    bx0, bx1 = min(p[0] for p in b), max(p[0] for p in b)
+    bz0, bz1 = min(p[1] for p in b), max(p[1] for p in b)
+    dx = max(0.0, ax0 - bx1, bx0 - ax1)
+    dz = max(0.0, az0 - bz1, bz0 - az1)
+    return math.hypot(dx, dz)
+
+
+def today_obstacles():
+    """Today's buildings, deliberately read from both authoritative files."""
+    out = json.loads((GV / "gv-buildings.json").read_text())
+    out += json.loads((GV / "gv-gchq.json").read_text())
+    return out
+
+
+def today_trees():
+    """Tree centres and crown radii from the surveyed eight-byte records."""
+    rec = np.frombuffer((GV / "gv-trees.bin").read_bytes(), dtype=[
+        ("x", "<i2"), ("z", "<i2"), ("h", "u1"), ("r", "u1"),
+        ("k", "u1"), ("s", "u1")])
+    # The unit crown is 0.71 units across; match loadFutureTrees' scale.
+    return [(r["x"] / 10, r["z"] / 10,
+             max(2.0, r["h"] * 0.25 * r["s"] / 100 * 0.355)) for r in rec]
+
+
+def obstacle_mask(shape, buildings, trees, clearance=3):
+    """Raster guard used for fitting; the exact geometry is asserted below."""
+    h, w = shape
+    im = Image.new("L", (w, h), 0)
+    draw = ImageDraw.Draw(im)
+    for b in buildings:
+        ring = b["ring"]
+        if max(x for x, _ in ring) < GCHQ[0] - CANOPY_RADIUS - 10 \
+                or min(x for x, _ in ring) > GCHQ[0] + CANOPY_RADIUS + 10 \
+                or max(z for _, z in ring) < GCHQ[1] - CANOPY_RADIUS - 10 \
+                or min(z for _, z in ring) > GCHQ[1] + CANOPY_RADIUS + 10:
+            continue
+        # The outer ring is intentionally solid. For GCHQ this excludes the
+        # courtyard as well as the occupied annulus, as the brief requires.
+        draw.polygon([(x + w / 2, z + h / 2) for x, z in ring], fill=255)
+    for x, z, radius in trees:
+        if math.dist((x, z), GCHQ) > CANOPY_RADIUS + radius:
+            continue
+        r = radius + 0.5
+        draw.ellipse((x + w / 2 - r, z + h / 2 - r,
+                      x + w / 2 + r, z + h / 2 + r), fill=255)
+    # Four raster metres is conservative for a three-metre geometric rule at
+    # pixel centres; the assertion remains the final authority.
+    size = 2 * (clearance + 1) + 1
+    return np.array(im.filter(ImageFilter.MaxFilter(size)), dtype=bool)
+
+
+def parking_components(parking, radius=CANOPY_RADIUS):
+    """Four-connected parking patches around GCHQ, in local metres.
+
+    The source is today's classified land rather than a drawn masterplan.
+    Islands below 400 m2 are access aprons and fragments, not car parks.
+    """
+    h, w = parking.shape
+    yy, xx = np.indices(parking.shape)
+    near = parking & ((xx - w / 2 - GCHQ[0]) ** 2
+                      + (yy - h / 2 - GCHQ[1]) ** 2 <= radius ** 2)
+    seen = np.zeros_like(near, dtype=bool)
+    out = []
+    for sy, sx in zip(*np.where(near)):
+        if seen[sy, sx]:
+            continue
+        todo = [(int(sy), int(sx))]
+        seen[sy, sx] = True
+        points = []
+        while todo:
+            y, x = todo.pop()
+            points.append((x - w / 2, y - h / 2))
+            for ny, nx in ((y - 1, x), (y + 1, x),
+                           (y, x - 1), (y, x + 1)):
+                if 0 <= ny < h and 0 <= nx < w \
+                        and near[ny, nx] and not seen[ny, nx]:
+                    seen[ny, nx] = True
+                    todo.append((ny, nx))
+        if len(points) >= 400:
+            out.append(np.asarray(points, dtype=float))
+    return out
+
+
+def make_canopies(cls, index, heights, meta, buildings, trees):
+    """Fit continuous PV rows to every usable GCHQ parking-bay patch.
+
+    OSM's parking polygons around the Doughnut are a mixture of straight and
+    curved bay strips, sometimes joined by one-pixel necks. One PCA direction
+    per connected polygon therefore missed most of the parking. Instead we
+    test real 11 m paired rows and 5.5 m edge rows at ten-degree headings,
+    then pack the longest candidates first. Mapped roads and footpaths are
+    hard exclusions, leaving the classified 6-8 m circulation gaps open.
+    """
+    parking = cls == index["parking"]
+    h, w = parking.shape
+    yy, xx = np.indices(parking.shape)
+    near = ((xx - w / 2 - GCHQ[0]) ** 2
+            + (yy - h / 2 - GCHQ[1]) ** 2 <= CANOPY_RADIUS ** 2)
+    source = parking & near
+    blocked = obstacle_mask(parking.shape, buildings, trees)
+    eligible = source & ~blocked
+    forbidden_indices = [index[name]
+                         for name in ("road", "road_minor", "path",
+                                      "water", "rail") if name in index]
+    forbidden = np.isin(cls, forbidden_indices) | blocked
+
+    rows, cols = np.where(eligible)
+    if not len(rows):
+        return [], {"parkingAreaM2": int(source.sum()),
+                    "eligibleParkingAreaM2": 0,
+                    "parkingCoveredM2": 0, "coverageFraction": 0.0,
+                    "parkingLots": 0, "parkingLotsCovered": 0}
+    gy, gx = np.mgrid[rows.min():rows.max() + 1:2,
+                      cols.min():cols.max() + 1:2]
+    centres = np.stack([gx.ravel(), gy.ravel()], axis=1)
+    centres = centres[eligible[centres[:, 1], centres[:, 0]]]
+    candidates = []
+    lengths = (60.0, 42.0, 28.0, 16.0, 10.0)
+
+    # Candidate generation is vectorised in small batches: about thirty
+    # thousand useful rectangles instead of millions of Python point tests.
+    for depth in CANOPY_DEPTHS:
+        for degrees in range(0, 180, 10):
+            angle = math.radians(degrees)
+            along = np.array([math.cos(angle), math.sin(angle)])
+            across = np.array([-along[1], along[0]])
+            for length in lengths:
+                offsets = np.array([
+                    along * u + across * v
+                    for u in np.arange(-length / 2, length / 2 + 0.1, 1.0)
+                    for v in np.arange(-depth / 2, depth / 2 + 0.1, 1.0)
+                ])
+                for start in range(0, len(centres), 800):
+                    batch = centres[start:start + 800]
+                    probes = np.rint(batch[:, None, :] + offsets).astype(int)
+                    probes[:, :, 0] = np.clip(probes[:, :, 0], 0, w - 1)
+                    probes[:, :, 1] = np.clip(probes[:, :, 1], 0, h - 1)
+                    pr = probes[:, :, 1]
+                    pc = probes[:, :, 0]
+                    parking_share = parking[pr, pc].mean(axis=1)
+                    clear = ~forbidden[pr, pc].any(axis=1)
+                    for i in np.where(
+                            (parking_share >= CANOPY_MIN_PARKING) & clear)[0]:
+                        candidates.append((length * depth, length, depth,
+                                           degrees, *batch[i]))
+
+    candidates.sort(key=lambda c: (-c[0], -c[1], c[3], c[5], c[4]))
+    occupied = np.zeros_like(parking)
+    reserved = np.zeros_like(parking)
+    chosen = []
+
+    def rectangle_pixels(cx, cy, length, depth):
+        pad = length / 2 + depth / 2 + 2
+        x0, x1 = max(0, int(cx - pad)), min(w, int(cx + pad) + 1)
+        y0, y1 = max(0, int(cy - pad)), min(h, int(cy + pad) + 1)
+        ry, rx = np.mgrid[y0:y1, x0:x1]
+        return x0, x1, y0, y1, rx - cx, ry - cy
+
+    for _, length, depth, degrees, cx, cy in candidates:
+        angle = math.radians(degrees)
+        along = np.array([math.cos(angle), math.sin(angle)])
+        across = np.array([-along[1], along[0]])
+        x0, x1, y0, y1, dx, dz = rectangle_pixels(cx, cy, length, depth)
+        u = dx * along[0] + dz * along[1]
+        v = dx * across[0] + dz * across[1]
+        inside = (np.abs(u) < length / 2 - 0.15) \
+            & (np.abs(v) < depth / 2 - 0.15)
+        if (reserved[y0:y1, x0:x1] & inside).any():
+            continue
+        # The source polygons are bay fields separated by mapped circulation;
+        # road/path pixels are hard exclusions above. Reserving the canopy
+        # itself (rather than buffering across those mapped gaps) lets paired
+        # rows occupy both sides while the 6-8 m aisles remain open.
+        reserve = inside
+        p0 = np.array([cx, cy]) - along * length / 2 - across * depth / 2
+        p1 = np.array([cx, cy]) + along * length / 2 - across * depth / 2
+        p2 = np.array([cx, cy]) + along * length / 2 + across * depth / 2
+        p3 = np.array([cx, cy]) - along * length / 2 + across * depth / 2
+        foot = [(round(p[0] - w / 2, 2), round(p[1] - h / 2, 2))
+                for p in (p0, p1, p2, p3)]
+        # The raster guard is conservative, but keep the exact three-metre
+        # rule here too so a rounded corner can never sneak through it.
+        nearby = [b for b in buildings
+                  if bbox_distance(foot, [tuple(p) for p in b["ring"]]) < 3.0
+                  and polygon_distance(
+                      foot, [tuple(p) for p in b["ring"]]) < 3.0]
+        if nearby:
+            continue
+        post_count = max(2, math.ceil(length / 9))
+        posts = []
+        for i in range(post_count):
+            t = 0.5 if post_count == 1 else 0.07 + i * 0.86 / (post_count - 1)
+            point = (p0 * (1 - t) + p1 * t + p3 * (1 - t) + p2 * t) / 2
+            x = round(point[0] - w / 2, 2)
+            z = round(point[1] - h / 2, 2)
+            posts.append({"x": x, "z": z,
+                          "ground": round(ground_at(heights, meta, x, z), 2)})
+        base = max(p["ground"] for p in posts)
+        chosen.append({
+            "ring": [[x, z] for x, z in foot], "holes": [],
+            "base": base, "height": 3.5, "family": "canopy",
+            "roof": "canopy", "axis": degrees, "eaves": 3.2,
+            "ridge": 3.5, "underside": 3.2, "thickness": 0.3,
+            "tiltDegrees": 6.0, "posts": posts,
+        })
+        occupied[y0:y1, x0:x1] |= inside
+        reserved[y0:y1, x0:x1] |= reserve
+
+    components = parking_components(source)
+    # OSM contains five nominal parking polygons here that are almost wholly
+    # under a building/courtyard or mature crown. They are the overlap bug,
+    # not usable car parks. Count a lot only when 200 m2 remains eligible.
+    usable_components = []
+    for points in components:
+        rr = (points[:, 1] + h / 2).astype(int)
+        cc = (points[:, 0] + w / 2).astype(int)
+        if int(eligible[rr, cc].sum()) >= 200:
+            usable_components.append(points)
+    covered_lots = sum(any(occupied[int(z + h / 2), int(x + w / 2)]
+                           for x, z in points) for points in usable_components)
+    if covered_lots != len(usable_components):
+        raise AssertionError(
+            f"canopies missed {len(usable_components) - covered_lots} usable car parks")
+    covered = int((occupied & source).sum())
+    stats = {
+        "parkingAreaM2": int(source.sum()),
+        "eligibleParkingAreaM2": int(eligible.sum()),
+        "parkingCoveredM2": covered,
+        "coverageFraction": covered / max(1, int(source.sum())),
+        "parkingLots": len(usable_components),
+        "parkingLotsCovered": covered_lots,
+    }
+    return chosen, stats
+
+
+def assert_canopy_clearance(canopies, buildings, heights, meta, clearance=3.0):
+    """No canopy or post may enter today's buildings or GCHQ courtyard."""
+    obstacles = [([tuple(p) for p in b["ring"]], b.get("name"))
+                 for b in buildings]
+    gchq = next(b for b in buildings
+                if b.get("name") == "Government Communications Headquarters")
+    courtyards = [[tuple(p) for p in hole] for hole in gchq.get("holes", [])]
+    for i, canopy in enumerate(canopies):
+        foot = [tuple(p) for p in canopy["ring"]]
+        for obstacle, name in obstacles:
+            if bbox_distance(foot, obstacle) < clearance \
+                    and polygon_distance(foot, obstacle) < clearance - 1e-6:
+                raise AssertionError(
+                    f"canopy {i} is within {clearance:g} m of {name or 'building'}")
+        if any(polygons_overlap(foot, yard) for yard in courtyards):
+            raise AssertionError(f"canopy {i} overlaps GCHQ courtyard")
+        for post in canopy["posts"]:
+            point = (post["x"], post["z"])
+            if any(bbox_distance([point], obstacle) < clearance
+                   and (point_in_poly(point, obstacle)
+                        or min(point_segment_distance(point, a, b)
+                               for a, b in zip(
+                                   obstacle, obstacle[1:] + obstacle[:1]))
+                        < clearance - 1e-6)
+                   for obstacle, _ in obstacles):
+                raise AssertionError(f"canopy {i} post enters building clearance")
+            want = round(ground_at(heights, meta, *point), 2)
+            if abs(post["ground"] - want) > 0.011:
+                raise AssertionError(
+                    f"canopy {i} post ground {post['ground']} != terrain {want}")
+            if post["ground"] >= canopy["base"] + canopy["underside"]:
+                raise AssertionError(f"canopy {i} post has no clear underside")
 
 
 # --- trees ------------------------------------------------------------------
@@ -914,23 +1253,37 @@ def main():
     buildings = make_buildings(cells, heights, meta, parcel_1m, W,
                                road, named_routes)
     buildings += make_glasshouses(cells, heights, meta, parcel_1m, W)
+    present = today_obstacles()
+    canopy_obstacles = present + buildings
+    canopies, canopy_stats = make_canopies(
+        cls, index, heights, meta, canopy_obstacles, today_trees())
+    assert_canopy_clearance(canopies, present, heights, meta)
+    buildings += canopies
 
     def footprint_area(b):
         r = b["ring"]
         return abs(sum(a[0] * q[1] - q[0] * a[1]
                        for a, q in zip(r, r[1:] + r[:1]))) / 2
 
+    permanent = [b for b in buildings if b["family"] != "canopy"]
     floor = sum(footprint_area(b) * b.get(
-        "storeys", max(1, round(b["height"] / STOREY))) for b in buildings)
+        "storeys", max(1, round(b["height"] / STOREY))) for b in permanent)
     campus_floor = round(sum(footprint_area(b) * b["storeys"] for b in buildings
                              if b["family"] == "campus"))
     dwellings = sum(b.get("dwellings", 0) for b in buildings)
     fam = Counter(b["family"] for b in buildings)
-    print(f"\n{len(buildings)} new buildings, {floor / 10000:.1f} ha of floor")
+    print(f"\n{len(permanent)} new buildings and {len(canopies)} canopies, "
+          f"{floor / 10000:.1f} ha of floor")
     for k, v in fam.most_common():
         print(f"   {k:<12} {v:>4}")
     print(f"   dwellings    {dwellings:>4}")
     print(f"   campus floor {campus_floor:>7,} m2")
+    canopy_area = sum(footprint_area(b) for b in canopies)
+    print(f"   canopy area  {canopy_area / 10000:7.2f} ha")
+    print(f"   parking      {canopy_stats['parkingAreaM2'] / 10000:7.2f} ha found; "
+          f"{canopy_stats['parkingCoveredM2'] / 10000:.2f} ha "
+          f"({canopy_stats['coverageFraction']:.1%}) directly covered; "
+          f"{canopy_stats['parkingLotsCovered']}/{canopy_stats['parkingLots']} lots")
     if not 1000 <= dwellings <= 1200:
         raise ValueError(f"dwelling target missed: {dwellings}")
     if not 93000 <= campus_floor <= 120000:
@@ -992,9 +1345,11 @@ def main():
         "classes": {k: {"index": index[k], "colour": f"#{palette[k]:06x}"}
                     for k in list(cover["classes"]) + list(NEW_CLASSES)},
         "families": {
-            "campus": {"wall": "#e8dfcb", "roof": "#93a469"},
-            "homes": {"wall": "#ece5d8", "roof": "#8a9b60"},
-            "glasshouse": {"wall": "#cfd8d4", "roof": "#dfe8e4"},
+            "campus": {"wall": "#aaa397", "roof": "#697456"},
+            "homes": {"wall": "#d8c6a5", "roof": "#293139",
+                      "flatRoof": "#6b7658"},
+            "glasshouse": {"wall": "#9eafb2", "roof": "#b8c9cc"},
+            "canopy": {"wall": "#34383a", "roof": "#17222c"},
         },
         "roofChanges": [{
             "name": "Government Communications Headquarters",
@@ -1006,7 +1361,18 @@ def main():
         }],
         "areasHectares": {k: round(v, 1) for k, v in ha.items()},
         "fields": len(cells),
-        "newBuildings": len(buildings),
+        "newBuildings": len(permanent),
+        "canopyCount": len(canopies),
+        "canopyHectares": round(canopy_area / 10000, 2),
+        "gchqParkingHectares": round(canopy_stats["parkingAreaM2"] / 10000, 2),
+        "gchqEligibleParkingHectares": round(
+            canopy_stats["eligibleParkingAreaM2"] / 10000, 2),
+        "gchqParkingCoveredHectares": round(
+            canopy_stats["parkingCoveredM2"] / 10000, 2),
+        "gchqParkingCoverageFraction": round(
+            canopy_stats["coverageFraction"], 3),
+        "gchqParkingLots": canopy_stats["parkingLots"],
+        "gchqParkingLotsCovered": canopy_stats["parkingLotsCovered"],
         "dwellings": dwellings,
         "campusFloorM2": campus_floor,
         "densityNote": ("Scheme-true density: about 1,100 homes and at least "
