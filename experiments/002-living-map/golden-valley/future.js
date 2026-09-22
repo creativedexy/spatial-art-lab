@@ -28,6 +28,17 @@ import { MEASURED_SUN, SUN_DIRECTION, sunFrom } from './look.js';
 const url = (f) => new URL(f, import.meta.url).href;
 export const futureMeta = await (await fetch(url('gv-2045-meta.json'))).json();
 
+// Values interpolated into GLSL always carry a decimal point. Apart from
+// preventing int/float overload failures, this keeps the shader and generated
+// metadata tied to one source of truth for every new agrivoltaic dimension.
+function glslFloat(value, places = 6) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) throw new TypeError(`invalid GLSL float: ${value}`);
+  return number.toFixed(places);
+}
+
+const agrivoltaicSpec = futureMeta.agrivoltaics;
+
 const SWEEP_FROM = -1250;     // local metres: the front starts west of the box
 const SWEEP_TO = 1250;
 const SOFT = 150;             // metres the front takes to pass a point
@@ -150,21 +161,82 @@ function share(material, patch, life = {}) {
 }
 
 /** Add the shared low-roughness PV glass response without losing any patch. */
-function pvGlassMaterial(material, key) {
+function pvGlassMaterial(material, key, row = null) {
   const previous = material.onBeforeCompile;
   const previousKey = material.customProgramCacheKey?.bind(material);
+  const jointColour = row ? new THREE.Color(row.moduleJointColour) : null;
+  const angle = row ? THREE.MathUtils.degToRad(row.bearingDegrees) : 0;
+  const rowVarying = row ? '\nvarying vec3 vPvWorld;' : '';
+  const rowVertex = row ? `
+        #ifdef USE_INSTANCING
+          vPvWorld = (modelMatrix * instanceMatrix
+                    * vec4(transformed, 1.0)).xyz;
+        #else
+          vPvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        #endif
+        ` : '';
+  const rowFragment = row ? `
+          // The module's own body stays M6b's dark glass; what changes at eye
+          // level is light, not albedo (see rowEmissive below). All this does
+          // is make the row less than perfectly smooth, and give it its module
+          // rhythm: one 36 m segment is still one instance, so the 1.1 m
+          // joints are drawn in world metres in the shader rather than bought
+          // with geometry. They antialias to a stable average from the air.
+          roughnessFactor = mix(roughnessFactor,
+            ${glslFloat(row.grazingResponse.roughness)}, 0.5);
+          vec3 pvEye = normalize(vViewPosition);
+          float pvAlong = dot(vPvWorld.xz,
+            vec2(${glslFloat(Math.cos(angle))}, ${glslFloat(Math.sin(angle))}));
+          float pvJointDistance = abs(fract(
+            pvAlong / ${glslFloat(row.moduleWidthMetres)} + 0.5) - 0.5)
+            * ${glslFloat(row.moduleWidthMetres)};
+          float pvJoint = 1.0 - smoothstep(
+            ${glslFloat(row.moduleJointWidthMetres * 0.5)},
+            ${glslFloat(row.moduleJointWidthMetres * 0.5)}
+              + max(fwidth(pvJointDistance), 0.000001),
+            pvJointDistance);
+          diffuseColor.rgb = mix(diffuseColor.rgb,
+            vec3(${glslFloat(jointColour.r)}, ${glslFloat(jointColour.g)},
+                 ${glslFloat(jointColour.b)}), pvJoint);
+        ` : '';
+  // Reflected sky is LIGHT, not albedo. M6b's PV body is a linear 0.04 at its
+  // brightest, so mixing a sky colour into `diffuseColor` and then lighting it
+  // with a sun that is behind the panel still gives black — which is what the
+  // first eye-level plates showed. Two things are missing, and both are light:
+  // a vertical module's shaded face is lit by half the sky hemisphere, and at
+  // grazing incidence it becomes a mirror of it. Added after lighting, with no
+  // view gate, because a term that only appears when you stand up is a fudge.
+  const rowEmissive = row ? `
+          {
+            vec3 skEye = normalize(vViewPosition);
+            float skGraze = pow(1.0 - abs(dot(normalize(normal), skEye)),
+                                ${glslFloat(row.grazingResponse.fresnelExponent)});
+            totalEmissiveRadiance += pvGlint
+              * (${glslFloat(row.grazingResponse.skyHemisphere)}
+                 + skGraze * ${glslFloat(row.grazingResponse.skyRadiance)});
+          }
+        ` : '';
   material.onBeforeCompile = (shader, ...args) => {
     if (previous) previous.call(material, shader, ...args);
     shader.uniforms.uPvSunDirection = pvSunDirection;
+    if (row) {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', `#include <common>${rowVarying}`)
+        .replace('#include <project_vertex>', `${rowVertex}
+          #include <project_vertex>`);
+    }
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>\n${PV_GLASS}`)
+      .replace('#include <common>', `#include <common>\n${PV_GLASS}${rowVarying}`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         {
           float pvRough = roughnessFactor;
           diffuseColor.rgb = fPvGlass(normal, 0.0, 0.0, pvRough);
           roughnessFactor = pvRough;
           metalnessFactor = 0.05;
-        }`);
+          ${rowFragment}
+        }`)
+      .replace('#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>${rowEmissive}`);
   };
   material.customProgramCacheKey = () =>
     `${previousKey ? previousKey() : material.type}:pv-glass:${key}`;
@@ -432,6 +504,8 @@ export function blendGround(
                       * futureMix;
          float orchard = gvClassWeight(${groundClass.orchard}, fc, fa) * futureMix;
          float arable = gvClassWeight(${groundClass.farmland}, fc, fa) * futureMix;
+         float agrivoltaic = gvClassEqual(fc, ${groundClass.agrivoltaic})
+                           * futureMix;
          float wetland = gvClassWeight(${groundClass.wetland}, fc, fa) * futureMix;
 
          // The measured field grain is 22 degrees. All frequencies are in
@@ -450,9 +524,47 @@ export function blendGround(
                               * 0.055;
          float drills = sin(across * 1.047198) * 0.022
                       + sin(across * 0.349066) * 0.018;
+
+         // The rows sit on global multiples of the measured 11 m grid. Keep
+         // 0.70 m either side of each panel as its service/uncultivated band,
+         // then run two assumed aggregate drill rhythms along the row. Fine
+         // drills fade to their mean before they can alias; the alternating
+         // inter-row crop exposure remains legible from the aerial cameras.
+         float cropPanelDistance = abs(mod(
+           across + ${glslFloat(agrivoltaicSpec.rowCentresMetres * 0.5)},
+           ${glslFloat(agrivoltaicSpec.rowCentresMetres)})
+           - ${glslFloat(agrivoltaicSpec.rowCentresMetres * 0.5)});
+         float cropWorked = smoothstep(
+           ${glslFloat(agrivoltaicSpec.crop.clearBandFromPanelMetres)},
+           ${glslFloat(agrivoltaicSpec.crop.clearBandFromPanelMetres
+                       + agrivoltaicSpec.crop.edgeBlendMetres)},
+           cropPanelDistance);
+         float cropStrip = floor(across
+           / ${glslFloat(agrivoltaicSpec.rowCentresMetres)});
+         float cropAlternate = mod(abs(cropStrip), 2.0);
+         float cropSpacing = mix(
+           ${glslFloat(agrivoltaicSpec.crop.rowSpacingMetres[0])},
+           ${glslFloat(agrivoltaicSpec.crop.rowSpacingMetres[1])},
+           cropAlternate);
+         float cropPixel = fwidth(across) / cropSpacing;
+         float cropResolved = 1.0 - smoothstep(
+           ${glslFloat(agrivoltaicSpec.crop.detailFadePixels[0])},
+           ${glslFloat(agrivoltaicSpec.crop.detailFadePixels[1])}, cropPixel);
+         float cropPhase = across * 6.283185 / cropSpacing;
+         float cropRows = cos(cropPhase)
+           * ${glslFloat(agrivoltaicSpec.crop.rowContrast)} * cropResolved;
+         float cropRotation = mix(
+           ${glslFloat(agrivoltaicSpec.crop.rotationExposure[0])},
+           ${glslFloat(agrivoltaicSpec.crop.rotationExposure[1])},
+           cropAlternate) - 1.0;
+         float cropAmount = agrivoltaic * cropWorked;
+         float cropNormal = sin(cropPhase)
+           * ${glslFloat(agrivoltaicSpec.crop.rowNormalStrength)}
+           * cropResolved * cropAmount;
          float groundDetail = mown * grass + meadowPatch * meadow
                             + meadowPatch * wetland * 0.85
-                            + orchardStrip * orchard + drills * arable;
+                            + orchardStrip * orchard + drills * arable
+                            + (cropRows + cropRotation) * cropAmount;
          diffuseColor.rgb *= max(0.72, 1.0 + groundDetail);
 
          // Wet meadow remains vegetation except for sparse 10-30 m pools.
@@ -491,6 +603,10 @@ export function blendGround(
          metalnessFactor = mix(metalnessFactor, 0.06, gvWaterAmount);`)
       .replace('#include <normal_fragment_maps>',
         `#include <normal_fragment_maps>
+         vec2 cropGradient = vec2(dFdx(across), dFdy(across));
+         cropGradient /= max(length(cropGradient), 0.000001);
+         normal = normalize(normal
+           + cropNormal * vec3(cropGradient.x, cropGradient.y, 0.0));
          float gvRippleX = sin(vFutureWorld.x * 0.72
                              + vFutureWorld.z * 0.31 + uGroundTime * 1.35);
          float gvRippleY = cos(vFutureWorld.x * -0.28
@@ -976,7 +1092,7 @@ export function riseMesh(geometry, family) {
   return mesh;
 }
 
-/** A compact row record becomes three instanced systems, not hundreds of meshes. */
+/** A compact row record becomes four instanced systems, not thousands of meshes. */
 function riseInstances(geometry, material, matrices, name) {
   const visible = share(material, function riseInstance(shader) {
     shader.vertexShader = shader.vertexShader
@@ -1025,20 +1141,26 @@ async function addAgrivoltaics(group, groundAt) {
     const ground = (y0 + y1) * 0.5;
     const slope = Math.atan2(y1 - y0, length);
     panelMatrices.push(matrix(x, ground + rows.panelBottomMetres, z,
-                              length, rows.panelHeightMetres, 0.08, slope));
-    railMatrices.push(matrix(x, ground + rows.panelBottomMetres - 0.03, z,
-                             length, 0.06, 0.12, slope));
+                              length, rows.panelHeightMetres,
+                              rows.panelDepthMetres, slope));
+    railMatrices.push(matrix(
+      x, ground + rows.panelBottomMetres - rows.railHeightMetres * 0.5, z,
+      length, rows.railHeightMetres, rows.railDepthMetres, slope));
     topEdgeMatrices.push(matrix(
-      x, ground + rows.panelBottomMetres + rows.panelHeightMetres - 0.03, z,
-      length, 0.06, 0.12, slope));
-    const posts = Math.max(2, Math.ceil(length / 7.0) + 1);
+      x, ground + rows.panelBottomMetres + rows.panelHeightMetres
+        - rows.railHeightMetres * 0.5, z,
+      length, rows.railHeightMetres, rows.railDepthMetres, slope));
+    const posts = Math.max(
+      2, Math.ceil(length / rows.postMaxCentresMetres) + 1,
+    );
     for (let i = 0; i < posts; i++) {
       const t = posts === 1 ? 0.0 : i / (posts - 1) - 0.5;
       const px = x + along.x * length * t;
       const pz = z + along.y * length * t;
       postMatrices.push(matrix(px, groundAt(px, pz), pz,
-                               0.10, rows.panelBottomMetres
-                               + rows.panelHeightMetres, 0.10));
+                               rows.postSectionMetres, rows.panelBottomMetres
+                               + rows.panelHeightMetres,
+                               rows.postSectionMetres));
     }
   }
 
@@ -1054,7 +1176,7 @@ async function addAgrivoltaics(group, groundAt) {
     clearcoat: 0.72,
     clearcoatRoughness: 0.10,
     envMapIntensity: 1.20,
-  }), 'agrivoltaic');
+  }), 'agrivoltaic', rows);
   const edge = new THREE.MeshStandardMaterial({
     color: 0x665747, roughness: 0.52, metalness: 0.34,
   });

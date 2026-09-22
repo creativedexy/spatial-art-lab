@@ -92,11 +92,11 @@ const NOISE = /* glsl */`
 // keyless build, and the thin directional glint that survives the map scale.
 export const PV_GLASS = /* glsl */`
   uniform vec3 uPvSunDirection;
+  const vec3 pvGlint = vec3(0.283149, 0.371238, 0.407240);
   vec3 fPvGlass(vec3 nrm, float frame, float glintBand,
                 inout float rough) {
     const vec3 pvBase = vec3(0.008568, 0.017642, 0.027321);
     const vec3 pvSky = vec3(0.042311, 0.068478, 0.095307);
-    const vec3 pvGlint = vec3(0.283149, 0.371238, 0.407240);
     vec3 eye = normalize(vViewPosition);
     vec3 sun = normalize((viewMatrix * vec4(uPvSunDirection, 0.0)).xyz);
     vec3 halfVector = normalize(sun + eye);

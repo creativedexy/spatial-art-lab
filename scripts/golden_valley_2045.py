@@ -83,9 +83,43 @@ NEW_CLASSES = {
 }
 PANEL_SPACING = 11.0
 PANEL_HEIGHT = 2.0
+PANEL_BOTTOM = 0.35
+PANEL_DEPTH = 0.08
 PANEL_END_SETBACK = 14.0
 PANEL_ACCESS_GAP = 4.0
 PANEL_SEGMENT = 36.0
+# These are assumptions, not measurements from the site: a 1.10 m module is
+# within the 1.0-1.2 m brief, while 3.60 m post centres put a support at every
+# third module or closer. Joints stay in the panel shader so the compact row
+# payload remains one record per terrain-following access segment.
+PANEL_MODULE_WIDTH = 1.10
+PANEL_MODULE_JOINT = 0.03
+PANEL_POST_CENTRES = 3.60
+PANEL_POST_SECTION = 0.12
+PANEL_RAIL_HEIGHT = 0.06
+PANEL_RAIL_DEPTH = 0.12
+
+# Ground-only crop marks. The two drill spacings are a legibility assumption,
+# representing the aggregate rows a person sees rather than individual cereal
+# stems. Adjacent 11 m inter-row strips alternate them as two crop phases.
+AGRIVOLTAIC_CROP_ROW_SPACING = (0.60, 0.80)
+AGRIVOLTAIC_CROP_CLEAR_BAND = 0.70
+AGRIVOLTAIC_CROP_EDGE_BLEND = 0.25
+AGRIVOLTAIC_CROP_ROW_CONTRAST = 0.16
+AGRIVOLTAIC_CROP_ROW_NORMAL = 0.045
+AGRIVOLTAIC_CROP_ROTATION_EXPOSURE = (0.88, 1.12)
+AGRIVOLTAIC_CROP_FADE_PIXELS = (0.35, 0.85)
+
+# The existing M6b body/glint colours remain untouched. What eye level showed
+# is that the body was never the problem: a linear 0.04 albedo with the sun
+# behind it is black however it is mixed. So these two add LIGHT after the
+# lighting stage, and neither is gated on where the camera is. A vertical
+# module's shaded face is lit by roughly half the sky hemisphere, and at
+# grazing incidence it mirrors it.
+AGRIVOLTAIC_FRESNEL_EXPONENT = 3.0
+AGRIVOLTAIC_SKY_HEMISPHERE = 0.10
+AGRIVOLTAIC_SKY_RADIANCE = 0.45
+AGRIVOLTAIC_GRAZING_ROUGHNESS = 0.06
 GCHQ = (123.0, 64.0)
 CANOPY_RADIUS = 400.0
 CANOPY_DEPTHS = (11.0, 5.5)  # paired bays first, then single perimeter bays
@@ -654,10 +688,11 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
 
 
 def make_agrivoltaics(cells):
-    """Vertical bifacial PV rows over pasture, on the measured 22 degree grain.
+    """Vertical bifacial PV rows over worked crop, on the measured 22° grain.
 
-    Records describe row segments rather than panels. The renderer instances a
-    two-metre glass fence, its light frame and slim posts from each record.
+    Records describe row segments rather than modules. The renderer instances
+    a two-metre glass row, shades its 1.1 m module joints and places structural
+    posts from each record without expanding the payload to one record per bay.
     Four-metre breaks every 36 m retain cross-field access, and the 14 m inset
     leaves the replanted hedge and its standard trees clear at every row end.
     """
@@ -700,9 +735,39 @@ def make_agrivoltaics(cells):
         "bearingDegrees": BEARING,
         "rowCentresMetres": PANEL_SPACING,
         "panelHeightMetres": PANEL_HEIGHT,
-        "panelBottomMetres": 0.35,
+        "panelBottomMetres": PANEL_BOTTOM,
+        "panelDepthMetres": PANEL_DEPTH,
         "endSetbackMetres": PANEL_END_SETBACK,
         "accessGapMetres": PANEL_ACCESS_GAP,
+        "moduleWidthMetres": PANEL_MODULE_WIDTH,
+        "moduleJointWidthMetres": PANEL_MODULE_JOINT,
+        "moduleJointColour": "#665747",
+        "postMaxCentresMetres": PANEL_POST_CENTRES,
+        "postSectionMetres": PANEL_POST_SECTION,
+        "railHeightMetres": PANEL_RAIL_HEIGHT,
+        "railDepthMetres": PANEL_RAIL_DEPTH,
+        "crop": {
+            "basis": ("assumption for legible aggregate worked-crop rows; "
+                      "not individual plant spacing"),
+            "rotation": "alternate neighbouring 11 m inter-row strips",
+            "rowSpacingMetres": list(AGRIVOLTAIC_CROP_ROW_SPACING),
+            "clearBandFromPanelMetres": AGRIVOLTAIC_CROP_CLEAR_BAND,
+            "edgeBlendMetres": AGRIVOLTAIC_CROP_EDGE_BLEND,
+            "rowContrast": AGRIVOLTAIC_CROP_ROW_CONTRAST,
+            "rowNormalStrength": AGRIVOLTAIC_CROP_ROW_NORMAL,
+            "rotationExposure": list(AGRIVOLTAIC_CROP_ROTATION_EXPOSURE),
+            "detailFadePixels": list(AGRIVOLTAIC_CROP_FADE_PIXELS),
+        },
+        "grazingResponse": {
+            "fresnelExponent": AGRIVOLTAIC_FRESNEL_EXPONENT,
+            "skyHemisphere": AGRIVOLTAIC_SKY_HEMISPHERE,
+            "skyRadiance": AGRIVOLTAIC_SKY_RADIANCE,
+            "roughness": AGRIVOLTAIC_GRAZING_ROUGHNESS,
+            "basis": ("a vertical module is lit by half the sky hemisphere and "
+                      "mirrors it at grazing incidence; both are added after "
+                      "lighting, because M6b's dark body under a sun that is "
+                      "behind the panel is black however it is mixed"),
+        },
         "fieldCount": field_count,
         "rowCount": row_count,
         "segmentCount": len(segments),
@@ -1615,6 +1680,17 @@ def main():
             "segments": agrivoltaics["segmentCount"],
             "bearingDegrees": agrivoltaics["bearingDegrees"],
             "rowCentresMetres": agrivoltaics["rowCentresMetres"],
+            "panelHeightMetres": agrivoltaics["panelHeightMetres"],
+            "panelBottomMetres": agrivoltaics["panelBottomMetres"],
+            "panelDepthMetres": agrivoltaics["panelDepthMetres"],
+            "moduleWidthMetres": agrivoltaics["moduleWidthMetres"],
+            "moduleJointWidthMetres": agrivoltaics["moduleJointWidthMetres"],
+            "postMaxCentresMetres": agrivoltaics["postMaxCentresMetres"],
+            "postSectionMetres": agrivoltaics["postSectionMetres"],
+            "railHeightMetres": agrivoltaics["railHeightMetres"],
+            "railDepthMetres": agrivoltaics["railDepthMetres"],
+            "crop": agrivoltaics["crop"],
+            "grazingResponse": agrivoltaics["grazingResponse"],
         },
         "sources": ["Environment Agency LiDAR (OGL v3)",
                     "OpenStreetMap contributors (ODbL)",
