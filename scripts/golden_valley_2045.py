@@ -82,10 +82,13 @@ GCHQ = (123.0, 64.0)
 CANOPY_RADIUS = 400.0
 CANOPY_DEPTHS = (11.0, 5.5)  # paired bays first, then single perimeter bays
 CANOPY_MIN_PARKING = 0.75
-# The new ground is painted over today's, not instead of it: at less than full
-# opacity the tramlines, the mown stripes and the slope shading underneath
-# still come through, so a changed field still reads as that field.
-FILL_ALPHA = 185
+# Earlier fills were translucent so today's field detail showed through. That
+# detail is not aligned with the new classes: pale stubble and dark crop marks
+# survived as green-cyan blotches inside wetland, orchard and built cells. The
+# shader now supplies use-specific detail in world metres, so class colour is
+# opaque here and has one unambiguous median for KEYED_GRADE to preserve.
+FILL_ALPHA = 255
+CHANNEL_WIDTH = 2.5
 
 # What the ground of a built cell is made of, before buildings go on it.
 # Courtyards and plazas, not "gardens and roofs averaged together":
@@ -1087,11 +1090,11 @@ def make_trees(lines, cells, parcel_1m, W):
     for c in cells:
         if c["use"] == "orchard":
             for x, z in orchard_points(c, parcel_1m, W):
-                out.append(tree_record(x, z, random.uniform(6, 8), 0,
+                out.append(tree_record(x, z, random.uniform(6, 8), 3,
                                        random.uniform(135, 155)))
                 counts["orchard"] += 1
             for x, z in woodland_points(c, settled, parcel_1m, W):
-                out.append(tree_record(x, z, random.uniform(12, 18), 0,
+                out.append(tree_record(x, z, random.uniform(12, 18), 1,
                                        random.uniform(75, 115)))
                 counts["woodland"] += 1
         elif c["use"] in ("homes", "campus"):
@@ -1107,7 +1110,7 @@ def make_trees(lines, cells, parcel_1m, W):
                     for x, z in clip_to_parcel(aa, bb, parcel_1m, W, step):
                         out.append(tree_record(x + random.uniform(-0.5, 0.5),
                                                z + random.uniform(-0.5, 0.5),
-                                               random.uniform(8, 12), 0,
+                                               random.uniform(8, 12), 4,
                                                random.uniform(75, 105)))
                         counts["street"] += 1
     if len(out) >= 30000:
@@ -1118,6 +1121,43 @@ def make_trees(lines, cells, parcel_1m, W):
 # --- the ground -------------------------------------------------------------
 
 RGB = lambda v: ((v >> 16) & 255, (v >> 8) & 255, v & 255)
+
+
+def stormwater_channels(cells, parcel_1m, W):
+    """One 2.5 m open channel on the wetland side of every home street.
+
+    The masterplan has no pipe network to pretend to know. Direction is the
+    honest piece we can derive: choose the side and outfall end nearest the
+    nearest wetland cell. The continuous street grid then conveys each short
+    reach towards that wet meadow, in the Augustenborg manner, without a
+    fictional diagonal ditch through homes or gardens.
+    """
+    wetlands = [c for c in cells if c["use"] == "wetland"]
+    if not wetlands:
+        return []
+    channels = []
+    for c in cells:
+        if c["use"] != "homes":
+            continue
+        target = min(wetlands, key=lambda w: math.dist(c["centre"], w["centre"]))
+        tx, tz = target["centre"]
+        for a, b, width in internal_streets(c, parcel_1m, W):
+            dx, dz = b[0] - a[0], b[1] - a[1]
+            n = math.hypot(dx, dz)
+            nx, nz = -dz / n, dx / n
+            mx, mz = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+            side = 1 if (tx - mx) * nx + (tz - mz) * nz >= 0 else -1
+            # Inside the carriageway edge, where an open kerbside rain garden
+            # remains legible but does not collide with the avenue trees.
+            off = max(0.0, width / 2 - CHANNEL_WIDTH / 2)
+            aa = (a[0] + nx * off * side, a[1] + nz * off * side)
+            bb = (b[0] + nx * off * side, b[1] + nz * off * side)
+            # Store the nearest-wetland end last so metadata and any future
+            # flow arrows inherit the same direction without changing format.
+            if math.dist(aa, (tx, tz)) < math.dist(bb, (tx, tz)):
+                aa, bb = bb, aa
+            channels.append((aa, bb, CHANNEL_WIDTH))
+    return channels
 
 
 def paint(cells, lines, cover, index, parcel_1m, W, palette):
@@ -1187,6 +1227,12 @@ def paint(cells, lines, cover, index, parcel_1m, W, palette):
     for _, a, b in lines:
         line(a, b, "scrub", 2.5)
 
+    # Draw last so the silver water remains visible through road and hedge
+    # crossings. Softening and sky reflection happen in future.js, not here.
+    channels = stormwater_channels(cells, parcel_1m, W)
+    for a, b, width in channels:
+        line(a, b, "water", width)
+
     # Nothing outside the allocation changes. That is what makes the wave
     # honest: the future differs only where somebody designed it.
     mask = Image.fromarray((parcel_1m * 255).astype(np.uint8), "L")
@@ -1195,7 +1241,11 @@ def paint(cells, lines, cover, index, parcel_1m, W, palette):
         (np.array(colour.getchannel("A")) * parcel_1m).astype(np.uint8), "L"))
     ka = np.array(klass)
     ka[~parcel_1m] = 255
-    return colour, Image.fromarray(ka, "L"), mask
+    channel_length = sum(math.dist(a, b) for a, b, _ in channels)
+    return colour, Image.fromarray(ka, "L"), mask, {
+        "count": len(channels), "lengthMetres": round(channel_length),
+        "widthMetres": CHANNEL_WIDTH,
+    }
 
 
 def main():
@@ -1304,7 +1354,8 @@ def main():
             index[name] = next_index
             next_index += 1
 
-    colour, klass, _ = paint(cells, lines, cover, index, parcel_1m, W, palette)
+    colour, klass, _, channel_stats = paint(
+        cells, lines, cover, index, parcel_1m, W, palette)
 
     if args.dry_run:
         print("\n--dry-run: nothing written")
@@ -1380,6 +1431,11 @@ def main():
         "floorHectares": round(floor / 10000, 1),
         "newTrees": len(trees),
         "treeCounts": dict(tree_counts),
+        "treeKinds": {
+            "0": "broad oak standard", "1": "mixed woodland clump",
+            "2": "hedge", "3": "orchard", "4": "street lime",
+        },
+        "stormwaterChannels": channel_stats,
         "sources": ["Environment Agency LiDAR (OGL v3)",
                     "OpenStreetMap contributors (ODbL)",
                     "everything else invented by this script"],

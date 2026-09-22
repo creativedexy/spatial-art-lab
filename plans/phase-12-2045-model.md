@@ -323,3 +323,27 @@ Valley SPD; `inspiration/golden-valley/README.md`.
   and a darker planted edge, all derived from `KEYED_GRADE.meadow`.
 - Masked photographed masts and lighting columns above the Doughnut's surveyed
   roof footprint while its 2045 meadow is visible, leaving today's tiles intact.
+
+## M5, what changed
+
+- Replaced the faceted canopy blobs with five instanced forms: broad oak,
+  mixed woodland, dense hedge, small orchard and tall avenue lime. Irregular
+  smooth lobe clusters, vertex occlusion, instance colour variation, shadow
+  casting and the existing wind give the crowns a lit side and dark gaps.
+- Kept today's 9,216 trees on the same path and retained the eight-byte tree
+  record. The 2045 kind byte now distinguishes standards, woodland, hedges,
+  orchard trees and street limes without changing the file format.
+- Removed the green-cyan ground blotches at source. They were present-day crop
+  and field marks showing through class fills composited at 185 of 255 alpha,
+  not mask noise. New class fills are opaque and their texture now comes from
+  the shader in world metres.
+- Added faint mowing bands to amenity grass, multi-scale meadow patches,
+  orchard strips, field-grain drill lines at 22 degrees and sparse open pools
+  in wet meadow. Five class and colour taps soften boundaries over seven metres
+  while leaving `KEYED_GRADE.ground` unchanged.
+- Made present and future water low-roughness, lightly rippled receivers of the
+  keyed sky environment, so channels and pools read silver from the air.
+- Added 18 open 2.5 m kerbside stormwater channels, totalling 2,790 m, on the
+  wetland side of the home streets. Each reach is directed towards its nearest
+  wetland cell in the generated street grid.
+- Kept 1,030 dwellings and 105,501 m2 of campus floor area unchanged.

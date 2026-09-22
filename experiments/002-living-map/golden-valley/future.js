@@ -141,6 +141,8 @@ function share(material, patch, life = {}) {
  */
 const groundMaskUniforms = [];
 const groundDirectUniforms = [];
+const groundClass = Object.fromEntries(Object.entries(futureMeta.classes)
+  .map(([name, value]) => [name, value.index / 255]));
 
 /** Draw our ground only where 2045 changes it. */
 export function setGroundMasked(on) {
@@ -236,6 +238,9 @@ export function blendGround(
                   { uFutureMap: { value: futureTexture },
                     uTodayClass: { value: todayClasses ?? null },
                     uFutureClass: { value: futureClasses ?? null },
+                    uGroundTexel: { value: new THREE.Vector2(
+                      1 / (futureTexture.image?.width || 2000),
+                      1 / (futureTexture.image?.height || 2000)) },
                     uGroundMask: { value: groundMask.value },
                     uDirectGround: { value: groundDirect.value },
                     uGroundSaturation: groundGrade.saturation,
@@ -265,12 +270,25 @@ export function blendGround(
          uniform sampler2D uFutureMap;
          uniform sampler2D uTodayClass;
          uniform sampler2D uFutureClass;
+         uniform vec2 uGroundTexel;
          uniform float uGroundMask;
          uniform float uDirectGround;
          uniform float uGroundSaturation;
          uniform float uGroundExposure;
          uniform float uFront; uniform float uSoft; uniform float uRagged;
          varying vec3 vFutureWorld;
+         float gvWaterAmount = 0.0;
+         float gvClassEqual(float sampleValue, float classValue) {
+           return 1.0 - step(0.5 / 255.0, abs(sampleValue - classValue));
+         }
+         float gvClassWeight(float classValue, float centre, vec4 around) {
+           return gvClassEqual(centre, classValue) * 0.36
+             + dot(vec4(
+                 gvClassEqual(around.x, classValue),
+                 gvClassEqual(around.y, classValue),
+                 gvClassEqual(around.z, classValue),
+                 gvClassEqual(around.w, classValue)), vec4(0.16));
+         }
          ${NOISE}`)
       .replace('#include <map_fragment>',
         `{
@@ -283,31 +301,121 @@ export function blendGround(
            // was pointless. The class maps answer it exactly: two indices,
            // and they either differ or they do not.
            //
-           // Discard rather than fade: half our field over a photograph of
-           // the same field is two grounds, and reads as neither.
+           // Five taps across seven metres turn a one-texel polygon edge into
+           // a 3-8 m transition. Over the photograph that transition has to
+           // be stippled with discard rather than alpha blended: two opaque
+           // terrains in one depth layer otherwise make a grey fringe.
            if (uGroundMask > 0.5) {
-             float wasClass = texture2D(uTodayClass, vMapUv).r;
-             float willClass = texture2D(uFutureClass, vMapUv).r;
-             bool changed = abs(wasClass - willClass) > 0.002;
-             if (!changed || futureAt(vFutureWorld) < 0.5) discard;
+             vec2 md = uGroundTexel * 3.5;
+             float changed = step(0.002, abs(
+               texture2D(uTodayClass, vMapUv).r
+               - texture2D(uFutureClass, vMapUv).r)) * 0.36;
+             changed += step(0.002, abs(
+               texture2D(uTodayClass, vMapUv + vec2(md.x, 0.0)).r
+               - texture2D(uFutureClass, vMapUv + vec2(md.x, 0.0)).r)) * 0.16;
+             changed += step(0.002, abs(
+               texture2D(uTodayClass, vMapUv - vec2(md.x, 0.0)).r
+               - texture2D(uFutureClass, vMapUv - vec2(md.x, 0.0)).r)) * 0.16;
+             changed += step(0.002, abs(
+               texture2D(uTodayClass, vMapUv + vec2(0.0, md.y)).r
+               - texture2D(uFutureClass, vMapUv + vec2(0.0, md.y)).r)) * 0.16;
+             changed += step(0.002, abs(
+               texture2D(uTodayClass, vMapUv - vec2(0.0, md.y)).r
+               - texture2D(uFutureClass, vMapUv - vec2(0.0, md.y)).r)) * 0.16;
+             float edgeDither = fHash(floor(vFutureWorld.xz * 2.0) + 37.0);
+             if (edgeDither > changed || futureAt(vFutureWorld) < 0.5) discard;
            }
          }
          #include <map_fragment>
-         // Drawn straight from the 2045 map over the photograph: graded to the
-         // photographed fields it sits among (KEYED_GRADE.ground). Off the moment
-         // the measured fallback takes over, which draws the ground as designed.
+         vec2 detailStep = uGroundTexel * 3.5;
+         vec4 futureTexel = texture2D(uFutureMap, vMapUv) * 0.36
+           + texture2D(uFutureMap, vMapUv + vec2(detailStep.x, 0.0)) * 0.16
+           + texture2D(uFutureMap, vMapUv - vec2(detailStep.x, 0.0)) * 0.16
+           + texture2D(uFutureMap, vMapUv + vec2(0.0, detailStep.y)) * 0.16
+           + texture2D(uFutureMap, vMapUv - vec2(0.0, detailStep.y)) * 0.16;
+         float futureMix = futureAt(vFutureWorld);
          if (uDirectGround > 0.5) {
-           float gl = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-           diffuseColor.rgb = mix(vec3(gl), diffuseColor.rgb, uGroundSaturation)
-                              * uGroundExposure;
+           diffuseColor.rgb = futureTexel.rgb;
          }
          if (uDirectGround < 0.5) {
            // The sampler is sRGB, so the GPU has already linearised this and
            // it can be mixed with diffuseColor directly.
-           vec4 futureTexel = texture2D(uFutureMap, vMapUv);
-           diffuseColor.rgb = mix(diffuseColor.rgb, futureTexel.rgb,
-                                  futureAt(vFutureWorld));
-         }`);
+           diffuseColor.rgb = mix(diffuseColor.rgb, futureTexel.rgb, futureMix);
+         }
+
+         // Class samples share the colour filter's radius. The class image
+         // itself stays lossless and nearest-filtered; averaging membership,
+         // not numeric indices, is what makes a real boundary transition.
+         float fc = texture2D(uFutureClass, vMapUv).r;
+         vec4 fa = vec4(
+           texture2D(uFutureClass, vMapUv + vec2(detailStep.x, 0.0)).r,
+           texture2D(uFutureClass, vMapUv - vec2(detailStep.x, 0.0)).r,
+           texture2D(uFutureClass, vMapUv + vec2(0.0, detailStep.y)).r,
+           texture2D(uFutureClass, vMapUv - vec2(0.0, detailStep.y)).r);
+         float grass = gvClassWeight(${groundClass.grass}, fc, fa) * futureMix;
+         float meadow = gvClassWeight(${groundClass.meadow}, fc, fa) * futureMix;
+         float orchard = gvClassWeight(${groundClass.orchard}, fc, fa) * futureMix;
+         float arable = gvClassWeight(${groundClass.farmland}, fc, fa) * futureMix;
+         float wetland = gvClassWeight(${groundClass.wetland}, fc, fa) * futureMix;
+
+         // The measured field grain is 22 degrees. All frequencies are in
+         // world metres, so the effect neither swims with the camera nor
+         // changes scale when a texture is recompressed.
+         const vec2 gvAlong = vec2(0.927184, 0.374607);
+         const vec2 gvAcross = vec2(-0.374607, 0.927184);
+         float along = dot(vFutureWorld.xz, gvAlong);
+         float across = dot(vFutureWorld.xz, gvAcross);
+         float mown = sin(across * 0.785398) * 0.028;
+         float meadowPatch = (fNoise(vFutureWorld.xz / 16.0)
+                            + fNoise(vFutureWorld.xz / 5.0 + 19.0) * 0.45
+                            - 0.725) * 0.13;
+         float orchardStrip = sin(across * 0.837758) * 0.045
+                            + (fNoise(vec2(along / 22.0, across / 7.5)) - 0.5)
+                              * 0.055;
+         float drills = sin(across * 1.047198) * 0.022
+                      + sin(across * 0.349066) * 0.018;
+         float groundDetail = mown * grass + meadowPatch * meadow
+                            + meadowPatch * wetland * 0.85
+                            + orchardStrip * orchard + drills * arable;
+         diffuseColor.rgb *= max(0.72, 1.0 + groundDetail);
+
+         // Wet meadow remains vegetation except for sparse 10-30 m pools.
+         // Existing water and those pools use the keyed sky environment via
+         // MeshStandardMaterial's low-roughness specular response below.
+         float wetNoise = fNoise(vFutureWorld.xz / 21.0) * 0.68
+                        + fNoise(vFutureWorld.xz / 8.0 + 31.0) * 0.32;
+         float pools = smoothstep(0.68, 0.79, wetNoise) * wetland;
+         float futureWater = min(1.0,
+           gvClassWeight(${groundClass.water}, fc, fa) + pools);
+         float todayWater = gvClassEqual(texture2D(uTodayClass, vMapUv).r,
+                                         ${groundClass.water});
+         gvWaterAmount = mix(todayWater, futureWater, futureMix);
+         float waterLuma = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+         vec3 silver = mix(diffuseColor.rgb, vec3(waterLuma) * 0.72
+                           + vec3(0.055, 0.075, 0.095), 0.62);
+         diffuseColor.rgb = mix(diffuseColor.rgb, silver, gvWaterAmount);
+
+         // Drawn straight over the photograph in a keyed build, so grade the
+         // finished detail rather than changing the established base palette.
+         if (uDirectGround > 0.5) {
+           float gl = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+           diffuseColor.rgb = mix(vec3(gl), diffuseColor.rgb, uGroundSaturation)
+                              * uGroundExposure;
+         }`)
+      .replace('#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+         roughnessFactor = mix(roughnessFactor, 0.18, gvWaterAmount);`)
+      .replace('#include <metalnessmap_fragment>',
+        `#include <metalnessmap_fragment>
+         metalnessFactor = mix(metalnessFactor, 0.06, gvWaterAmount);`)
+      .replace('#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+         float gvRippleX = sin(vFutureWorld.x * 0.72
+                             + vFutureWorld.z * 0.31 + uTime * 1.35);
+         float gvRippleY = cos(vFutureWorld.x * -0.28
+                             + vFutureWorld.z * 0.83 + uTime * 1.75);
+         normal = normalize(normal + gvWaterAmount * 0.035
+                            * vec3(gvRippleX, gvRippleY, 0.0));`);
   };
   m.needsUpdate = true;
 }
@@ -980,7 +1088,7 @@ async function loadFutureTrees(groundAt, unitTree, treeKinds, grade = null) {
     const mesh = new THREE.InstancedMesh(
       unitTree(kind),
       growMaterial(new THREE.MeshStandardMaterial({
-        color: 0xffffff, roughness: 0.92, flatShading: true })),
+        color: 0xffffff, roughness: 0.94, vertexColors: true })),
       list.length);
     mesh.castShadow = true;
     mesh.receiveShadow = true;

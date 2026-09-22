@@ -25,19 +25,55 @@ import { mergeGeometries } from '../terrain/vendor/BufferGeometryUtils.js';
 const url = (f) => new URL(f, import.meta.url).href;
 export const coverMeta = await (await fetch(url('gv-landcover.json'))).json();
 
-// Broadleaf, scrub, hedge — matching treeKinds in gv-landcover.json. `lobes`
-// are canopy blobs in unit-tree space: [x, y, z, radius]. More than one, and
-// off-centre, because a single sphere on a stick reads as a lollipop the
-// moment the camera comes below about 150 m.
+// Five reusable crown forms, still selected by the one-byte kind in each tree
+// record. Kinds 0-2 retain today's broadleaf/scrub/hedge meanings; the 2045
+// generator uses 3 for orchard and 4 for avenue lime. Woodland uses the mixed
+// scrub form, while standards use the oak.
+//
+// These are higher-detail noisy lobe clusters rather than impostors. At the
+// map's 340-450 m working distance the added silhouette and self-shadowing
+// survive, while an atlas would spend fill rate and make its shadow a card.
+// Geometry is paid for five times, then instanced about 17,000 times. Baked
+// vertex occlusion deepens the underside without moving the measured median;
+// the scene light supplies the actual sunward highlight.
+//
+// A lobe is [x, y, z, radius, xScale, yScale, zScale]. The whole result is a
+// one-metre tree, standing on the origin.
 export const KINDS = [
-  { colour: 0x54703f, trunk: 0.34, squash: 1.0, lobes: [
-    [0, 0.72, 0, 0.30], [0.15, 0.56, -0.10, 0.23], [-0.12, 0.63, 0.14, 0.21],
+  { name: 'oak', colour: 0x54703f, trunk: 0.34, detail: 1, lobes: [
+    [0.00, 0.68, 0.00, 0.27, 1.08, 0.92, 1.04],
+    [0.20, 0.61, -0.09, 0.22, 1.08, 0.88, 1.00],
+    [-0.18, 0.62, 0.12, 0.23, 1.06, 0.90, 1.08],
+    [0.05, 0.79, 0.12, 0.20, 0.94, 1.00, 1.02],
+    [-0.08, 0.80, -0.14, 0.18, 1.08, 0.96, 0.94],
+    [0.20, 0.75, 0.15, 0.16, 0.96, 0.92, 1.05],
   ] },
-  { colour: 0x6f7a4c, trunk: 0, squash: 0.7, lobes: [
-    [0, 0.42, 0, 0.46], [0.22, 0.30, 0.16, 0.32],
+  { name: 'mixed', colour: 0x667a48, trunk: 0.18, detail: 0, lobes: [
+    [-0.16, 0.53, 0.04, 0.31, 1.10, 0.85, 0.96],
+    [0.16, 0.55, -0.10, 0.29, 0.98, 0.98, 1.12],
+    [0.02, 0.75, 0.11, 0.25, 0.90, 1.00, 0.98],
+    [0.25, 0.72, 0.14, 0.20, 1.05, 0.88, 0.92],
+    [-0.23, 0.72, -0.13, 0.19, 0.95, 0.90, 1.08],
   ] },
-  { colour: 0x4f6440, trunk: 0, squash: 0.85, lobes: [
-    [0, 0.5, 0, 0.75],
+  { name: 'hedge', colour: 0x4f6440, trunk: 0, detail: 0, lobes: [
+    [-0.24, 0.43, 0.03, 0.35, 1.08, 0.70, 0.92],
+    [0.22, 0.45, -0.05, 0.35, 1.02, 0.72, 0.98],
+    [0.00, 0.58, 0.10, 0.30, 1.18, 0.68, 0.90],
+    [0.05, 0.37, -0.20, 0.29, 0.98, 0.70, 1.12],
+  ] },
+  { name: 'orchard', colour: 0x657b43, trunk: 0.38, detail: 1, lobes: [
+    [0.00, 0.62, 0.00, 0.27, 1.08, 0.90, 1.08],
+    [0.18, 0.59, -0.08, 0.21, 1.02, 0.88, 1.06],
+    [-0.17, 0.60, 0.10, 0.21, 1.08, 0.90, 1.00],
+    [0.01, 0.75, 0.10, 0.20, 0.98, 0.94, 1.04],
+    [-0.05, 0.73, -0.14, 0.17, 1.04, 0.90, 0.98],
+  ] },
+  { name: 'lime', colour: 0x5d7842, trunk: 0.35, detail: 1, lobes: [
+    [0.00, 0.58, 0.00, 0.25, 0.88, 1.16, 0.88],
+    [0.13, 0.68, -0.06, 0.22, 0.86, 1.20, 0.90],
+    [-0.12, 0.71, 0.09, 0.22, 0.90, 1.20, 0.86],
+    [0.02, 0.84, 0.03, 0.18, 0.82, 1.10, 0.84],
+    [0.09, 0.50, 0.10, 0.18, 0.90, 1.12, 0.88],
   ] },
 ];
 
@@ -128,12 +164,42 @@ export function unitTree(kind) {
     // mergeGeometries refuses a mix of indexed and non-indexed inputs and
     // returns null rather than throwing, so the failure only shows up later
     // as a render-time TypeError. The icosahedron is non-indexed; match it.
-    parts.push(trunk.toNonIndexed());
+    const trunkPart = trunk.toNonIndexed();
+    const trunkShade = new Float32Array(trunkPart.attributes.position.count * 3);
+    trunkShade.fill(0.66);
+    trunkPart.setAttribute('color', new THREE.BufferAttribute(trunkShade, 3));
+    parts.push(trunkPart);
   }
-  for (const [x, y, z, r] of kind.lobes) {
-    const lobe = new THREE.IcosahedronGeometry(r, 0);
-    lobe.scale(1, kind.squash, 1);
+  for (const [x, y, z, r, sx, sy, sz] of kind.lobes) {
+    const lobe = new THREE.IcosahedronGeometry(r, kind.detail);
+    lobe.scale(sx, sy, sz);
     lobe.translate(x, y, z);
+    const position = lobe.attributes.position;
+    const normal = lobe.attributes.normal;
+    const shades = new Float32Array(position.count * 3);
+    for (let i = 0; i < position.count; i++) {
+      // Detail-zero polyhedra normally carry one normal per triangular face.
+      // Give duplicated vertices the ellipsoid's radial normal instead, so
+      // even the cheap hedge and woodland lobes shade as foliage, not gems.
+      normal.setXYZ(i,
+        (position.getX(i) - x) / (sx * sx),
+        (position.getY(i) - y) / (sy * sy),
+        (position.getZ(i) - z) / (sz * sz));
+      // 0.72 at a lobe's bottom and 1.28 at its top gives roughly a 0.8-stop
+      // crown range around a median of one. A tiny deterministic variation
+      // prevents the extra triangles resolving as another regular polyhedron.
+      const relativeY = THREE.MathUtils.clamp(
+        (position.getY(i) - y) / (2 * r * sy) + 0.5, 0, 1);
+      const hash = Math.sin(position.getX(i) * 91.7
+                          + position.getY(i) * 57.3
+                          + position.getZ(i) * 113.1) * 0.04;
+      const shade = THREE.MathUtils.clamp(0.72 + relativeY * 0.56 + hash,
+                                          0.64, 1.32);
+      shades[i * 3] = shades[i * 3 + 1] = shades[i * 3 + 2] = shade;
+    }
+    normal.needsUpdate = true;
+    lobe.normalizeNormals();
+    lobe.setAttribute('color', new THREE.BufferAttribute(shades, 3));
     parts.push(lobe);
   }
   return mergeGeometries(parts);
@@ -168,7 +234,9 @@ export async function loadTrees(groundAt) {
     if (!list.length) return;
     const mesh = new THREE.InstancedMesh(
       unitTree(kind),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, flatShading: true }),
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff, roughness: 0.94, vertexColors: true,
+      }),
       list.length);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
