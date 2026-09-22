@@ -153,6 +153,75 @@ export function setGroundDirect(on) {
   for (const u of groundDirectUniforms) u.value = groundDirect.value;
 }
 
+/** World-space meadow detail for GCHQ's very large annular roof. */
+function meadowRoof(material, amount) {
+  const previous = material.onBeforeCompile;
+  const previousKey = material.customProgramCacheKey?.bind(material);
+  material.onBeforeCompile = (shader) => {
+    if (previous) previous(shader);
+    shader.uniforms.uMeadowAt = amount;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>',
+        '#include <common>\nvarying vec2 vGchqMeadowWorld;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+         vGchqMeadowWorld = (modelMatrix * vec4(transformed, 1.0)).xz;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform float uMeadowAt;
+        varying vec2 vGchqMeadowWorld;
+        float meadowHash(vec2 p) {
+          return fract(sin(dot(floor(p), vec2(127.1, 311.7))) * 43758.5453);
+        }
+        float meadowNoise(vec2 p) {
+          vec2 i = floor(p), f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(meadowHash(i), meadowHash(i + vec2(1.0, 0.0)), f.x),
+                     mix(meadowHash(i + vec2(0.0, 1.0)),
+                         meadowHash(i + vec2(1.0, 1.0)), f.x), f.y);
+        }
+        float meadowRay(vec2 p, vec2 direction) {
+          float ahead = smoothstep(-1.0, 2.0, dot(p, direction));
+          float off = abs(p.x * direction.y - p.y * direction.x);
+          return ahead * (1.0 - smoothstep(1.25, 2.05, off));
+        }`)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        if (uMeadowAt > 0.001) {
+          vec2 p = vGchqMeadowWorld - vec2(141.5, 58.0);
+          float radius = length(vec2(p.x, p.y * 1.035));
+          // Broad 5-20 m changes stop the hectare-scale roof becoming a
+          // single olive band, while the grade still supplies its base hue.
+          float patches = meadowNoise(vGchqMeadowWorld / 18.0) * 0.22
+                        + meadowNoise(vGchqMeadowWorld / 7.0 + 19.0) * 0.12;
+          vec3 meadow = diffuseColor.rgb;
+          vec3 planted = meadow * (0.82 + patches);
+          float flower = meadowHash(vGchqMeadowWorld * 1.35 + 7.0);
+          planted = mix(planted, meadow * vec3(1.62, 1.48, 0.54),
+                        step(0.955, flower) * 0.82);
+          planted = mix(planted, meadow * vec3(1.62, 1.58, 1.42),
+                        step(0.975, flower) * 0.78);
+          planted = mix(planted, meadow * vec3(1.25, 0.72, 1.38),
+                        step(0.989, flower) * 0.72);
+          float rings = 1.0 - smoothstep(1.35, 2.25,
+            min(abs(radius - 61.0), abs(radius - 80.0)));
+          float radials = max(meadowRay(p, normalize(vec2(0.91, 0.42))),
+                           max(meadowRay(p, normalize(vec2(-0.28, 0.96))),
+                               meadowRay(p, normalize(vec2(-0.82, -0.57)))));
+          float mown = clamp(rings + radials, 0.0, 1.0);
+          planted = mix(planted, meadow * vec3(0.84, 0.88, 0.66), mown * 0.90);
+          float edge = 1.0 - smoothstep(0.45, 1.75,
+            min(abs(radius - 43.5), abs(radius - 98.5)));
+          planted = mix(planted, meadow * 0.54, edge * 0.72);
+          diffuseColor.rgb = mix(diffuseColor.rgb, planted, uMeadowAt);
+        }`)
+      .replace('#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+         roughnessFactor = mix(roughnessFactor, 0.98, uMeadowAt);`);
+  };
+  material.customProgramCacheKey = () =>
+    `${previousKey ? previousKey() : 'gchq'}:meadow-v2`;
+  material.needsUpdate = true;
+}
+
 export function blendGround(
   mesh, futureTexture, todayClasses, futureClasses, directGround = false,
 ) {
@@ -418,12 +487,21 @@ function futureGeometry(list, palette, grade = null) {
         const j = (i + 1) % 4;
         quad(bottom[i], bottom[j], top[j], top[i], y0, ax, az);
       }
-      const posts = Math.max(2, Math.ceil(length / 9));
-      for (let i = 0; i < posts; i++) {
-        const t = posts === 1 ? 0.5 : 0.07 + i * 0.86 / (posts - 1);
-        const c = mix2(mix2(p, q, t), mix2(s, r, t), 0.5);
-        solidPost(c[0], c[1], y0 + 0.4, topY(c) - (b.thickness ?? 0.3),
-                  along, across, y0, ax, az);
+      const postCount = Math.max(2, Math.ceil(length / 9));
+      const generatedPosts = b.posts ?? Array.from(
+        { length: postCount }, (_, i) => {
+          const t = postCount === 1 ? 0.5 : 0.07 + i * 0.86 / (postCount - 1);
+          const c = mix2(mix2(p, q, t), mix2(s, r, t), 0.5);
+          return { x: c[0], z: c[1], ground: b.base };
+        });
+      for (const post of generatedPosts) {
+        const c = [post.x, post.z];
+        // Every foot comes from the terrain heightfield at this exact point;
+        // a shared minimum base is what made the old white needles pass up
+        // through GCHQ's roof on sloping/overlapping source polygons.
+        solidPost(c[0], c[1], post.ground,
+                  topY(c) - (b.thickness ?? 0.3),
+                  along, across, post.ground, ax, az);
       }
       continue;
     }
@@ -799,6 +877,8 @@ export async function addFuture(scene, renderer, {
   const gchqFrom = gchqRoof && gchqRoof.material.color.clone();
   const gchqTo = change && new THREE.Color(change.roof);
   if (gchqTo && directGround) gradeColour(gchqTo, KEYED_GRADE.meadow);
+  const meadowMix = { value: 0 };
+  if (gchqRoof) meadowRoof(gchqRoof.material, meadowMix);
   // How far the front has passed the ring, 0 to 1. Kept because the tiles
   // layer needs it: over photogrammetry our GCHQ roof is the ONLY part of our
   // town still drawn, and it has to arrive with the meadow rather than sit
@@ -853,6 +933,7 @@ export async function addFuture(scene, renderer, {
         // rather than when the toggle is pressed.
         meadowAt = THREE.MathUtils.clamp(
           (uniforms.uFront.value - 123 + SOFT) / (SOFT * 2), 0, 1);
+        meadowMix.value = meadowAt;
         gchqRoof.material.color.copy(gchqFrom).lerp(gchqTo, meadowAt);
         if (overTiles) {
           // Fading rather than switching: the real ring is underneath, and a

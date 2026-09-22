@@ -405,11 +405,20 @@ export const CANOPY_FRAGMENT = NOISE + /* glsl */`
       float gx = 1.0 - fBand(fract(m.x / 1.1), 0.025, 0.975);
       float gy = 1.0 - fBand(fract(m.y / 1.75), 0.025, 0.975);
       float grid = clamp(gx + gy, 0.0, 1.0);
-      rough = mix(0.20, 0.48, grid);
-      return mix(base * vec3(0.68, 0.87, 1.05), base * 1.65, grid * 0.58);
+      // Blue-black cells, a hairline aluminium edge, and one restrained sun
+      // streak: enough to read as PV at 340 m without becoming a cyan roof.
+      float glintLine = abs(fract((m.x + m.y * 0.24) / 19.0) - 0.5) * 2.0;
+      float glint = pow(max(0.0, 1.0 - glintLine), 24.0) * (1.0 - grid);
+      vec3 panel = base * vec3(0.55, 0.78, 1.04);
+      vec3 frame = base * vec3(2.25, 2.18, 2.02);
+      rough = mix(0.15, 0.43, grid);
+      return mix(panel, frame, grid * 0.82) + base * glint * 0.42;
     }
-    rough = 0.72;
-    return base * 0.78;
+    // Pale enough to separate the open underside from the shadow it casts on
+    // the photographed cars; still neutral, so it cannot read as another PV
+    // face when seen obliquely.
+    rough = 0.78;
+    return base * vec3(1.38, 1.34, 1.25);
   }
 `;
 

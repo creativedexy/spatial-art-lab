@@ -304,9 +304,20 @@ Valley SPD; `inspiration/golden-valley/README.md`.
   grid and party break, with 45 degree roofs and measured south-east PV faces.
 - Reworked apartments as silvered-larch mass timber, campus blocks as timber
   and glass with meadow and PV roofs, and glasshouses as framed glass volumes.
-- Generated 110 open solar canopies, covering 1.16 ha of classified GCHQ car
-  parks, as tilted PV slabs on posts with the parking left visible below.
+- Initially generated 110 open solar canopies over 1.16 ha of classified GCHQ
+  car parks; the follow-up below replaces that first-pass layout.
 - Kept one 4096 px soft shadow map and made loaded Google tile materials receive
   the shadows from 2045 buildings, canopies and trees.
 - Kept 1,030 dwellings and 105,501 m2 of campus floor area unchanged. The
-  generated building payload is 11 KB gzipped, including the new canopies.
+  generated building payload is 19 KB gzipped, including the new canopies.
+- Follow-up: excluded both present-day building datasets, GCHQ's courtyard and
+  surveyed tree crowns before fitting canopies, then asserted every roof and
+  post remains at least 3 m from today's building footprints.
+- Found 5.92 ha of mapped parking within 400 m (5.08 ha usable after those
+  exclusions) and now covers all 35 usable car-park components with 180 crisp
+  paired/single PV rows: 2.78 ha of roof and 2.45 ha of parking directly shaded.
+- Stored the terrain height at every canopy post, so posts run from `groundAt`
+  ground to the tilted canopy underside instead of sharing a low corner base.
+- Reworked the Doughnut roof as graded wildflower meadow: 5-20 m planting
+  patches, yellow/white/purple fleck, two concentric mown paths, radial cuts
+  and a darker planted edge, all derived from `KEYED_GRADE.meadow`.
