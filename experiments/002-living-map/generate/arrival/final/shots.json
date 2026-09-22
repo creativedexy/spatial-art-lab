@@ -1,0 +1,62 @@
+[
+  {
+    "id": "the-street",
+    "pillar": "the same street, standing 20 m back so the near terraces fra",
+    "pos": [
+      -230,
+      47.1,
+      -636
+    ],
+    "above": 2,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "the-court",
+    "pillar": "eight metres south in the same clearing, both blocks in one ",
+    "pos": [
+      -150,
+      45.2,
+      -210
+    ],
+    "above": 2,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "among-the-panels",
+    "pillar": "inside the panel field looking at the new homes: rows in the",
+    "pos": [
+      -500,
+      39.1,
+      -545
+    ],
+    "above": 1,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  }
+]

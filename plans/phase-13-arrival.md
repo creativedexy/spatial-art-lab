@@ -35,17 +35,53 @@ longer hold, and one of them reverses:
   to every arrival clears the ground, so no new descent machinery is needed:
   the existing `places.js` flight lands at 1.6 m unmodified.
 
-## What eye level exposed in the model
+## What eye level exposed in the model, and the fix
 
-Standing in it is the first honest test of a model signed off from 340 m:
+Standing in it is the first honest test of a model signed off from 340 m.
 
-- **The agrivoltaic rows are opaque black walls.** 2 m tall, no sky in the
-  face, no module joints, no posts at a believable spacing, and mown grass
-  between the rows. The crop between the rows is the entire argument for
-  vertical agrivoltaics and it is not there. Being fixed.
-- **The campus courts are unlit lawns.** The blocks face east, so the late
-  afternoon sun the photographs are matched to puts their own courtyards in
-  shadow, and the ground between them carries nothing.
+**The agrivoltaic rows were opaque black walls.** 2 m tall, no sky in the face,
+no module joints, no posts at a believable spacing, and mown grass between the
+rows — when the crop between the rows is the entire argument for vertical
+agrivoltaics. The plan geometry was never wrong: 3 fields, 39 rows, 195
+segments, 11 m centres, 2.0 m tall, 0.35 m clear of the ground, 22 degrees,
+all unchanged and compared equal after regeneration.
+
+The first attempt failed in an instructive way. It mixed a sky colour into
+`diffuseColor` behind a view-elevation gate, so that the lift could not reach
+the signed-off aerial. It changed nothing: M6b's PV body is a linear 0.04 at
+its brightest, the sun is behind the panel, and no amount of mixing a dark
+albedo makes a dark albedo bright. **Reflected sky is light, not albedo.** So
+the face is now lit after the lighting stage by two terms, and neither is gated
+on where the camera is, because a term that only appears when you stand up is
+a fudge:
+
+- `skyHemisphere` 0.10 — a vertical module's shaded face is lit by roughly half
+  the sky hemisphere.
+- `skyRadiance` 0.45 on a third-power Schlick term — at grazing incidence it
+  mirrors that sky.
+
+What that costs the aerial, measured rather than assumed: on the held
+`the-panels` framing, mean luminance moves 2 parts in 255 and 9% of pixels move
+by more than 8, and nearly all of it is the field gaining the crop stripes it
+should always have had.
+
+**The rows now have module rhythm**, drawn in world metres in the shader rather
+than bought with geometry: 1.1 m bays, 30 mm joints, 120 mm posts at 3.6 m
+centres instead of 7 m. One 36 m segment is still one instance and the rows are
+still four instanced draws.
+
+**The 11 m between the rows is farmed.** Only texels whose class is exactly
+`agrivoltaic` are worked, with a 0.7 m unworked service band beside each panel
+line and alternating drill rhythms on neighbouring strips. Contrast was raised
+from 0.07 to 0.16 after the first pass read as mown stripes rather than a crop.
+These are legibility assumptions about the aggregate rows a person sees, not a
+claim about plant spacing, and they say so in the metadata.
+
+**The campus courts are unlit lawns.** The blocks face east, so the late
+afternoon sun the photographs are matched to puts their own courtyards in
+shadow, and the ground between them carries nothing. Not fixed in the model:
+the court arrival's plate is handed to the generator with the court surface,
+planting and seating described in the prompt.
 
 ## The three arrivals, revised
 
