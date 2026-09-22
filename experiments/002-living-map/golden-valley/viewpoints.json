@@ -10,91 +10,101 @@
       "id": "the-vale",
       "name": "The vale",
       "pos": [
-        -900,
-        420,
-        -400
+        -602.5,
+        174.9,
+        -53.2
       ],
       "look": [
-        100,
-        200
+        -250,
+        -300
       ],
       "places": [
         "doughnut",
         "princess-elizabeth-way"
       ],
       "says": "West Cheltenham from above the fields the scheme is allocated on, with GCHQ at the centre and the Cotswold edge behind.",
-      "why": "the establishing shot: whole town, the ring in the middle of it, escarpment on the horizon and no box edge anywhere"
+      "why": "the establishing shot: whole town, the ring in the middle of it, escarpment on the horizon and no box edge anywhere; phase 12 M1 (22 Sep): moved in to 450 m at 17 degrees down, candidate scheme-a, so the 2045 half is legible and today stays the photograph",
+      "fov": 40,
+      "lift": 0
     },
     {
       "id": "the-campus",
       "name": "Cyber Central",
       "pos": [
-        -640,
-        230,
-        300
+        -401.3,
+        147.3,
+        -393.7
       ],
       "look": [
         -180,
-        -126
+        -130
       ],
       "places": [
         "campus-courtyards",
         "gv-site"
       ],
       "says": "Nine hectares of campus on the near side of the brook, a hundred metres from the Doughnut and inside the same hedge grid as the fields it replaces.",
-      "why": "the best pair of the sixteen — the brook corridor reads, GCHQ anchors the middle distance and the town runs to the escarpment behind"
+      "why": "the best pair of the sixteen — the brook corridor reads, GCHQ anchors the middle distance and the town runs to the escarpment behind; phase 12 M1 (22 Sep): moved in to 360 m at 17 degrees down, candidate campus-b, so the 2045 half is legible and today stays the photograph",
+      "fov": 38,
+      "lift": 0
     },
     {
       "id": "the-meadow-roof",
       "name": "The meadow roof",
       "pos": [
-        430,
-        280,
-        440
+        -101.6,
+        165.7,
+        296.6
       ],
       "look": [
-        -120,
-        -120
+        123,
+        64
       ],
       "places": [
         "gchq-meadow"
       ],
       "says": "The Doughnut re-roofed: 3.6 hectares of south-facing ground at 20 m, which the open-land survey found and nobody had counted as land.",
-      "why": "the single most legible change in the whole scheme, and the one frame where what is already here becomes the argument"
+      "why": "the single most legible change in the whole scheme, and the one frame where what is already here becomes the argument; phase 12 M1 (22 Sep): moved in to 340 m at 18 degrees down, candidate meadow-a, so the 2045 half is legible and today stays the photograph",
+      "fov": 38,
+      "lift": 8
     },
     {
       "id": "the-homes",
       "name": "The homes",
       "pos": [
-        -620,
-        165,
-        -1010
+        -513.6,
+        157.2,
+        -451.6
       ],
       "look": [
-        -120,
-        -520
+        -280,
+        -730
       ],
       "places": [],
       "says": "A new quarter in the near field and the Cheltenham it joins on the skyline — fifteen hectares of homes against an edge that is already there.",
-      "why": "turned round to look back at the town: it puts the box edge behind the camera and the does-it-eat-the-town question in front of it"
+      "why": "turned round to look back at the town: it puts the box edge behind the camera and the does-it-eat-the-town question in front of it; phase 12 M1 (22 Sep): moved in to 380 m at 17 degrees down, candidate homes-a, so the 2045 half is legible and today stays the photograph",
+      "fov": 38,
+      "lift": 0
     },
     {
       "id": "the-panels",
       "name": "Panels and glasshouses",
       "pos": [
-        120,
-        260,
-        -60
+        -345.7,
+        150.5,
+        -811.5
       ],
       "look": [
-        -372,
-        -240
+        -470,
+        -470
       ],
       "places": [
         "panels-and-glasshouses"
       ],
       "says": "Agrivoltaics on the west-facing slopes and glass below them: ground that is still farmed, under panels, and counted as neither building nor field.",
-      "why": "the half of the scheme that is productive landscape rather than architecture, and an honest empty field at 2026"
+      "why": "the half of the scheme that is productive landscape rather than architecture, and an honest empty field at 2026; phase 12 M1 (22 Sep): moved in to 380 m at 17 degrees down, candidate panels-b, so the 2045 half is legible and today stays the photograph",
+      "fov": 38,
+      "lift": 0
     }
   ]
 }

@@ -73,12 +73,12 @@ const CAMERAS = [
   { name: 'campus-courtyards',      above: 190, focus:  378, want: true },
   { name: 'panels-and-glasshouses', above: 210, focus:  537, want: true },
   { name: 'cyber-central',          above: 175, focus: 1032, want: true },
-  // the five held shots, at rest
-  { name: 'the-vale',               above: 386, focus: 1218, want: true },
-  { name: 'the-campus',             above: 197, focus:  649, want: true },
-  { name: 'the-meadow-roof',        above: 235, focus:  814, want: true },
-  { name: 'the-homes',              above: 133, focus:  707, want: true },
-  { name: 'the-panels',             above: 207, focus:  561, want: true },
+  // the five held shots, at rest (moved in by phase 12 M1, 22 Sep)
+  { name: 'the-vale',               above: 141, focus:  450, want: true },
+  { name: 'the-campus',             above: 106, focus:  360, want: true },
+  { name: 'the-meadow-roof',        above: 128, focus:  340, want: true },
+  { name: 'the-homes',              above: 118, focus:  380, want: true },
+  { name: 'the-panels',             above: 105, focus:  380, want: true },
   // and everything that must fall back to our own model
   { name: 'walk, level ahead',      above:  14, focus: 1400, want: false },
   { name: 'walk, looking down',     above:  14, focus:   80, want: false },
