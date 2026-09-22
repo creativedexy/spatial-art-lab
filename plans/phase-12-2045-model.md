@@ -439,3 +439,25 @@ Valley SPD; `inspiration/golden-valley/README.md`.
 - Preserved every existing `onBeforeCompile` stage and its program-cache key
   when layering PV glass, life/weather and 2045 growth patches; the measured
   sun direction is an explicitly declared shader uniform in every PV program.
+
+## M7, trustworthy light probe at the held cameras
+
+- Added three dedicated photographed-building reference cameras over the
+  already-built north, central and south of Cheltenham, looking away from the
+  allocation. They use the tone views' 1280 x 720 framing, settle gate,
+  raycasts, geometric-error rejection, component floor and clipping guards.
+- The building reference now needs at least two determinate, non-biased
+  dedicated views. Their per-view statistics are combined without letting the
+  view with the most pixels set the result, then compared with the visible
+  2045 buildings in each held shot. The former same-shot reference remains a
+  guarded fallback, and every verdict records which source it used.
+- A target with no mask pixels in a camera is reported as `not-applicable` and
+  listed separately from indeterminate views, so the GCHQ meadow-roof proxy is
+  judged where the roof is visible without penalising unrelated shots.
+- Replaced geometry-only dominance exclusion with a measured influence rule:
+  component 1 must supply more than half of retained geometry *and* removing
+  its unclipped pixels must move the reference median by more than 0.1 stops
+  (the probe's existing material-action boundary), or leave no independent
+  remainder. Dominant-component masks and influence are written for audit.
+- Offline syntax and synthetic guard checks pass; the new reference cameras
+  and final tone verdicts still require the main session's real keyed-map run.
