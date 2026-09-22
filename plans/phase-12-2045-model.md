@@ -327,3 +327,47 @@ Valley SPD; `inspiration/golden-valley/README.md`.
   and a darker planted edge, all derived from `KEYED_GRADE.meadow`.
 - Masked photographed masts and lighting columns above the Doughnut's surveyed
   roof footprint while its 2045 meadow is visible, leaving today's tiles intact.
+
+## M5, what changed
+
+- Replaced the faceted canopy blobs with five instanced forms: broad oak,
+  mixed woodland, dense hedge, small orchard and tall avenue lime. Irregular
+  smooth lobe clusters, vertex occlusion, instance colour variation, shadow
+  casting and the existing wind give the crowns a lit side and dark gaps.
+- Kept today's 9,216 trees on the same path and retained the eight-byte tree
+  record. The 2045 kind byte now distinguishes standards, woodland, hedges,
+  orchard trees and street limes without changing the file format.
+- Removed the green-cyan ground blotches at source. They were present-day crop
+  and field marks showing through class fills composited at 185 of 255 alpha,
+  not mask noise. New class fills are opaque and their texture now comes from
+  the shader in world metres.
+- Added faint mowing bands to amenity grass, multi-scale meadow patches,
+  orchard strips, field-grain drill lines at 22 degrees and sparse open pools
+  in wet meadow. Five class and colour taps soften boundaries over seven metres
+  while leaving `KEYED_GRADE.ground` unchanged.
+- Made present and future water low-roughness, lightly rippled receivers of the
+  keyed sky environment, so channels and pools read silver from the air.
+- Added 18 open 2.5 m kerbside stormwater channels, totalling 2,790 m, on the
+  wetland side of the home streets. Each reach is directed towards its nearest
+  wetland cell in the generated street grid.
+- Kept 1,030 dwellings and 105,501 m2 of campus floor area unchanged.
+- Follow-up: replaced the smooth grey-olive puffballs with overlapping,
+  unequal faceted lobes, lower crowns and independent 0.7-1.3 instance axes.
+  Woodland crowns overlap into a broken continuous canopy; orchard crowns are
+  smaller so the 7.5 m planting rows retain visible ground between them.
+- Shifted `KEYED_GRADE.trees` from saturation 0.40 / exposure 1.16 to
+  saturation 0.47 / exposure 1.41 after the keyed M5 probe measured planting
+  0.10 saturation and 0.28 stops below photographed canopy.
+- Restored the probe's exact centre-texel future-ground classification and
+  added a flat white, unlit diagnostic output. The seven-metre colour filter,
+  field texture and water treatment remain confined to the normal render.
+- Confirmed the Doughnut material and `KEYED_GRADE.meadow` never changed in
+  M5. Its apparent proxy shift came from the regressed ground mask changing
+  which photographed fields formed the reference; restoring that mask also
+  restores the M4 roof comparison population.
+- Isolated M4's binary centre-texel ground-ownership discard ahead of every M5
+  colour, class-detail and water sample, so those additions can only shade
+  ground that the proven present-class versus future-class test already drew.
+- Sized orchard crowns directly from the 7.5 m planting grid: 6.4-7.1 m
+  irregular crowns now nearly touch down each row while preserving the wider
+  inter-row gaps and the established keyed planting colour grade.

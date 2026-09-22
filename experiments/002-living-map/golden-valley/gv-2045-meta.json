@@ -156,6 +156,18 @@
     "woodland": 909,
     "street": 682
   },
+  "treeKinds": {
+    "0": "broad oak standard",
+    "1": "mixed woodland clump",
+    "2": "hedge",
+    "3": "orchard",
+    "4": "street lime"
+  },
+  "stormwaterChannels": {
+    "count": 18,
+    "lengthMetres": 2790,
+    "widthMetres": 2.5
+  },
   "sources": [
     "Environment Agency LiDAR (OGL v3)",
     "OpenStreetMap contributors (ODbL)",
