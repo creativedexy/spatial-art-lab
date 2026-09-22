@@ -253,7 +253,43 @@
     "rows": 39,
     "segments": 195,
     "bearingDegrees": 22.0,
-    "rowCentresMetres": 11.0
+    "rowCentresMetres": 11.0,
+    "panelHeightMetres": 2.0,
+    "panelBottomMetres": 0.35,
+    "panelDepthMetres": 0.08,
+    "moduleWidthMetres": 1.1,
+    "moduleJointWidthMetres": 0.03,
+    "postMaxCentresMetres": 3.6,
+    "postSectionMetres": 0.12,
+    "railHeightMetres": 0.06,
+    "railDepthMetres": 0.12,
+    "crop": {
+      "basis": "assumption for legible aggregate worked-crop rows; not individual plant spacing",
+      "rotation": "alternate neighbouring 11 m inter-row strips",
+      "rowSpacingMetres": [
+        0.6,
+        0.8
+      ],
+      "clearBandFromPanelMetres": 0.7,
+      "edgeBlendMetres": 0.25,
+      "rowContrast": 0.16,
+      "rowNormalStrength": 0.045,
+      "rotationExposure": [
+        0.88,
+        1.12
+      ],
+      "detailFadePixels": [
+        0.35,
+        0.85
+      ]
+    },
+    "grazingResponse": {
+      "fresnelExponent": 3.0,
+      "skyHemisphere": 0.1,
+      "skyRadiance": 0.45,
+      "roughness": 0.06,
+      "basis": "a vertical module is lit by half the sky hemisphere and mirrors it at grazing incidence; both are added after lighting, because M6b's dark body under a sun that is behind the panel is black however it is mixed"
+    }
   },
   "sources": [
     "Environment Agency LiDAR (OGL v3)",
