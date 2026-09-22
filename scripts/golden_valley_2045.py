@@ -78,6 +78,10 @@ NEW_CLASSES = {
 PANEL = 0x59636b               # the panel rows themselves
 PANEL_WIDTH = 2.2
 PANEL_SPACING = 11.0
+GCHQ = (123.0, 64.0)
+CANOPY_RADIUS = 350.0
+CANOPY_DEPTH = 5.5
+CANOPY_GAP = 1.5
 # The new ground is painted over today's, not instead of it: at less than full
 # opacity the tramlines, the mown stripes and the slope shading underneath
 # still come through, so a changed field still reads as that field.
@@ -503,10 +507,13 @@ def building_record(foot, family, cell, heights, meta, storeys, roof,
     if roof == "flat":
         b.update(roof="flat", axis=None, eaves=h, ridge=h)
     else:
+        depth = min(math.dist(a, q)
+                    for a, q in zip(foot, foot[1:] + foot[:1]))
+        eaves = max(2.0, storeys - 0.5) * STOREY
+        ridge = eaves + depth / 2              # 45-degree Passivhaus roof
         b.update(roof="gable", axis=round(axis, 1),
-                 # One storey of rise over a 9-10 m-deep terrace is a roughly
-                 # 35-degree pitch: visibly steep from the aerial views.
-                 eaves=round(h - STOREY, 2), ridge=h)
+                 eaves=round(eaves, 2), ridge=round(ridge, 2),
+                 height=round(ridge, 2), roofPitchDegrees=45)
     b.update(extra)
     return b
 
@@ -620,7 +627,7 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
         if ring is None:
             continue
         a, b = ring[0], ring[1]
-        for foot, _ in blocks_along(a, b, *c["centre"], 62, 13, 14):
+        for foot, axis in blocks_along(a, b, *c["centre"], 62, 13, 14):
             if not all(parcel_1m[
                     min(max(int(z + W / 2), 0), W - 1),
                     min(max(int(x + W / 2), 0), W - 1)] for x, z in foot):
@@ -628,8 +635,167 @@ def make_glasshouses(cells, heights, meta, parcel_1m, W):
             base = round(min(ground_at(heights, meta, x, z) for x, z in foot), 2)
             out.append({"ring": [[round(x, 2), round(z, 2)] for x, z in foot],
                         "holes": [], "base": base, "height": 6.5,
-                        "family": "glasshouse", "roof": "flat", "axis": None,
-                        "eaves": 6.5, "ridge": 6.5, "cell": c["centre"]})
+                        "family": "glasshouse", "roof": "gable",
+                        "axis": round(math.degrees(math.atan2(
+                            axis[1], axis[0])), 1),
+                        "eaves": 4.2, "ridge": 6.5, "cell": c["centre"]})
+    return out
+
+
+def point_in_poly(point, poly):
+    """Even-odd containment for the small convex footprints in this dataset."""
+    x, z = point
+    inside = False
+    for a, b in zip(poly, poly[1:] + poly[:1]):
+        if (a[1] > z) != (b[1] > z):
+            at = a[0] + (z - a[1]) * (b[0] - a[0]) / (b[1] - a[1])
+            if x < at:
+                inside = not inside
+    return inside
+
+
+def segments_cross(a, b, c, d):
+    if max(a[0], b[0]) < min(c[0], d[0]) \
+            or max(c[0], d[0]) < min(a[0], b[0]) \
+            or max(a[1], b[1]) < min(c[1], d[1]) \
+            or max(c[1], d[1]) < min(a[1], b[1]):
+        return False
+    def side(p, q, r):
+        return (q[0] - p[0]) * (r[1] - p[1]) \
+            - (q[1] - p[1]) * (r[0] - p[0])
+    return side(a, b, c) * side(a, b, d) <= 0 \
+        and side(c, d, a) * side(c, d, b) <= 0
+
+
+def polygons_overlap(a, b):
+    if any(point_in_poly(p, b) for p in a) \
+            or any(point_in_poly(p, a) for p in b):
+        return True
+    return any(segments_cross(p, q, r, s)
+               for p, q in zip(a, a[1:] + a[:1])
+               for r, s in zip(b, b[1:] + b[:1]))
+
+
+def parking_components(parking, radius=CANOPY_RADIUS):
+    """Four-connected parking patches around GCHQ, in local metres.
+
+    The source is today's classified land rather than a drawn masterplan.
+    Islands below 400 m2 are access aprons and fragments, not car parks.
+    """
+    h, w = parking.shape
+    yy, xx = np.indices(parking.shape)
+    near = parking & ((xx - w / 2 - GCHQ[0]) ** 2
+                      + (yy - h / 2 - GCHQ[1]) ** 2 <= radius ** 2)
+    seen = np.zeros_like(near, dtype=bool)
+    out = []
+    for sy, sx in zip(*np.where(near)):
+        if seen[sy, sx]:
+            continue
+        todo = [(int(sy), int(sx))]
+        seen[sy, sx] = True
+        points = []
+        while todo:
+            y, x = todo.pop()
+            points.append((x - w / 2, y - h / 2))
+            for ny, nx in ((y - 1, x), (y + 1, x),
+                           (y, x - 1), (y, x + 1)):
+                if 0 <= ny < h and 0 <= nx < w \
+                        and near[ny, nx] and not seen[ny, nx]:
+                    seen[ny, nx] = True
+                    todo.append((ny, nx))
+        if len(points) >= 400:
+            out.append(np.asarray(points, dtype=float))
+    return out
+
+
+def make_canopies(cls, parking_index, heights, meta, buildings):
+    """PV rows fitted to the measured long axis of GCHQ's car parks.
+
+    A row is accepted only when its full 5.5 m bay samples as parking. The
+    1.5 m gaps preserve circulation, and runs are split at 42 m so the result
+    reads as car-port structures rather than one dark lid over the cars.
+    """
+    parking = cls == parking_index
+    h, w = parking.shape
+    obstacles = [[tuple(p) for p in b["ring"]] for b in buildings]
+
+    def is_parking(point):
+        x, z = point
+        col, row = int(round(x + w / 2)), int(round(z + h / 2))
+        return 0 <= row < h and 0 <= col < w and parking[row, col] \
+            and math.dist(point, GCHQ) <= CANOPY_RADIUS
+
+    def footprint_is_parking(foot):
+        """Sample the complete bay at half-metre resolution, including edges."""
+        p, q, _, s = foot
+        nu = max(1, math.ceil(math.dist(p, q) / 0.5))
+        nv = max(1, math.ceil(math.dist(p, s) / 0.5))
+        return all(is_parking((
+            p[0] + (q[0] - p[0]) * i / nu + (s[0] - p[0]) * j / nv,
+            p[1] + (q[1] - p[1]) * i / nu + (s[1] - p[1]) * j / nv,
+        )) for i in range(nu + 1) for j in range(nv + 1))
+
+    out = []
+    for points in parking_components(parking):
+        centre = points.mean(axis=0)
+        values, vectors = np.linalg.eigh(np.cov((points - centre).T))
+        along = vectors[:, int(np.argmax(values))]
+        across = np.array([-along[1], along[0]])
+        local = (points - centre) @ np.stack([along, across], axis=1)
+        (umin, vmin), (umax, vmax) = local.min(axis=0), local.max(axis=0)
+
+        for vv in np.arange(vmin + 3.75, vmax - 3.75 + 1e-6,
+                            CANOPY_DEPTH + CANOPY_GAP):
+            stations = np.arange(umin + 1.5, umax - 1.5 + 1e-6, 0.75)
+            valid = []
+            for uu in stations:
+                valid.append(all(is_parking(
+                    centre + along * uu + across * (vv + dv))
+                    for dv in np.linspace(-CANOPY_DEPTH / 2,
+                                          CANOPY_DEPTH / 2, 9)))
+
+            start = None
+            runs = []
+            for i, ok in enumerate(valid + [False]):
+                if ok and start is None:
+                    start = i
+                elif not ok and start is not None:
+                    lo, hi = stations[start], stations[i - 1]
+                    if hi - lo >= 10.0:
+                        runs.append((lo, hi))
+                    start = None
+
+            for lo, hi in runs:
+                cursor = lo
+                while cursor + 10.0 <= hi:
+                    end = min(cursor + 42.0, hi)
+                    p0 = centre + along * cursor \
+                        + across * (vv - CANOPY_DEPTH / 2)
+                    p1 = centre + along * end \
+                        + across * (vv - CANOPY_DEPTH / 2)
+                    p2 = centre + along * end \
+                        + across * (vv + CANOPY_DEPTH / 2)
+                    p3 = centre + along * cursor \
+                        + across * (vv + CANOPY_DEPTH / 2)
+                    foot = [tuple(p) for p in (p0, p1, p2, p3)]
+                    rounded_foot = [(round(x, 2), round(z, 2))
+                                    for x, z in foot]
+                    if footprint_is_parking(rounded_foot) and not any(
+                            polygons_overlap(rounded_foot, obstacle)
+                            for obstacle in obstacles):
+                        base = round(min(ground_at(heights, meta, x, z)
+                                         for x, z in rounded_foot), 2)
+                        out.append({
+                            "ring": [[x, z] for x, z in rounded_foot],
+                            "holes": [], "base": base, "height": 3.5,
+                            "family": "canopy", "roof": "canopy",
+                            "axis": round(math.degrees(math.atan2(
+                                along[1], along[0])), 1),
+                            "eaves": 3.2, "ridge": 3.5,
+                            "underside": 3.2, "thickness": 0.3,
+                            "tiltDegrees": 6.0,
+                        })
+                    cursor = end + CANOPY_GAP
     return out
 
 
@@ -914,23 +1080,29 @@ def main():
     buildings = make_buildings(cells, heights, meta, parcel_1m, W,
                                road, named_routes)
     buildings += make_glasshouses(cells, heights, meta, parcel_1m, W)
+    canopies = make_canopies(cls, index["parking"], heights, meta, buildings)
+    buildings += canopies
 
     def footprint_area(b):
         r = b["ring"]
         return abs(sum(a[0] * q[1] - q[0] * a[1]
                        for a, q in zip(r, r[1:] + r[:1]))) / 2
 
+    permanent = [b for b in buildings if b["family"] != "canopy"]
     floor = sum(footprint_area(b) * b.get(
-        "storeys", max(1, round(b["height"] / STOREY))) for b in buildings)
+        "storeys", max(1, round(b["height"] / STOREY))) for b in permanent)
     campus_floor = round(sum(footprint_area(b) * b["storeys"] for b in buildings
                              if b["family"] == "campus"))
     dwellings = sum(b.get("dwellings", 0) for b in buildings)
     fam = Counter(b["family"] for b in buildings)
-    print(f"\n{len(buildings)} new buildings, {floor / 10000:.1f} ha of floor")
+    print(f"\n{len(permanent)} new buildings and {len(canopies)} canopies, "
+          f"{floor / 10000:.1f} ha of floor")
     for k, v in fam.most_common():
         print(f"   {k:<12} {v:>4}")
     print(f"   dwellings    {dwellings:>4}")
     print(f"   campus floor {campus_floor:>7,} m2")
+    canopy_area = sum(footprint_area(b) for b in canopies)
+    print(f"   canopy area  {canopy_area / 10000:7.2f} ha")
     if not 1000 <= dwellings <= 1200:
         raise ValueError(f"dwelling target missed: {dwellings}")
     if not 93000 <= campus_floor <= 120000:
@@ -992,9 +1164,11 @@ def main():
         "classes": {k: {"index": index[k], "colour": f"#{palette[k]:06x}"}
                     for k in list(cover["classes"]) + list(NEW_CLASSES)},
         "families": {
-            "campus": {"wall": "#e8dfcb", "roof": "#93a469"},
-            "homes": {"wall": "#ece5d8", "roof": "#8a9b60"},
-            "glasshouse": {"wall": "#cfd8d4", "roof": "#dfe8e4"},
+            "campus": {"wall": "#aaa397", "roof": "#697456"},
+            "homes": {"wall": "#d8c6a5", "roof": "#293139",
+                      "flatRoof": "#6b7658"},
+            "glasshouse": {"wall": "#9eafb2", "roof": "#b8c9cc"},
+            "canopy": {"wall": "#34383a", "roof": "#17222c"},
         },
         "roofChanges": [{
             "name": "Government Communications Headquarters",
@@ -1006,7 +1180,9 @@ def main():
         }],
         "areasHectares": {k: round(v, 1) for k, v in ha.items()},
         "fields": len(cells),
-        "newBuildings": len(buildings),
+        "newBuildings": len(permanent),
+        "canopyCount": len(canopies),
+        "canopyHectares": round(canopy_area / 10000, 2),
         "dwellings": dwellings,
         "campusFloorM2": campus_floor,
         "densityNote": ("Scheme-true density: about 1,100 homes and at least "

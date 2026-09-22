@@ -102,16 +102,21 @@
   },
   "families": {
     "campus": {
-      "wall": "#e8dfcb",
-      "roof": "#93a469"
+      "wall": "#aaa397",
+      "roof": "#697456"
     },
     "homes": {
-      "wall": "#ece5d8",
-      "roof": "#8a9b60"
+      "wall": "#d8c6a5",
+      "roof": "#293139",
+      "flatRoof": "#6b7658"
     },
     "glasshouse": {
-      "wall": "#cfd8d4",
-      "roof": "#dfe8e4"
+      "wall": "#9eafb2",
+      "roof": "#b8c9cc"
+    },
+    "canopy": {
+      "wall": "#34383a",
+      "roof": "#17222c"
     }
   },
   "roofChanges": [
@@ -131,6 +136,8 @@
   },
   "fields": 29,
   "newBuildings": 147,
+  "canopyCount": 110,
+  "canopyHectares": 1.16,
   "dwellings": 1030,
   "campusFloorM2": 105501,
   "densityNote": "Scheme-true density: about 1,100 homes and at least 93,000 m2 of campus floor area.",

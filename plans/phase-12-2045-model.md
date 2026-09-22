@@ -295,3 +295,18 @@ flowchart LR
 Sources: goldenvalleyuk.com (masterplan, IDEA, INPUT, OUTPUT, ROUTER,
 RESIDENTIAL pages, read 15 Sep 2026); Cheltenham Borough Council, Golden
 Valley SPD; `inspiration/golden-valley/README.md`.
+
+## M4-lite, what changed
+
+- Normalised every 2045 footprint winding before meshing, closed the gables,
+  and added 400 mm eaves, 750 mm flat-roof parapets and dark plinths.
+- Gave each terrace dwelling its own facade bay, window rhythm, roof panel
+  grid and party break, with 45 degree roofs and measured south-east PV faces.
+- Reworked apartments as silvered-larch mass timber, campus blocks as timber
+  and glass with meadow and PV roofs, and glasshouses as framed glass volumes.
+- Generated 110 open solar canopies, covering 1.16 ha of classified GCHQ car
+  parks, as tilted PV slabs on posts with the parking left visible below.
+- Kept one 4096 px soft shadow map and made loaded Google tile materials receive
+  the shadows from 2045 buildings, canopies and trees.
+- Kept 1,030 dwellings and 105,501 m2 of campus floor area unchanged. The
+  generated building payload is 11 KB gzipped, including the new canopies.

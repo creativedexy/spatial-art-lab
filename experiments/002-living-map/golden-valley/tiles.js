@@ -313,6 +313,25 @@ export async function addTiles(scene, { camera, renderer, future, lift }) {
   let placed = false;
   let showing = false;
   let lastError = null;
+  // 3d-tiles-renderer 0.5.2 exposes each decoded glTF through load-model.
+  // Marking its meshes as receivers changes no tile data: it only lets the
+  // one world shadow map darken the photograph where our 2045 geometry stands
+  // between it and the measured sun. The tiles do not cast, because their
+  // photography already contains today's shadows and self-shadowing it again
+  // would print a second, mismatched sun into the image.
+  tiles.addEventListener('load-model', (event) => {
+    const model = event.scene ?? event.model ?? event.content;
+    model?.traverse?.((object) => {
+      if (!object.isMesh) return;
+      object.castShadow = false;
+      object.receiveShadow = true;
+      const materials = Array.isArray(object.material)
+        ? object.material : [object.material];
+      for (const material of materials) {
+        if (material) material.needsUpdate = true;
+      }
+    });
+  });
   tiles.addEventListener('load-error', (e) => {
     lastError = e.error?.message ?? String(e.error);
   });
