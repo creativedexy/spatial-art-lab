@@ -1,0 +1,62 @@
+[
+  {
+    "id": "courtyards-clearing",
+    "pillar": "the one clearing in the campus orchard: 17 m block 40 m away",
+    "pos": [
+      -156,
+      45,
+      -200
+    ],
+    "above": 2,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "courtyards-clearing-b",
+    "pillar": "same clearing, turned north to the 13.6 m block and the cour",
+    "pos": [
+      -156,
+      45,
+      -200
+    ],
+    "above": 2,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  },
+  {
+    "id": "courtyards-clearing-c",
+    "pillar": "eight metres south in the same clearing, both blocks in one ",
+    "pos": [
+      -150,
+      45.2,
+      -210
+    ],
+    "above": 2,
+    "slant": 0,
+    "bearing": 0,
+    "today": {
+      "showing": false,
+      "settled": false
+    },
+    "2045": {
+      "showing": false,
+      "settled": false
+    }
+  }
+]

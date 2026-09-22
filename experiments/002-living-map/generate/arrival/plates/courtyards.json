@@ -1,0 +1,56 @@
+{
+  "note": "clearing candidates",
+  "shots": [
+    {
+      "id": "courtyards-clearing",
+      "pillar": "the one clearing in the campus orchard: 17 m block 40 m away",
+      "pos": [
+        -156,
+        45.02,
+        -200
+      ],
+      "look": [
+        -193,
+        43.77,
+        -216
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "courtyards-clearing-b",
+      "pillar": "same clearing, turned north to the 13.6 m block and the cour",
+      "pos": [
+        -156,
+        45.02,
+        -200
+      ],
+      "look": [
+        -168,
+        44.41,
+        -167
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    },
+    {
+      "id": "courtyards-clearing-c",
+      "pillar": "eight metres south in the same clearing, both blocks in one ",
+      "pos": [
+        -150,
+        45.23,
+        -210
+      ],
+      "look": [
+        -200,
+        43.67,
+        -190
+      ],
+      "fov": 48,
+      "slant": 0,
+      "bearing": 0
+    }
+  ]
+}

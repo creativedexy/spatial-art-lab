@@ -1,4 +1,65 @@
-# Phase 13 — arrival, the design
+# Phase 13 — arrival
+
+*Designed by Codex 12 Sep 2026 against the model at `665efcd`; re-measured here
+against the phase-12 model on 22 Sep, which changed the answer.*
+*Phase: Develop.*
+
+## What the re-measurement found
+
+The design below was written when the allocation held 70 repeated house
+footprints, panels painted into the ground, and no glasshouse anyone could
+stand near. Phase 12 put 1,030 dwellings on internal streets, 195 real panel
+row segments and 7,806 trees into the same box. Three of its conclusions no
+longer hold, and one of them reverses:
+
+- **The Homes now has a there.** 75 pairs of facing terraces stand 23 m apart
+  with a stormwater channel in the verge. `homes-street-close` at
+  `(-230, -636)` puts 38 buildings in frame, the nearest rising 25 to 27
+  degrees either side. This is the strongest arrival in the set, and the
+  design ruled it out for a reason that has since been built over.
+- **Both arrivals the design chose are standing inside an orchard.** At
+  `(-280, -150)` the nearest tree is 5 m away and the campus is not visible;
+  at `(-410, -380)` there are 885 trees in frame, the nearest 9 m off, and the
+  glasshouse is 92 m away rising 2.6 degrees behind them. Neither camera
+  survives contact with the trees phase 12 planted. The plates are in
+  `experiments/002-living-map/generate/arrival/plates/`.
+- **Fiddlers Brook is not where the design put it.** The nearest water to the
+  campus centroid is 41 m south-west of it, not 13 m from that camera.
+- **`scripts/measure_arrival.py` is the instrument**, written for this phase.
+  It reports the ground under foot, the buildings in frame with how far they
+  rise in the picture, what the ground is made of along a fan of rays, the
+  trees (read from `gv-2045-trees.bin`, not the class raster — the first
+  version missed them, and three plates came back as a wall of leaves from
+  positions it had called clear), the nearest panel row, and whether the
+  flight in clears the terrain. The straight line from every parent viewpoint
+  to every arrival clears the ground, so no new descent machinery is needed:
+  the existing `places.js` flight lands at 1.6 m unmodified.
+
+## What eye level exposed in the model
+
+Standing in it is the first honest test of a model signed off from 340 m:
+
+- **The agrivoltaic rows are opaque black walls.** 2 m tall, no sky in the
+  face, no module joints, no posts at a believable spacing, and mown grass
+  between the rows. The crop between the rows is the entire argument for
+  vertical agrivoltaics and it is not there. Being fixed.
+- **The campus courts are unlit lawns.** The blocks face east, so the late
+  afternoon sun the photographs are matched to puts their own courtyards in
+  shadow, and the ground between them carries nothing.
+
+## The three arrivals, revised
+
+| Arrival | Stand | Looks at | Why it, and not the alternative |
+|---|---|---|---|
+| The street | `(-230, -636)` | `(-150, -604)` | 38 buildings, terraces 20 m either side rising 25°, channel in the verge |
+| The court | `(-150, -210)` | `(-200, -190)` | the one clearing in the campus orchard; two blocks at 40 and 60 m |
+| Among the panels | `(-500, -545)` | `(-365, -581)` | panels 2 m off, the new homes 86 to 155 m behind — held until the rows are fixed |
+
+Eye is 1.6 m above the measured terrain at each. The lens is 48 degrees
+vertical, the lens every photograph in this map was made with. All three are
+2045-only; before frames stay parked.
+
+---
 
 **Produced by Codex** (`gpt-5.6-sol`, read-only over the repo at `665efcd`,
 12 Sep 2026) as a work package, then checked here.
@@ -25,7 +86,11 @@ wrong in the direction of more work.
 
 ---
 
-## Choose two
+## The original design, as written 12 Sep
+
+*Kept as written. Its verifications and its three refusals are still worth reading; its two chosen cameras are superseded above.*
+
+### Choose two
 
 - **Cyber Central → The Courtyards at Fiddlers Brook.** This is the essential arrival: the 15.8 ha wetland corridor only becomes intelligible beside its narrow watercourse, with the campus occupied behind it. This carries frame 5’s planted foreground, architecture and human life.
 - **Panels and glasshouses → Working glasshouse edge.** At eye level the proposition becomes concrete: crops beneath spaced panels, waste-heat glasshouses and campus buildings in one working landscape.
@@ -38,7 +103,7 @@ Keep these aerial:
 - **The Homes:** no “there”; the geometry contains 70 repeated house footprints but no named square, street or civic focus. Inventing one would be dishonest.
 - **The Meadow Roof:** it has a subject, but no credible public ground-level destination. GCHQ’s secured, elevated roof is understood from above; ground access would either hide the meadow or fabricate access.
 
-## Destination frames
+### Destination frames
 
 ### 1. The Courtyards at Fiddlers Brook
 
@@ -64,7 +129,7 @@ Keep these aerial:
 
 **Forbid:** continuous black solar carpet; panels higher than roughly `2 m` or closer than the `11 m` row spacing; bare gravel solar farm; glasshouse becoming a warehouse, domestic polytunnel or giant conservatory; duplicated buildings; generic towers; empty fields or people reduced to specks.
 
-## Back up
+### Back up
 
 A persistent **“Back to Cyber Central”** or **“Back to Panels and glasshouses”** control should:
 

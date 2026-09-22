@@ -1,0 +1,96 @@
+{
+  "note": "Phase 13 arrival candidates, measured against the phase-12 model before anything is rendered. Eye 1.6 m on the terrain, 48 degree vertical field of view, the lens every place photograph in this map was made with. `stand` and `look` are local metres (x east, z south). `from` is the viewpoint the descent starts at.",
+  "candidates": [
+    {
+      "id": "homes-street",
+      "from": "the-homes",
+      "stand": [
+        -214.7,
+        -628.9
+      ],
+      "look": [
+        -140.7,
+        -598.9
+      ],
+      "why": "the street between facing terraces, 23 m apart, channel in the verge"
+    },
+    {
+      "id": "homes-street-close",
+      "from": "the-homes",
+      "stand": [
+        -230,
+        -636
+      ],
+      "look": [
+        -150,
+        -604
+      ],
+      "why": "the same street, standing 20 m back so the near terraces frame it"
+    },
+    {
+      "id": "panels-to-homes",
+      "from": "the-panels",
+      "stand": [
+        -500,
+        -545
+      ],
+      "look": [
+        -365,
+        -581
+      ],
+      "why": "inside the panel field looking at the new homes: rows in the foreground, town behind"
+    },
+    {
+      "id": "panels-along-rows",
+      "from": "the-panels",
+      "stand": [
+        -490,
+        -500
+      ],
+      "look": [
+        -434,
+        -639
+      ],
+      "why": "looking along the rows so they recede, crops between them"
+    },
+    {
+      "id": "courtyards-clearing",
+      "from": "the-campus",
+      "stand": [
+        -156,
+        -200
+      ],
+      "look": [
+        -193,
+        -216
+      ],
+      "why": "the one clearing in the campus orchard: 17 m block 40 m away across the court"
+    },
+    {
+      "id": "courtyards-clearing-b",
+      "from": "the-campus",
+      "stand": [
+        -156,
+        -200
+      ],
+      "look": [
+        -168,
+        -167
+      ],
+      "why": "same clearing, turned north to the 13.6 m block and the court between them"
+    },
+    {
+      "id": "courtyards-clearing-c",
+      "from": "the-campus",
+      "stand": [
+        -150,
+        -210
+      ],
+      "look": [
+        -200,
+        -190
+      ],
+      "why": "eight metres south in the same clearing, both blocks in one frame"
+    }
+  ]
+}
