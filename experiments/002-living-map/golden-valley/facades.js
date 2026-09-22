@@ -84,6 +84,37 @@ const NOISE = /* glsl */`
   }
 `;
 
+// One photovoltaic surface language for every generated use: the vertical
+// agrivoltaic rows, dwelling and campus roofs, and GCHQ's car-park canopies.
+// Colours are linear-sRGB versions of #17242E, #3A4A57 and #91A4AB. The
+// standard/physical material still supplies the real sun and environment
+// reflection; this establishes the glass body, a sky fallback for the
+// keyless build, and the thin directional glint that survives the map scale.
+export const PV_GLASS = /* glsl */`
+  uniform vec3 uPvSunDirection;
+  vec3 fPvGlass(vec3 nrm, float frame, float glintBand,
+                inout float rough) {
+    const vec3 pvBase = vec3(0.008568, 0.017642, 0.027321);
+    const vec3 pvSky = vec3(0.042311, 0.068478, 0.095307);
+    const vec3 pvGlint = vec3(0.283149, 0.371238, 0.407240);
+    vec3 eye = normalize(vViewPosition);
+    vec3 sun = normalize((viewMatrix * vec4(uPvSunDirection, 0.0)).xyz);
+    vec3 halfVector = normalize(sun + eye);
+    float fresnel = pow(1.0 - abs(dot(nrm, eye)), 3.0);
+    float sunGlint = pow(max(dot(nrm, halfVector), 0.0), 72.0)
+                   * smoothstep(0.0, 0.08, dot(nrm, sun));
+    float skyAmount = 0.48 + fresnel * 0.18;
+    #ifndef USE_ENVMAP
+      skyAmount = 0.68 + fresnel * 0.18;
+    #endif
+    vec3 glass = mix(pvBase, pvSky, skyAmount);
+    glass = mix(glass, pvGlint,
+                clamp(sunGlint * 0.90 + glintBand * 0.34, 0.0, 0.92));
+    rough = mix(0.14, 0.34, frame);
+    return mix(glass, pvGlint, frame * 0.82);
+  }
+`;
+
 /**
  * The campus block: banded silvered larch over a glazed ground floor, a
  * window every bay, a parapet, and a meadow roof crossed by PV rows.
@@ -92,7 +123,7 @@ const NOISE = /* glsl */`
  * below are proportions of anything — they are the sizes the architecture
  * actually is.
  */
-export const CAMPUS_FRAGMENT = NOISE + /* glsl */`
+export const CAMPUS_FRAGMENT = NOISE + PV_GLASS + /* glsl */`
   vec3 fCampus(vec2 m, float surf, float bayW, float wallTop, float variant,
                inout vec3 nrm, inout float rough, vec3 base) {
     // --- the roof ---------------------------------------------------------
@@ -112,11 +143,15 @@ export const CAMPUS_FRAGMENT = NOISE + /* glsl */`
       float planted = max(0.0, 1.0 - path - service);
       float saw = fract((m.x + m.y * 0.55) / 2.4);
       float pv = fBand(saw, 0.10, 0.405) * planted;
-      c = mix(c, base * vec3(0.16, 0.21, 0.27), pv * 0.96);
-      c = mix(c, base * 1.25, fBand(saw, 0.08, 0.11) * pv);
+      float pvFrame = fBand(saw, 0.10, 0.125) * pv;
+      float pvStreak = pow(max(0.0, 1.0
+        - abs(fract((m.x + m.y * 0.24) / 19.0) - 0.5) * 2.0), 24.0);
+      float pvRough = rough;
+      vec3 pvGlass = fPvGlass(nrm, pvFrame, pvStreak, pvRough);
+      c = mix(c, pvGlass, pv * 0.96);
       c = mix(c, base * vec3(1.18, 1.12, 1.00), path * 0.88);
       c = mix(c, base * vec3(0.42, 0.40, 0.37), service * 0.92);
-      rough = mix(rough, 0.22, pv);
+      rough = mix(rough, pvRough, pv);
       return c;
     }
     if (surf > 2.5) { rough = 0.88; return base * 0.78; }
@@ -292,7 +327,7 @@ export const NCIC_FRAGMENT = NOISE + /* glsl */`
 `;
 
 /** Passivhaus terraces and mass-timber apartment blocks, in metres. */
-export const HOMES_FRAGMENT = NOISE + /* glsl */`
+export const HOMES_FRAGMENT = NOISE + PV_GLASS + /* glsl */`
   vec3 fHomes(vec2 m, float surf, float bayW, float wallTop, float typology,
               inout vec3 nrm, inout float rough, vec3 base) {
     if (surf > 2.5) { rough = 0.90; return base * vec3(0.72, 0.66, 0.56); }
@@ -341,16 +376,15 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
     // of opposite dwelling pitches is also PV, producing the programme's
     // 58.2% home-pitch share as near-whole roofs rather than thin token strips.
     if (surf > 0.5 && surf < 1.5) {
-      vec3 pv = base * vec3(0.42, 0.58, 0.72);
       float frameX = 1.0 - fBand(fract(m.x / 1.05), 0.025, 0.975);
       float frameY = 1.0 - fBand(fract(m.y / 1.65), 0.025, 0.975);
       float frame = clamp(frameX + frameY, 0.0, 1.0);
       float houseBreak = 1.0 - fBand(fract(m.x / bayW), 0.035, 0.965);
-      vec3 c = mix(pv, base * 1.55, frame * 0.52);
+      float glintLine = abs(fract((m.x + m.y * 0.24) / 19.0) - 0.5) * 2.0;
+      float glint = pow(max(0.0, 1.0 - glintLine), 24.0);
+      vec3 pv = fPvGlass(nrm, frame, glint, rough);
+      vec3 c = pv;
       c = mix(c, base * 0.34, houseBreak * 0.75);
-      // A restrained glint on the measured sun-facing pitch.
-      c += base * 0.11 * pow(max(nrm.y, 0.0), 10.0);
-      rough = 0.20;
       return c;
     }
     if (surf > 1.5 && surf < 2.5) {
@@ -361,12 +395,14 @@ export const HOMES_FRAGMENT = NOISE + /* glsl */`
       float tile = fBand(fract(m.y / 0.34), 0.04, 0.88);
       float breakLine = 1.0 - fBand(fract(m.x / bayW), 0.035, 0.965);
       vec3 slate = base * (0.76 + tile * 0.16 - breakLine * 0.18);
-      vec3 pv = base * vec3(0.42, 0.58, 0.72);
       float frameX = 1.0 - fBand(fract(m.x / 1.05), 0.025, 0.975);
       float frameY = 1.0 - fBand(fract(m.y / 1.65), 0.025, 0.975);
       float frame = clamp(frameX + frameY, 0.0, 1.0);
-      pv = mix(pv, base * 1.55, frame * 0.52);
-      rough = mix(0.88, 0.20, secondPv);
+      float glintLine = abs(fract((m.x + m.y * 0.24) / 19.0) - 0.5) * 2.0;
+      float glint = pow(max(0.0, 1.0 - glintLine), 24.0);
+      float pvRough = rough;
+      vec3 pv = fPvGlass(nrm, frame, glint, pvRough);
+      rough = mix(0.88, pvRough, secondPv);
       vec3 c = mix(slate, pv, secondPv);
       return mix(c, base * vec3(1.10, 1.05, 0.96), maintenance * 0.86);
     }
@@ -425,8 +461,8 @@ export const GLASSHOUSE_FRAGMENT = NOISE + /* glsl */`
 `;
 
 /** Thin PV slab above open parking, with the frame grid doing the scale work. */
-export const CANOPY_FRAGMENT = NOISE + /* glsl */`
-  vec3 fCanopy(vec2 m, float surf, inout float rough, vec3 base) {
+export const CANOPY_FRAGMENT = NOISE + PV_GLASS + /* glsl */`
+  vec3 fCanopy(vec2 m, float surf, vec3 nrm, inout float rough, vec3 base) {
     if (surf > 0.5) {
       float gx = 1.0 - fBand(fract(m.x / 1.1), 0.025, 0.975);
       float gy = 1.0 - fBand(fract(m.y / 1.75), 0.025, 0.975);
@@ -435,10 +471,7 @@ export const CANOPY_FRAGMENT = NOISE + /* glsl */`
       // streak: enough to read as PV at 340 m without becoming a cyan roof.
       float glintLine = abs(fract((m.x + m.y * 0.24) / 19.0) - 0.5) * 2.0;
       float glint = pow(max(0.0, 1.0 - glintLine), 24.0) * (1.0 - grid);
-      vec3 panel = base * vec3(0.55, 0.78, 1.04);
-      vec3 frame = base * vec3(2.25, 2.18, 2.02);
-      rough = mix(0.15, 0.43, grid);
-      return mix(panel, frame, grid * 0.82) + base * glint * 0.42;
+      return fPvGlass(nrm, grid, glint, rough);
     }
     // Pale enough to separate the open underside from the shadow it casts on
     // the photographed cars; still neutral, so it cannot read as another PV
@@ -479,6 +512,7 @@ export function facadeChunk(kind) {
   }
   if (kind === 'homes') {
     return {
+      pv: true,
       vertex: FACADE_VERTEX,
       vertexBody: FACADE_VERTEX_BODY,
       fragment: FACADE_VARYINGS + HOMES_FRAGMENT,
@@ -514,13 +548,15 @@ export function facadeChunk(kind) {
   }
   if (kind === 'canopy') {
     return {
+      pv: true,
       vertex: FACADE_VERTEX,
       vertexBody: FACADE_VERTEX_BODY,
       fragment: FACADE_VARYINGS + CANOPY_FRAGMENT,
       fragmentBody: /* glsl */`
         {
           float fRough = roughnessFactor;
-          diffuseColor.rgb = fCanopy(vFacade, vSurface, fRough,
+          vec3 fNormal = normal;
+          diffuseColor.rgb = fCanopy(vFacade, vSurface, fNormal, fRough,
                                      diffuseColor.rgb);
           roughnessFactor = fRough;
         }
@@ -528,6 +564,7 @@ export function facadeChunk(kind) {
     };
   }
   return {
+    pv: true,
     vertex: FACADE_VERTEX,
     vertexBody: FACADE_VERTEX_BODY,
     fragment: FACADE_VARYINGS + CAMPUS_FRAGMENT,
