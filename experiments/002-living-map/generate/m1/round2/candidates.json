@@ -1,0 +1,15 @@
+{
+  "note": "Phase 12 M1 round 2. Round 1 (../contact-sheet.jpg) kept the photograph on in all ten but lost the horizon at 22 degrees of pitch, and the west-edge frames sat on low-detail tiles. Pitch 16-18 here; the edge pillar becomes a whole-scheme view to GCHQ at 450 m. Shot after M3a so the 2045 half shows scheme-true density.",
+  "shots": [
+    {"id": "homes-a", "pillar": "homes streets", "look": [-280, -730], "bearing": 40, "slant": 380, "pitch": 17, "fov": 38, "lift": 0},
+    {"id": "homes-c", "pillar": "homes streets", "look": [-300, -760], "bearing": 20, "slant": 330, "pitch": 18, "fov": 38, "lift": 0},
+    {"id": "campus-b", "pillar": "campus around IDEA", "look": [-180, -130], "bearing": 140, "slant": 360, "pitch": 17, "fov": 38, "lift": 0},
+    {"id": "campus-a", "pillar": "campus around IDEA", "look": [-180, -130], "bearing": 75, "slant": 380, "pitch": 16, "fov": 38, "lift": 0},
+    {"id": "meadow-a", "pillar": "meadow roof + solar car parks", "look": [123, 64], "bearing": 44, "slant": 340, "pitch": 18, "fov": 38, "lift": 8},
+    {"id": "meadow-b", "pillar": "meadow roof + solar car parks", "look": [123, 64], "bearing": 135, "slant": 360, "pitch": 18, "fov": 38, "lift": 8},
+    {"id": "panels-b", "pillar": "panels and glasshouses", "look": [-470, -470], "bearing": 200, "slant": 380, "pitch": 17, "fov": 38, "lift": 0},
+    {"id": "panels-c", "pillar": "panels and glasshouses", "look": [-440, -420], "bearing": 230, "slant": 340, "pitch": 18, "fov": 38, "lift": 0},
+    {"id": "scheme-a", "pillar": "the whole scheme to GCHQ", "look": [-250, -300], "bearing": 55, "slant": 450, "pitch": 17, "fov": 40, "lift": 0},
+    {"id": "scheme-b", "pillar": "the whole scheme to GCHQ", "look": [-300, -250], "bearing": 80, "slant": 450, "pitch": 16, "fov": 40, "lift": 0}
+  ]
+}

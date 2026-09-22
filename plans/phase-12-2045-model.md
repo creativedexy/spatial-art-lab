@@ -135,6 +135,32 @@ merges; Dex approves the boards and the frames. Nothing spends money.
 **Done when** Dex signs a one-page ledger: five shots, three moves each, and a
 floor of 35% "changes strongly" per shot.
 
+**Draft ledger (22 Sep, for sign-off).** Shot ids are fixed when M1's frames
+are picked.
+
+| Shot | Building | Trees | Sustainable |
+|---|---|---|---|
+| Homes streets | Passivhaus terrace streets and timber blocks where there were fields | Street avenues; a woodland belt on the farmland edge | Whole-roof PV; stormwater channels along the streets into a pond |
+| Campus around IDEA | Timber courtyard campus around IDEA's walkable meadow roof; OUTPUT at seven storeys | Woodland courtyards with retained oaks | PV sawn to the sun on the flat roofs; ROUTER and the cycle greenway |
+| Meadow roof | GCHQ's ring re-roofed as wildflower meadow | Tree avenues along the car park edges | Solar canopies over every GCHQ car park |
+| Panels and glasshouses | Glasshouses on the campus's waste heat | Mature orchard rows; woodland behind | Vertical bifacial PV over grazed pasture |
+| Orchard and wetland edge | Terraces backing onto the wet meadow | The orchard ring and woodland copses | Wet meadow with open water reflecting the sky |
+
+### M3a: rough massing, in parallel with M0 to M2 *(added 22 Sep)*
+
+Dex: the 2045 half reads as "a sparse dot of trees in a field". The count and
+the siting come from the scheme, not the boards, so they don't wait for M2.
+Codex extends `golden_valley_2045.py` now:
+- homes and campus cells get internal streets and perimeter blocks, not one
+  row of buildings round the edge
+- about 1,100 dwellings and 93,000 m²+ of campus, with OUTPUT, INPUT and ROUTER
+  named
+- mature orchards, woodland belts on the farmland edge, avenues on the new
+  streets
+
+The boards later decide character (roofs, materials, typology detail); M3
+becomes refinement of this pass rather than a first build.
+
 ### M1: reframe the shots *(Develop, 1 day)*
 
 - Every shot at 250 to 450 m, with a narrower lens, each about one pillar:
