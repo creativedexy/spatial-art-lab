@@ -1,0 +1,68 @@
+{
+ "plates": [
+  {
+   "label": "G1 \u00b7 panther, sandstone",
+   "path": "experiments/003-spider-probe/video/out/g1.mp4"
+  },
+  {
+   "label": "H4 \u00b7 shark, plankton",
+   "path": "experiments/003-spider-probe/video/out/h4.mp4"
+  },
+  {
+   "label": "H8 \u00b7 octopus eye",
+   "path": "experiments/003-spider-probe/video/out/h8.mp4"
+  },
+  {
+   "label": "E1 \u00b7 orb weaver, frost",
+   "path": "experiments/003-spider-probe/video/out/e1.mp4"
+  },
+  {
+   "label": "E5 \u00b7 seahorse, sea fan",
+   "path": "experiments/003-spider-probe/video/out/e5.mp4"
+  }
+ ],
+ "shots": [
+  "chain-test",
+  "e1-depth-reel",
+  "e5-depth-reel",
+  "h4-depth-reel",
+  "h8-depth-reel",
+  "j1-twin",
+  "j1-twin-reel",
+  "j2-specimen",
+  "j2-specimen-reel",
+  "k2-hud",
+  "k2-hud-reel",
+  "k2-twin",
+  "sh-a-scan",
+  "sh-b-mesh",
+  "sh-c-dream",
+  "sh-c1-crystal-bloom",
+  "sh-c2-amber-storm",
+  "sh-c3-mono-red",
+  "sh-c4-jewel",
+  "sh-c5-number-shards",
+  "sh-c6-violet-spin",
+  "sh-c7-cream-dust",
+  "sh-c8-glitch-crystal",
+  "sh-d-echo",
+  "sh-e-contour",
+  "sh-f-dither",
+  "sh-g1-16cell",
+  "sh-g2-24cell",
+  "sh-g3-hopf",
+  "sh-g4-lattice",
+  "sh-g5-golden",
+  "sh-g6-shards",
+  "sh-g7-slices",
+  "sh-g8-armillary",
+  "sh-x1-twin",
+  "sh-x2-ascii",
+  "sh-x3-glitch",
+  "sh-x4-hud",
+  "sh-x5-card",
+  "sh-x6-pulse",
+  "sh-x7-orbit",
+  "sh-x8-echo"
+ ]
+}

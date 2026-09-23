@@ -33,6 +33,7 @@ canvas{max-width:calc(100% - 40px);max-height:calc(100vh - 90px);box-shadow:0 0 
   <h1>SPECIMEN STUDIO</h1>
   <p class="sub">Geometry and HUD over your images and video. Runs on this machine; nothing is uploaded.</p>
   <div class="row"><button id="load">+ Source</button><select id="preset" aria-label="Preset"></select></div>
+  <div class="row" id="libRow" hidden><select id="plate" aria-label="Plate"></select><select id="shot" aria-label="Shot"></select></div>
   <div class="row"><button id="audio">+ Audio</button><span id="aname" style="color:var(--mut);align-self:center"></span></div>
   <div class="row"><button id="rnd">Random field</button><button id="save">Save preset</button><button id="copy">Copy JSON</button></div>
   <div class="row"><button id="saveshot">Save shot (for make.py)</button></div>
@@ -653,9 +654,27 @@ $('webm').onclick = () => {
   rec.onstop = () => { const a = document.createElement('a'); a.download = `specimen-${P.seed}.webm`; a.href = URL.createObjectURL(new Blob(chunks, {type: 'video/webm'})); a.click(); $('status').textContent = ''; };
   t0 = performance.now(); if (isVideo) src.currentTime = 0; rec.start(); $('status').textContent = `● RECORDING ${len}s`; setTimeout(() => rec.stop(), len * 1000);
 };
+// Library (served by serve.py): pick a plate or load a saved shot; Save shot then carries the plate path.
+let platePath = null;
+function loadPlate(path) {
+  platePath = path; resetDepth();
+  const v = document.createElement('video'); v.src = '../../' + path; v.onloadeddata = () => setSource(v, true);
+}
+if (location.protocol.startsWith('http')) fetch('shots/index.json').then(r => r.json()).then(lib => {
+  $('libRow').hidden = false;
+  $('plate').innerHTML = '<option value="">PLATE…</option>' + lib.plates.map(p => `<option value="${p.path}">${p.label}</option>`).join('');
+  $('shot').innerHTML = '<option value="">SHOT…</option>' + lib.shots.map(s => `<option>${s}</option>`).join('');
+  $('plate').onchange = () => $('plate').value && loadPlate($('plate').value);
+  $('shot').onchange = async () => {
+    if (!$('shot').value) return; const s = await (await fetch(`shots/${$('shot').value}.json`)).json(), all = {...PRESETS, ...stored()};
+    Object.assign(P, defaults, {bind: {}}, s.preset ? (all[s.preset] || {}) : {}, s.params || {});
+    if (s.format) { const [w, h] = s.format.split('x').map(Number); cv.width = w; cv.height = h; $('format').value = s.format; }
+    buildControls(); if (s.plate) { $('plate').value = s.plate; loadPlate(s.plate); } else extract();
+  };
+}).catch(() => {});
 // Save shot: the current settings as a shot file make.py can run (hand-tuned in the browser, rendered headless).
 $('saveshot').onclick = () => {
-  const shot = {name: `shot-${P.seed}`, plate: '(set the plate path)', format: `${cv.width}x${cv.height}`, fps: 24, seconds: +$('length').value, params: {...P}};
+  const shot = {name: `shot-${P.seed}`, plate: platePath || '(set the plate path)', format: `${cv.width}x${cv.height}`, fps: 24, seconds: +$('length').value, params: {...P}};
   const a = document.createElement('a'); a.download = `${shot.name}.json`; a.href = URL.createObjectURL(new Blob([JSON.stringify(shot, null, 1)], {type: 'application/json'})); a.click();
 };
 window.studio = {
