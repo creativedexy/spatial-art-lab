@@ -34,7 +34,7 @@ canvas{max-width:calc(100% - 40px);max-height:calc(100vh - 90px);box-shadow:0 0 
   <p class="sub">Geometry and HUD over your images and video. Runs on this machine; nothing is uploaded.</p>
   <div class="row"><button id="load">+ Source</button><select id="preset" aria-label="Preset"></select></div>
   <div class="row" id="libRow" hidden><select id="plate" aria-label="Plate"></select><select id="shot" aria-label="Shot"></select><select id="track" aria-label="Audio track"></select></div>
-  <div class="row"><button id="audio">+ Audio</button><span id="aname" style="color:var(--mut);align-self:center"></span></div>
+  <div class="row"><button id="audio">+ Audio</button><button id="noaudio" title="Stop and remove the track">✕ Audio</button><span id="aname" style="color:var(--mut);align-self:center"></span></div>
   <div class="row"><button id="rnd">Random field</button><button id="save">Save preset</button><button id="copy">Copy JSON</button></div>
   <div class="row"><button id="saveshot">Save shot (for make.py)</button></div>
   <div id="controls"></div>
@@ -171,6 +171,10 @@ function loadAudio(f, url) {
   const node = actxA.createMediaElementSource(audioEl); analyser = actxA.createAnalyser(); analyser.fftSize = 1024; fbins = new Uint8Array(analyser.frequencyBinCount);
   audioDest = actxA.createMediaStreamDestination(); node.connect(analyser); analyser.connect(actxA.destination); node.connect(audioDest);
   actxA.resume(); audioEl.play(); $('aname').textContent = (f ? f.name : url.split('/').pop()).slice(0, 24);
+}
+function stopAudio() {                                                   // remove the track: silence, zero the signals, and Save shot drops it
+  if (audioEl) audioEl.pause(); audioEl = null; analyser = null; audioDest = null; audioPath = null;
+  for (const k of ['BASS', 'MID', 'HIGH']) sig[k] = 0; $('aname').textContent = ''; if ($('track')) $('track').value = '';
 }
 // Headless render mode (make.py): time comes from the frame index, sound from an offline analysis track.
 let HEADLESS = false, SEQ = false, forcedT = null, sigTrack = null, sigIndex = 0, LEN = 0, FPS = 24;
@@ -641,7 +645,7 @@ function loadFile(f) {
   if (f.type.startsWith('video')) { const v = document.createElement('video'); v.src = url; v.onloadeddata = () => setSource(v, true); }
   else { const i = new Image(); i.onload = () => setSource(i, false); i.src = url; }
 }
-$('audio').onclick = () => $('afile').click(); $('afile').onchange = e => e.target.files[0] && loadAudio(e.target.files[0]);
+$('noaudio').onclick = stopAudio; $('audio').onclick = () => $('afile').click(); $('afile').onchange = e => e.target.files[0] && loadAudio(e.target.files[0]);
 $('load').onclick = () => $('file').click(); $('file').onchange = e => e.target.files[0] && loadFile(e.target.files[0]);
 addEventListener('dragover', e => { e.preventDefault(); $('drop').classList.add('on'); });
 addEventListener('dragleave', e => { if (e.target === $('drop')) $('drop').classList.remove('on'); });
@@ -675,8 +679,8 @@ function loadPlate(path) {
 if (location.protocol.startsWith('http')) fetch('/api/library', {cache: 'no-store'}).then(r => r.json()).then(lib => {
   $('libRow').hidden = false; if (Object.keys(local()).length) pushPresets(local());   // copy browser-only presets into presets.json
   $('plate').innerHTML = '<option value="">PLATE…</option>' + lib.plates.map(p => `<option value="${p.path}">${p.label}</option>`).join('');
-  $('track').innerHTML = '<option value="">AUDIO…</option>' + lib.audio.map(a => `<option value="${a}">${a.split('/').pop()}</option>`).join('');
-  $('track').onchange = () => { const a = $('track').value; if (!a) return; loadAudio(null, '../../' + a); audioPath = a; $('aname').textContent = a.split('/').pop().slice(0, 24); };
+  $('track').innerHTML = '<option value="">NO AUDIO</option>' + lib.audio.map(a => `<option value="${a}">${a.split('/').pop()}</option>`).join('');
+  $('track').onchange = () => { const a = $('track').value; if (!a) return stopAudio(); loadAudio(null, '../../' + a); audioPath = a; $('aname').textContent = a.split('/').pop().slice(0, 24); };
   $('shot').innerHTML = '<option value="">SHOT…</option>' + lib.shots.map(s => `<option>${s}</option>`).join('');
   $('plate').onchange = () => $('plate').value && loadPlate($('plate').value);
   $('shot').onchange = async () => {
