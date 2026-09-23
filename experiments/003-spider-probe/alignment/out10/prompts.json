@@ -1,0 +1,73 @@
+{
+  "tool": "built-in image generation",
+  "use_case": "photorealistic-natural",
+  "source_size": "1024x1536",
+  "final_size": "1080x1920",
+  "reference_images": [
+    "../out7/v2-moss-stride.png",
+    "../out9/f5-octopus.png",
+    "../out9/e1-orb-frost.png"
+  ],
+  "reference_role": "Lighting and darkness only: one low directional source, deep black beyond, photographic wildlife realism, and particles catching the light. Do not copy subjects, plants, or environments.",
+  "shared_constraints": [
+    "Vertical 2:3 clean wildlife portrait plate",
+    "Side profile or slight three-quarter from the side; never front-on",
+    "More than a headshot",
+    "Subject approximately 55-65% of frame width and placed lower-middle",
+    "Open dark space in front of the face",
+    "Keep essential anatomy inside the central 80% for the final centre crop",
+    "One low directional light with rapid falloff to deep black",
+    "Photographic wildlife realism and correct anatomy",
+    "No ferns, moss, HUD, text, lines, borders, or watermark"
+  ],
+  "prompts": [
+    {
+      "file": "g1-shark.png",
+      "subject": "An oceanic whitetip shark, identifiable by its long rounded white-tipped pectoral and dorsal fins, gliding in strict side profile across black open water.",
+      "scene": "Empty black open ocean, sparse marine snow in the beam, and a very faint surface shimmer far above.",
+      "framing": "Show the complete front half from snout through five visible gill slits to just behind the extended near-side pectoral fin, including the dorsal fin base. The front-half silhouette fits comfortably in frame, occupies about 55-60% of the width, sits lower-middle, and looks into broad open black water.",
+      "lighting": "A single low torch-like grazing beam catches the eye, gills, dorsal edge, and pectoral fin; rapid falloff to black; marine snow glints.",
+      "avoid": "Oversized or edge-to-edge shark, clipped key fin, front-facing angle, great-white proportions, bright blue water, seabed, other animals, diver, cage, bait, plants, illustration, or CGI look."
+    },
+    {
+      "file": "g2-owl.png",
+      "subject": "An anatomically correct barn owl perched in strict side profile on a frosted fence post, with its head turned only slightly toward the light while remaining unmistakably side-on.",
+      "scene": "Sparse winter night, snow falling through the beam, simple frost-coated post, and deep black background.",
+      "framing": "Show full head, neck transition, shoulders, chest, and upper body down to the perch. The owl occupies 55-65% of frame width, sits lower-middle, and looks into open darkness in front of its beak.",
+      "lighting": "One low warm-white grazing beam, falling snow sparkling, and rapid falloff to deep black.",
+      "avoid": "Front-facing gaze, symmetrical face, tight headshot, spread wings, clipped head or body, forest clutter, plants, illustration, or CGI look."
+    },
+    {
+      "file": "g3-panther.png",
+      "subject": "An anatomically correct melanistic leopard crouched in strict side profile on wet black basalt in heavy night rain, with subtle rosettes, water beading on the fur and whiskers, and one amber eye lit.",
+      "scene": "Bare wet black basalt ledge, rain streaks and tiny splashes, and a deep black background with no foliage.",
+      "framing": "Show the full head, neck, both shoulders, upper front chest, and forelegs. The leopard occupies 55-65% of frame width, sits lower-middle, and looks into generous black space ahead of its nose.",
+      "lighting": "A single low warm-white light grazes the face, amber eye, shoulder, and raindrops; deep black falloff.",
+      "avoid": "Front-facing pose, tight headshot, cropped ears, chest, or forelegs, open mouth, snarl, bright background, vegetation, illustration, or CGI look."
+    },
+    {
+      "file": "g4-wolf.png",
+      "subject": "An anatomically correct adult grey wolf in strict side profile in a night blizzard, with a thick winter coat, frost on its muzzle and guard hairs, and a subtle breath plume.",
+      "scene": "Open winter darkness with wind-driven snow crossing the beam and no trees, plants, or landscape clutter.",
+      "framing": "Show the full head, neck, shoulders, upper front chest, and forelegs. The wolf occupies 55-65% of frame width, sits lower-middle, and looks into open dark space ahead of its nose.",
+      "lighting": "One low soft warm-white light catches the eye, muzzle frost, shoulders, and snow; rapid falloff into deep black.",
+      "avoid": "Front-facing pose, tight headshot, cropped ears or chest, snarling, open mouth, bright snowy landscape, trees, fantasy styling, illustration, or CGI look."
+    },
+    {
+      "file": "g5-stag.png",
+      "subject": "An anatomically correct mature red deer stag in strict side profile on a misty moorland at night, with breath clouding, frost on sparse heather tips, and full branching antlers catching the light.",
+      "scene": "Minimal night moorland, mostly black, with a low strip of sparse frost-tipped heather and thin mist drifting through the beam.",
+      "framing": "Show the complete head and muzzle, full antlers, long neck, shoulders, and front chest. Including antlers, the stag occupies about 55-65% of frame width, sits lower-middle, and looks into open darkness.",
+      "lighting": "One low warm-white grazing light rims the antlers, eye, muzzle, neck, breath, and mist; deep black falloff.",
+      "avoid": "Front-facing pose, tight headshot, cropped or fantasy antlers, daylight, dense vegetation, forest, illustration, or CGI look."
+    },
+    {
+      "file": "g6-heron.png",
+      "subject": "An anatomically correct adult grey heron in strict side profile standing in black shallow water at night, with a complete head and dagger bill, long S-curved neck, shoulders, breast, and upper body visible.",
+      "scene": "Bare black shallow water, sparse concentric ripples around the legs, and low mist skimming the water; no shoreline plants.",
+      "framing": "The heron occupies 55-65% of frame width, sits lower-middle, and looks into broad open black space ahead of its bill. Show enough body and water to establish the stance.",
+      "lighting": "One low warm-white grazing source catches the eye, bill edge, feather ridges, ripples, and mist; rapid falloff into deep black.",
+      "avoid": "Front-facing pose, tight headshot, cropped bill, anatomically wrong neck, spread wings, bright pond, fish, prey, reeds, vegetation, illustration, or CGI look."
+    }
+  ]
+}
