@@ -47,7 +47,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        body = json.loads(self.rfile.read(int(self.headers.get('Content-Length', 0))) or b'{}')
+        raw = self.rfile.read(int(self.headers.get('Content-Length', 0)))
+        if self.path.startswith('/api/audio?name='):                   # a dropped track joins the library
+            from urllib.parse import unquote
+            name = re.sub(r'[^\w.-]+', '-', unquote(self.path.split('=', 1)[1]))[:120]
+            if not name.lower().endswith(('.wav', '.mp3', '.m4a', '.aif', '.aiff', '.flac', '.ogg')):
+                return self._json(400, {'error': 'not audio'})
+            (HERE / 'audio' / name).write_bytes(raw); return self._json(200, {'path': f'experiments/004-specimen-studio/audio/{name}'})
+        body = json.loads(raw or b'{}')
         if self.path == '/api/presets':                          # merge by name; never deletes
             f = HERE / 'presets.json'; cur = json.loads(f.read_text()) if f.exists() else {}
             cur.update(body); f.write_text(json.dumps(cur, indent=1)); return self._json(200, {'presets': len(cur)})
@@ -74,6 +81,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return f
 
     def copyfile(self, src, dst):
+        try: self._copy(src, dst)
+        except (BrokenPipeError, ConnectionResetError): pass                # the browser cancelled a video range: normal
+
+    def _copy(self, src, dst):
         left = getattr(self, '_left', None)
         if left is None:
             return super().copyfile(src, dst)
