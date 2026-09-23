@@ -9,7 +9,7 @@ shot.json (paths relative to the repo root):
   preset    a Specimen Studio preset name; params override any field (Save shot in the studio writes these)
   format    "1280x720" | "720x1280" | "1080x1350" | "1080x1080";  fps, seconds
   audio     optional track: analysed offline into per-frame bass/mid/high for the bindings, then muxed in
-  cues      optional [{bar, name, params}]: the look changes at each bar (the studio's timeline); hits come from beats.py
+  cues      optional [{bar, name, plate, params}]: the look (and clip) changes at each bar (the studio's timeline); hits come from beats.py
 Output: render/<name>.mp4 and render/<name>-sheet.jpg in this folder. Adjust by opening studio.html,
 tuning by hand and pressing Save shot; the saved file runs here unchanged.
 """
@@ -109,19 +109,29 @@ def main(shot_path):
     cfg = {k: shot[k] for k in ('preset', 'params', 'format', 'cues') if k in shot}
     if shot.get('audio'):                                              # hits for the beat engine: exact sidecar or detected
         sys.path.insert(0, str(HERE)); import beats; cfg['beats'] = beats.beatmap(ROOT / shot['audio'])
-    seq = []
-    if plate.suffix.lower() in ('.mp4', '.mov', '.webm', '.m4v'):          # unpack video: exact frames, no seeking
-        (work / 'src').mkdir()
-        sh(['ffmpeg', '-y', '-v', 'error', '-i', str(plate), '-vf', f'fps={fps}', '-frames:v', str(frames), '-q:v', '2', str(work / 'src/%04d.jpg')])
-        seq = sorted((work / 'src').glob('*.jpg'))
-        log(f'plate unpacked: {len(seq)} frames')
-    cfg.update(source=rel(seq[0] if seq else plate), fps=fps, seconds=secs, signals=signals)
+    cues = shot.get('cues') or []; bm = cfg.get('beats'); seqs = {}
+    for k, p in enumerate(dict.fromkeys([str(plate)] + [str((ROOT / c['plate']).resolve()) for c in cues if c.get('plate')])):
+        p = Path(p)
+        if p.suffix.lower() in ('.mp4', '.mov', '.webm', '.m4v'):          # unpack video: exact frames, no seeking; a short clip yields fewer and loops
+            d = work / f'src{k}'; d.mkdir()
+            sh(['ffmpeg', '-y', '-v', 'error', '-i', str(p), '-vf', f'fps={fps}', '-frames:v', str(frames), '-q:v', '2', str(d / '%04d.jpg')])
+            seqs[str(p)] = sorted(d.glob('*.jpg')); log(f'plate {p.name}: {len(seqs[str(p)])} frames')
+        else:
+            seqs[str(p)] = [p]
+
+    def plate_at(t):                                                   # the clip under the playhead: the latest cue's, as in the studio
+        bl, off, cur = 240 / (bm['bpm'] if bm else 120), bm['offset'] if bm else 0, None
+        for c in cues:
+            if off + c['bar'] * bl <= t + 0.02 and (cur is None or c['bar'] >= cur['bar']): cur = c
+        return str((ROOT / cur['plate']).resolve()) if cur and cur.get('plate') else str(plate)
+    seq = seqs[str(plate)]
+    cfg.update(source=rel(seq[0]), fps=fps, seconds=secs, signals=signals)
     (work / 'cfg.json').write_text(json.dumps(cfg))
     res = browse('js', f"studio.load({json.dumps(cfg)}).then(r => JSON.stringify(r))")
     log('loaded', res.strip().splitlines()[-1][:200])
     t0 = time.time()
     for i in range(frames):
-        arg = f', {json.dumps(rel(seq[i % len(seq)]))}' if seq else ''          # the plate loops under a longer timeline
+        s = seqs[plate_at(i / fps)]; arg = f', {json.dumps(rel(s[i % len(s)]))}'          # each clip loops under the timeline
         browse('js', f'studio.frame({i}{arg})', '--out', str(work / f'f{i:04d}.png'))
         if i % 48 == 0:
             log(f'frame {i}/{frames}  {time.time() - t0:.0f}s')

@@ -32,5 +32,48 @@
   "response_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0cd86-8da4-7163-883d-f42e7507c422",
   "prompt": "The peacock spider steps forward across the dark moss, legs lifting deliberately, its iridescent blue and red body catching the light as it turns slightly. The moss stays still. Locked-off macro camera. One cool soft light, deep black background.",
   "submitted": 1790154542.471199
+ },
+ "g1": {
+  "request_id": "01a0ce4e-03fe-7ce2-8e1a-6814bbb76a90",
+  "status_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce4e-03fe-7ce2-8e1a-6814bbb76a90/status",
+  "response_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce4e-03fe-7ce2-8e1a-6814bbb76a90",
+  "prompt": "The black leopard stays low on the sandstone ledge, head turning slightly as it watches, shoulders shifting, tail tip twitching; fine dust drifts through the torch beam and settles. Locked-off long-lens camera, shallow depth of field. Desert canyon at night, one low warm torch from the side, deep black sky.",
+  "submitted": 1790167614.442488,
+  "video": "https://v3b.fal.media/files/b/0aab9445/ncH4LMe9rXwWwGXOdc7VO_output.mp4"
+ },
+ "h4": {
+  "request_id": "01a0ce4e-0849-7240-b40f-c63cb486a793",
+  "status_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce4e-0849-7240-b40f-c63cb486a793/status",
+  "response_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce4e-0849-7240-b40f-c63cb486a793",
+  "prompt": "The shark glides slowly forward across the frame, tail sweeping, pectoral fin steady; blue bioluminescent plankton sparks and swirls in its wake where the fin cuts the water. Locked-off camera. Black open water at night over a pale sand plain, one low torch.",
+  "submitted": 1790167615.539273,
+  "video": "https://v3b.fal.media/files/b/0aab9444/UvUXG2QmHFuDPDxwN-UoL_output.mp4"
+ },
+ "h8": {
+  "request_id": "01a0ce50-6d8b-7343-9a6a-d18f5e283dce",
+  "status_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce50-6d8b-7343-9a6a-d18f5e283dce/status",
+  "response_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce50-6d8b-7343-9a6a-d18f5e283dce",
+  "prompt": "The octopus eye slowly blinks and its pupil narrows; the skin ripples, papillae rising and colour cells flickering; the curled arm tightens and its suckers flex. Red sea whips sway gently. Locked-off macro camera. Black water at night, one low warm light.",
+  "submitted": 1790167772.53477,
+  "video": "https://v3b.fal.media/files/b/0aab9452/JZ1BaeNPl93Sv8-0ahyUR_output.mp4",
+  "done": 1790167883.380945
+ },
+ "e1": {
+  "request_id": "01a0ce50-7243-7930-98e3-14163ad2ce72",
+  "status_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce50-7243-7930-98e3-14163ad2ce72/status",
+  "response_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce50-7243-7930-98e3-14163ad2ce72",
+  "prompt": "The orb-weaver spider sits at the hub of its frosted web, legs flexing slightly; the web trembles in a faint breeze, frost on the threads glinting as it moves, teasel heads nodding. Locked-off macro camera. Frozen meadow at night, one low torch, deep black beyond.",
+  "submitted": 1790167773.7441359,
+  "video": "https://v3b.fal.media/files/b/0aab9451/71zC_Hb51TYxL0tV5v6qj_output.mp4",
+  "done": 1790167859.973192
+ },
+ "e5": {
+  "request_id": "01a0ce52-2330-7f53-ad90-912d30c2fe54",
+  "status_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce52-2330-7f53-ad90-912d30c2fe54/status",
+  "response_url": "https://queue.fal.run/fal-ai/kling-video/requests/01a0ce52-2330-7f53-ad90-912d30c2fe54",
+  "prompt": "The seahorse sways gently, tail gripping the sea fan branch, its small dorsal fin fluttering fast, eye turning; plankton sparks drift past and the sea fan lattice moves softly in the current. Locked-off macro camera. Black water at night, one low light.",
+  "submitted": 1790167884.583682,
+  "video": "https://v3b.fal.media/files/b/0aab945e/Dhx3yxujCzMgnpuxDOXcI_output.mp4",
+  "done": 1790167988.685385
  }
 }

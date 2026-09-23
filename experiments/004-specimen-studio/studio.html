@@ -568,6 +568,7 @@ function shape(x, y, s, kind) {
 const TP = {playing: true, pos: 0, last: performance.now()};
 let spinA = 0, spinT = null, snapBase = 0, snapTurn = 0, lastKicks = 0, formA = 0, cueStart = 0;   // integrated form motion: nothing jolts it
 function resetMotion() { spinA = 0; spinT = null; snapBase = 0; snapTurn = 0; lastKicks = 0; formA = 0; }
+const safePlay = m => { const q = m.play(); if (q) q.catch(() => {}); };   // an interrupted play() (fast clip changes) is not an error
 const isPlaying = () => audioEl ? !audioEl.paused : TP.playing;
 let BM = null, BEAT = {KICK: 0, SNARE: 0, HAT: 0, kicks: 0, kickAge: 99, bar: 0, barPh: 0}, cues = [], cueOn = -2;
 const bpmNow = () => BM ? BM.bpm : 120, barLen = () => 240 / bpmNow();
@@ -579,7 +580,7 @@ function now(time) {
 }
 function syncPlate(t, force) { if (!isVideo || !src || !src.duration || SEQ) return; const want = t % src.duration; if (force || Math.abs(src.currentTime - want) > 0.15) src.currentTime = want; }
 function setPlaying(on) {
-  TP.playing = on; TP.last = performance.now(); if (audioEl) on ? audioEl.play() : audioEl.pause(); if (isVideo && src) on ? src.play() : src.pause();
+  TP.playing = on; TP.last = performance.now(); if (audioEl) on ? safePlay(audioEl) : audioEl.pause(); if (isVideo && src) on ? safePlay(src) : src.pause();
   $('play').textContent = on ? '❚❚' : '▶';
 }
 function seek(t) { t = Math.max(0, Math.min(tlLength() - 1e-3, t)); TP.pos = t; if (audioEl) audioEl.currentTime = t; syncPlate(t, true); cueOn = -2; spinT = null; resetDepth(); }
@@ -598,7 +599,10 @@ function applyCues(bar) {                                                  // th
   let k = -1; cues.forEach((c, i) => { if (c.bar <= bar && (k < 0 || c.bar >= cues[k].bar)) k = i; });
   cueStart = k >= 0 ? (BM ? BM.offset : 0) + cues[k].bar * barLen() : 0;
   if (k === cueOn) return; cueOn = k; if (k < 0) return;
-  Object.assign(P, defaults, {bind: {}}, JSON.parse(JSON.stringify(cues[k].params))); if (!HEADLESS) { buildControls(); $('preset').value = cues[k].name; } extract();
+  Object.assign(P, defaults, {bind: {}}, JSON.parse(JSON.stringify(cues[k].params))); if (!HEADLESS) { buildControls(); $('preset').value = cues[k].name; }
+  const pl = cues[k].plate;                                                 // a cue can cut to another clip
+  if (pl && pl !== platePath) { if (HEADLESS) { platePath = pl; resetDepth(); } else { loadPlate(pl); $('plate').value = pl; } }
+  extract();
 }
 const tlc = $('tlc'), tlx = tlc.getContext('2d');
 function drawTimeline(t) {
@@ -625,7 +629,7 @@ tlc.onpointerdown = e => {
 };
 $('play').onclick = () => setPlaying(!(audioEl ? !audioEl.paused : TP.playing));
 $('addcue').onclick = () => {
-  const bar = BEAT.bar; cues = cues.filter(q => q.bar !== bar).concat({bar, name: $('preset').value, params: JSON.parse(JSON.stringify(P))}).sort((a, b) => a.bar - b.bar);
+  const bar = BEAT.bar; cues = cues.filter(q => q.bar !== bar).concat({bar, name: $('preset').value, plate: platePath, params: JSON.parse(JSON.stringify(P))}).sort((a, b) => a.bar - b.bar);
   cueOn = cues.findIndex(q => q.bar === bar); $('status').textContent = `CUE AT BAR ${bar + 1}`; setTimeout(() => $('status').textContent = '', 1500);
 };
 addEventListener('keydown', e => {
@@ -765,9 +769,9 @@ function render(time) {
 }
 function loop(time) { if (!HEADLESS) { render(time); requestAnimationFrame(loop); } }   // the only scheduler: extra render() calls can't stack loops
 // ---------------------------------------------------------------------------------------------------
-function keepInCue() { if (cues.length && cueOn >= 0) { cues[cueOn].params = JSON.parse(JSON.stringify(P)); cues[cueOn].name = $('preset').value; } }   // edits belong to the cue you're in
+function keepInCue() { if (cues.length && cueOn >= 0) { cues[cueOn].params = JSON.parse(JSON.stringify(P)); cues[cueOn].name = $('preset').value; cues[cueOn].plate = platePath; } }   // edits belong to the cue you're in
 function changed(k) { keepInCue(); if (k === 'layout') { extract(); return; } if (['fx', 'cell', 'fxth', 'fxAmt', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'depth', 'lfo', 'ink', 'acc', 'blend', 'src', 'over', 'speed', 'amount', 'motion', 'scan', 'grain', 'frame', 'sidebar', 'lw', 'lalpha', 'radius', 'stroke', 'fill', 'title', 'labels', 'hyper', 'hsize', 'hdepth', 'wdist', 'hspin', 'hw', 'formY', 'dof', 'rack', 'pblur', 'pfocus', 'occlude', 'matteTh', 'track', 'trackX', 'trackY', 'glitch', 'rays', 'kickTurn', 'kickPunch', 'kickFlash', 'snareGlitch', 'hatFlicker', 'barRack', 'react', 'rKickZoom', 'rKickShake', 'rKickSplit', 'rKickBlur', 'rSnareInvert', 'rSnareHue', 'rHatGrain', 'rHatScan', 'rBassBloom', 'rBassTrails', 'rBassSpin', 'rBassFx', 'rMidDof', 'rHighStreaks'].includes(k)) return; extract(); }
-function setSource(el, video) { src = el; isVideo = video; frameNo = 0; if (video) { el.muted = true; el.loop = true; el.playsInline = true; isPlaying() ? el.play() : el.pause(); syncPlate(audioEl ? audioEl.currentTime : TP.pos, true); } setTimeout(extract, 50); }
+function setSource(el, video) { if (src && src !== el && src.pause) src.pause(); src = el; isVideo = video; frameNo = 0; if (video) { el.muted = true; el.loop = true; el.playsInline = true; isPlaying() ? safePlay(el) : el.pause(); syncPlate(audioEl ? audioEl.currentTime : TP.pos, true); } setTimeout(extract, 50); }
 function loadFile(f) {
   const url = URL.createObjectURL(f);
   if (f.type.startsWith('video')) { const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = url; v.oncanplay = () => { v.oncanplay = null; setSource(v, true); }; }
@@ -806,11 +810,16 @@ $('webm').onclick = () => {
 };
 // Library (served by serve.py): pick a plate or load a saved shot; Save shot then carries the plate path.
 let platePath = null;
+const plateCache = {};                                                     // one preloaded element per clip: cue cuts are instant
+function plateEl(path) {
+  if (!plateCache[path]) { const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.loop = true; v.src = '../../' + path; plateCache[path] = v; }
+  return plateCache[path];
+}
 function loadPlate(path) {
-  platePath = path; resetDepth();
+  if (platePath !== path) resetDepth(); platePath = path;
   if (/\.(png|jpe?g)$/i.test(path)) { const i = new Image(); i.onload = () => setSource(i, false); i.src = '../../' + path; return; }
-  const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = '../../' + path;   // preload: a paused clip is drawable at once
-  v.oncanplay = () => { v.oncanplay = null; setSource(v, true); };                                    // swap only when ready: no black frames
+  const v = plateEl(path); if (v.readyState >= 3) return setSource(v, true);                  // preload: a paused clip is drawable at once
+  v.oncanplay = () => { v.oncanplay = null; if (platePath === path) setSource(v, true); };          // swap only when ready: no black frames
 }
 if (location.protocol.startsWith('http')) fetch('/api/library', {cache: 'no-store'}).then(r => r.json()).then(lib => {
   $('libRow').hidden = false; if (Object.keys(local()).length) pushPresets(local());   // copy browser-only presets into presets.json
@@ -819,12 +828,12 @@ if (location.protocol.startsWith('http')) fetch('/api/library', {cache: 'no-stor
   $('track').onchange = () => { const a = $('track').value; if (!a) return stopAudio(); loadAudio(null, '../../' + a); audioPath = a; BM = null;
     fetch('/api/beatmap?path=' + encodeURIComponent(a)).then(r => r.ok ? r.json() : null).then(m => { if (audioPath === a) BM = m; }); $('aname').textContent = a.split('/').pop().slice(0, 24); };
   $('shot').innerHTML = '<option value="">SHOT…</option>' + lib.shots.map(s => `<option>${s}</option>`).join('');
-  $('plate').onchange = () => $('plate').value && loadPlate($('plate').value);
+  $('plate').onchange = () => { if ($('plate').value) { loadPlate($('plate').value); keepInCue(); } };
   $('shot').onchange = async () => {
     if (!$('shot').value) return; const s = await (await fetch(`shots/${$('shot').value}.json`)).json(), all = {...PRESETS, ...stored()};
     Object.assign(P, defaults, {bind: {}}, s.preset ? (all[s.preset] || {}) : {}, s.params || {});
     if (s.format) { const [w, h] = s.format.split('x').map(Number); cv.width = w; cv.height = h; $('format').value = s.format; }
-    cues = s.cues || []; cueOn = -2; buildControls(); if (s.plate) { $('plate').value = s.plate; loadPlate(s.plate); } else extract();
+    cues = s.cues || []; cueOn = -2; cues.forEach(c => c.plate && !/\.(png|jpe?g)$/i.test(c.plate) && plateEl(c.plate)); buildControls(); if (s.plate) { $('plate').value = s.plate; loadPlate(s.plate); } else extract();
     if (s.audio) { $('track').value = s.audio; $('track').onchange(); }
   };
 }).catch(() => {});
