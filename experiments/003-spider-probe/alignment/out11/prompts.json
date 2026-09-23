@@ -1,0 +1,67 @@
+{
+  "tool": "built-in image generation",
+  "use_case": "lighting-weather",
+  "source_size": "1024x1536",
+  "final_size": "1080x1920",
+  "reference_images": {
+    "panther": "../out10/g3-panther.png",
+    "shark": "../out10/g1-shark.png",
+    "octopus": "../out9/f5-octopus.png"
+  },
+  "reference_role": "Edit targets. Preserve each animal's pose, side-on angle, framing, scale, position in frame, identity, and anatomy as closely as possible; change only the environment.",
+  "shared_constraints": [
+    "Vertical 2:3 photographic wildlife plate, generated at 1024 x 1536",
+    "Keep the animal inside the central 80% for a later narrow centre crop",
+    "One low directional light source with deep black beyond",
+    "Photographic wildlife realism and correct anatomy",
+    "Atmospheric particles catching the light",
+    "No ferns, moss, HUD, text, lines, watermark, or extra animals"
+  ],
+  "prompts": [
+    {
+      "file": "h1-panther-sandstone.png",
+      "input": "../out10/g3-panther.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical photographic wildlife plate. Input image: the supplied panther image is the edit target. Re-stage this exact black panther on a red sandstone ledge in a desert canyon at night, with fine desert dust drifting through the beam. Keep the same individual black panther, exact side-on right-facing pose, head and shoulders, crouched body posture, anatomy, silhouette, head angle, gaze, facial structure, paw placement, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism and highly realistic anatomy and textures. Light with one low warm directional source, deep black beyond, and atmospheric particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment; replace the wet rock and rain entirely with dry red sandstone, canyon darkness, and illuminated airborne dust. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h2-panther-mangrove.png",
+      "input": "../out10/g3-panther.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical photographic wildlife plate. Input image: the supplied panther image is the edit target. Re-stage this exact black panther crouched on a thick mangrove root above still black water at night, with a few fireflies as small points of light and the water mirroring the single torch-like light. Keep the same individual black panther, exact side-on right-facing pose, head and shoulders, crouched body posture, anatomy, silhouette, head angle, gaze, facial structure, paw placement, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism and highly realistic anatomy and textures. Light with one low warm directional source, deep black beyond, and atmospheric particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment; replace the wet rock and rain entirely with mangrove root, black water, fireflies, and reflection. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h3-panther-snow.png",
+      "input": "../out10/g3-panther.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical photographic wildlife plate. Input image: the supplied panther image is the edit target. Re-stage this exact black panther crouched on a snow-covered granite ledge during mountain snowfall at night, with snowflakes lit in the beam and delicate frost on the whiskers. Keep the same individual black panther, exact side-on right-facing pose, head and shoulders, crouched body posture, anatomy, silhouette, head angle, gaze, facial structure, paw placement, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism and highly realistic anatomy and textures. Light with one low warm directional source, deep black beyond, and atmospheric particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment; replace the wet rock and rain entirely with snowy granite, dark mountain atmosphere, falling snow, and whisker frost. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h4-shark-plankton.png",
+      "input": "../out10/g1-shark.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical underwater wildlife photograph. Input image: the supplied shark image is the edit target. Re-stage this exact shark gliding over a pale sand plain at night, trailing a swirl of blue bioluminescent plankton that sparks where its pectoral fin cuts through the water. Keep the same shark, exact side-on right-facing pose and swimming attitude, front body with the pectoral fin, anatomy, silhouette, head angle, eye, mouth, gills, dorsal fin, pectoral fin placement, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism and highly realistic shark anatomy and underwater texture. Light with one low directional source, deep black beyond, and suspended particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment; keep the blue plankton sparse, natural, and clearly environmental. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h5-shark-reefwall.png",
+      "input": "../out10/g1-shark.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical underwater wildlife photograph. Input image: the supplied shark image is the edit target. Re-stage this exact shark gliding alongside a sheer reef wall hung with natural sea fans and sponges, with the wall catching the single torch-like light while surrounding water falls into blackness. Keep the same shark, exact side-on right-facing pose and swimming attitude, front body with the pectoral fin, anatomy, silhouette, head angle, eye, mouth, gills, dorsal fin, pectoral fin placement, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism and highly realistic shark anatomy and underwater texture. Light with one low directional source, deep black beyond, and suspended particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h6-shark-ice.png",
+      "input": "../out10/g1-shark.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical underwater wildlife photograph. Input image: the supplied shark image is the edit target. Re-stage this exact shark gliding beneath a ceiling of sea ice, with cold light filtering through cracks in the ice and a few bubbles and suspended ice crystals in the water. Keep the same shark, exact side-on right-facing pose and swimming attitude, front body with the pectoral fin, anatomy, silhouette, head angle, eye, mouth, gills, dorsal fin, pectoral fin placement, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism and highly realistic shark anatomy and underwater texture. Use one low directional source, deep black beyond, and suspended particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h7-octopus-shells.png",
+      "input": "../out9/f5-octopus.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical macro underwater wildlife photograph. Input image: the supplied octopus image is the edit target. Re-stage this exact octopus close-up on a bed of pale scallop and cockle shells. Keep the same octopus, exact tight macro close-up of the eye, same eye shape and orientation, skin texture and coloration, anatomy, same single curled arm crossing the lower frame with the same row of visible suckers, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism, macro detail, correct octopus anatomy, and natural skin texture. Light with one low warm directional source, deep black beyond, and suspended particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment; keep shell forms visible around and beneath the preserved eye-and-arm composition without obscuring the eye or suckers. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h8-octopus-seawhips.png",
+      "input": "../out9/f5-octopus.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical macro underwater wildlife photograph. Input image: the supplied octopus image is the edit target. Re-stage this exact octopus close-up among red sea whips and orange cup corals. Keep the same octopus, exact tight macro close-up of the eye, same eye shape and orientation, skin texture and coloration, anatomy, same single curled arm crossing the lower frame with the same row of visible suckers, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism, macro detail, correct octopus anatomy, and natural skin texture. Light with one low warm directional source, deep black beyond, and suspended particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment; use the sea whips and cup corals to frame the close-up without obscuring the eye or curled arm. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    },
+    {
+      "file": "h9-octopus-urchins.png",
+      "input": "../out9/f5-octopus.png",
+      "prompt": "Use case: lighting-weather. Asset type: vertical macro underwater wildlife photograph. Input image: the supplied octopus image is the edit target. Re-stage this exact octopus close-up in a kelp holdfast tangle with several purple sea urchins. Keep the same octopus, exact tight macro close-up of the eye, same eye shape and orientation, skin texture and coloration, anatomy, same single curled arm crossing the lower frame with the same row of visible suckers, framing, scale, and position in frame as close as possible to the reference. Keep the animal inside the central 80% for a later narrow crop. Use photographic wildlife realism, macro detail, correct octopus anatomy, and natural skin texture. Light with one low warm directional source, deep black beyond, and suspended particles catching the light. Portrait 2:3, intended generation size 1024 x 1536. Change only the environment; use the holdfasts and urchins to surround the close-up without obscuring the eye or curled arm. No ferns, no moss, no HUD, no text, no lines, no watermark, no extra animals."
+    }
+  ]
+}

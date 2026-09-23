@@ -1,0 +1,47 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Headless pipeline</title>
+<style>:root{--ink:#000;--mut:#555;--line:#e3e3e0;--soft:#f5f5f2}*{box-sizing:border-box}body{margin:0;background:#fff;color:#000;font:15px/1.55 system-ui,-apple-system,sans-serif}
+.wrap{max-width:1180px;margin:auto;padding:48px 32px 70px}.eyebrow{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+h1,h2{font-family:Georgia,serif;font-weight:400}h1{font-size:clamp(34px,5vw,60px);line-height:1.05;margin:12px 0}h2{font-size:28px;margin:44px 0 8px;border-top:1px solid #000;padding-top:16px}
+.lede{font-size:18px;max-width:66ch;color:#222}svg{width:100%;height:auto;display:block;margin-top:18px}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:10px}td,th{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);border-bottom:1px solid #000}
+.plain{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-top:22px;max-width:880px}.plain h3{font-family:Georgia,serif;font-variant:small-caps;font-weight:400;font-size:20px;margin:0 0 6px}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--soft);padding:1px 5px;border-radius:4px}
+@media(max-width:700px){.wrap{padding:32px 16px}}</style></head><body><div class="wrap">
+<p class="eyebrow">Spatial art lab · plan · phase: Develop · 23 Sep 2026</p>
+<h1>One shot file, run headless, open any stage to adjust.</h1>
+<p class="lede">Every shot is described once, in <code>shot.json</code>. One command runs every stage without a window. Any stage can be opened in its own tool, changed by hand, and the change is written back to the same file, so the next headless run keeps it.</p>
+<svg viewBox="0 0 1120 470" font-family="system-ui,-apple-system,sans-serif" font-size="13">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#000"/></marker></defs>
+<rect x="470" y="10" width="180" height="54" rx="8" fill="#000"/><text x="560" y="34" fill="#fff" text-anchor="middle" font-weight="600">shot.json</text><text x="560" y="52" fill="#bbb" text-anchor="middle" font-size="11">plate · look · HUD · audio · output</text>
+<g stroke="#000" fill="none" stroke-width="1.2">
+<path d="M500 64 L130 118" marker-end="url(#a)"/><path d="M530 64 L400 118" marker-end="url(#a)"/><path d="M590 64 L700 118" marker-end="url(#a)"/><path d="M620 64 L985 118" marker-end="url(#a)"/>
+<path d="M235 175 H290" marker-end="url(#a)"/><path d="M510 175 H565" marker-end="url(#a)"/><path d="M835 175 H875" marker-end="url(#a)"/>
+</g>
+<g font-size="12">
+<rect x="20" y="120" width="215" height="112" rx="10" fill="#fff" stroke="#000"/><text x="36" y="146" font-weight="600">1 · Plate</text><text x="36" y="166">Blender -b (built)</text><text x="36" y="184">or generated clip (Kling, paid)</text><text x="36" y="202">or phone footage</text>
+<rect x="292" y="120" width="218" height="112" rx="10" fill="#fff" stroke="#000"/><text x="308" y="146" font-weight="600">2 · Track + HUD</text><text x="308" y="166">TouchDesigner via boot DAT (built)</text><text x="308" y="184">tracks real motion, draws HUD</text><text x="308" y="202">audio in → CHOP → parameters</text>
+<rect x="567" y="120" width="268" height="112" rx="10" fill="#fff" stroke="#000"/><text x="583" y="146" font-weight="600">3 · Geometry layer</text><text x="583" y="166">Specimen Studio in headless Chromium</text><text x="583" y="184">preset from shot.json, frame-stepped</text><text x="583" y="202">(render mode: to build)</text>
+<rect x="877" y="120" width="223" height="112" rx="10" fill="#fff" stroke="#000"/><text x="893" y="146" font-weight="600">4 · Finish + audio</text><text x="893" y="166">ffmpeg: glow, grade, mux</text><text x="893" y="184">ProRes / MP4 / stills</text><text x="893" y="202">Resolve for the cut (manual)</text>
+</g>
+<g font-size="11.5" fill="#555">
+<text x="20" y="262" font-weight="600" fill="#000">Headless: </text><text x="92" y="262">make.py shot.json → runs 1 to 4, writes render/, contact sheet, review page</text>
+<text x="20" y="300" font-weight="600" fill="#000">Go in and adjust:</text>
+<text x="36" y="324">1 · open the .blend (saved every run)</text>
+<text x="292" y="324">2 · open the .toe: boot off, a control</text><text x="308" y="340">panel bound to shot.json</text>
+<text x="567" y="324">3 · open studio.html with ?shot=… ; sliders;</text><text x="583" y="340">"Save to shot" writes back</text>
+<text x="877" y="324">4 · Resolve timeline for the edit</text>
+</g>
+<rect x="567" y="378" width="533" height="72" rx="10" fill="#fff" stroke="#000" stroke-dasharray="4 4"/><text x="583" y="404" font-weight="600" font-size="12">Ladybug · the model for Specimen Studio</text><text x="583" y="424" font-size="11.5" fill="#555">Its structure (effect layer, finish stack, any control bound to sound) is now built into stage 3.</text><text x="583" y="440" font-size="11.5" fill="#555">It has no API, so we learn from it rather than depend on it; it stays optional by hand.</text>
+<path d="M701 232 V378" stroke="#000" stroke-dasharray="4 4" fill="none" marker-end="url(#a)"/>
+</svg>
+<div class="plain"><h3>In plain English</h3><p>Headless is for repeats: the same shot rebuilt after a change, ten variations overnight, a new plate through the same look. Adjusting is for taste: you open one stage, move sliders until it feels right, and the numbers land back in the shot file.</p><p>Ladybug is good at looks and at binding motion to sound, but it has no API and no documented project file, so it cannot be driven headless. So we took its ideas instead: Specimen Studio v2 has its layer structure, an effect layer, a finish stack and sound bindings, in a file we control and can run headless.</p></div>
+<h2>Where each tool sits</h2>
+<table><thead><tr><th>Tool</th><th>Headless?</th><th>How we go in to adjust</th><th>Status</th></tr></thead><tbody>
+<tr><td>Blender 5.2</td><td>Yes, <code>-b -P script</code></td><td>Open the saved .blend</td><td>Built (probe_a_spider.py)</td></tr>
+<tr><td>TouchDesigner 2025</td><td>Yes, boot Execute DAT then quit</td><td>Open the .toe with boot off; parameters on a panel</td><td>Built (td/); control panel and JSON binding to add</td></tr>
+<tr><td>Specimen Studio</td><td>Yes, headless Chromium, frame-stepped</td><td>Open in browser, sliders, save back</td><td>Interactive built; render mode and save-back to add</td></tr>
+<tr><td>Audio</td><td>Yes, TouchDesigner CHOPs and ffmpeg</td><td>In TouchDesigner (Audio File In → Analyze → binds)</td><td>To add</td></tr>
+<tr><td>Ladybug</td><td>No (no API or CLI)</td><td>Its own studio, by hand</td><td>Reference: its effect layer, finish stack and sound bindings are rebuilt in Specimen Studio v2</td></tr>
+<tr><td>Resolve (free)</td><td>Partly (scripting API in Studio only)</td><td>The edit</td><td>Recommended editor</td></tr>
+</tbody></table>
+</div></body></html>

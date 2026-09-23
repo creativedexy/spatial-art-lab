@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.10">
+<resources>
+<format id="r0" name="FFVideoFormat1920p24" frameDuration="1/24s" width="1080" height="1920"/>
+<asset id="r1" name="j1-twin-reel" start="0s" duration="5s" hasVideo="1" format="r0"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/j1-twin-reel.mp4"/></asset>
+<asset id="r2" name="k2-hud-reel" start="0s" duration="5s" hasVideo="1" format="r0"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/k2-hud-reel.mp4"/></asset>
+<asset id="r3" name="j2-specimen-reel" start="0s" duration="5s" hasVideo="1" format="r0"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/j2-specimen-reel.mp4"/></asset>
+</resources>
+<library><event name="Reels 01 · 9:16"><project name="Reels 01 · 9:16">
+<sequence format="r0" duration="15s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k"><spine>
+<asset-clip ref="r1" name="j1-twin-reel" offset="0s" start="0s" duration="5s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="j1-twin-reel"/></asset-clip>
+<asset-clip ref="r2" name="k2-hud-reel" offset="5s" start="0s" duration="5s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="k2-hud-reel"/></asset-clip>
+<asset-clip ref="r3" name="j2-specimen-reel" offset="10s" start="0s" duration="5s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="j2-specimen-reel"/></asset-clip>
+</spine></sequence></project></event></library>
+</fcpxml>

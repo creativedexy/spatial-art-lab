@@ -1,0 +1,1 @@
+{"name": "sh-g4-lattice", "plate": "experiments/003-spider-probe/video/out/e5.mp4", "preset": "Depth 4D \u00b7 minimal", "params": {"trackX": 62, "trackY": 36, "formY": 48, "matteTh": 34, "hyper": "LATTICE", "hsize": 78}, "format": "1080x1920", "fps": 24, "seconds": 5}

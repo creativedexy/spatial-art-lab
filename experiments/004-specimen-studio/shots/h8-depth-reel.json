@@ -1,0 +1,1 @@
+{"name": "h8-depth-reel", "plate": "experiments/003-spider-probe/video/out/h8.mp4", "preset": "Depth 4D \u00b7 minimal", "params": {"trackX": 45, "trackY": 22, "formY": 46, "hsize": 70, "matteTh": 22}, "format": "1080x1920", "fps": 24, "seconds": 5}

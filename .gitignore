@@ -61,3 +61,16 @@ experiments/002-living-map/tiles-test/key.js
 # The Google Maps Platform key for the tiles layer. Never committed: the map
 # reads it at run time and does without it everywhere else.
 experiments/002-living-map/**/key.js
+
+# TouchDesigner scripted builds (experiments/*/td): mktoe.py regenerates the .toe from build_hud.py,
+# so the expanded source, the boot log and the per-shot handoff file are scratch.
+experiments/**/td/*-src.toe*
+experiments/**/td/*.log
+experiments/**/td/shot_io.json
+experiments/**/td/CrashAutoSave.*
+
+# studio audio: generated tracks (make_beats.py regenerates them) and any music dropped in
+experiments/004-specimen-studio/audio/*.wav
+experiments/004-specimen-studio/audio/*.mp3
+experiments/004-specimen-studio/audio/*.m4a
+experiments/004-specimen-studio/audio/*.beats.json

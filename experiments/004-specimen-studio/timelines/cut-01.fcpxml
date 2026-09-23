@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.10">
+<resources>
+<format id="r0" name="FFVideoFormat720p24" frameDuration="1/24s" width="1280" height="720"/>
+<asset id="r1" name="j1-twin" start="0s" duration="5s" hasVideo="1" format="r0"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/j1-twin.mp4"/></asset>
+<asset id="r2" name="k2-hud" start="0s" duration="5s" hasVideo="1" format="r0"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/k2-hud.mp4"/></asset>
+<asset id="r3" name="j2-specimen" start="0s" duration="5s" hasVideo="1" format="r0"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/j2-specimen.mp4"/></asset>
+</resources>
+<library><event name="Spider and jellyfish · cut 01"><project name="Spider and jellyfish · cut 01">
+<sequence format="r0" duration="15s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k"><spine>
+<asset-clip ref="r1" name="j1-twin" offset="0s" start="0s" duration="5s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="j1-twin"/></asset-clip>
+<asset-clip ref="r2" name="k2-hud" offset="5s" start="0s" duration="5s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="k2-hud"/></asset-clip>
+<asset-clip ref="r3" name="j2-specimen" offset="10s" start="0s" duration="5s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="j2-specimen"/></asset-clip>
+</spine></sequence></project></event></library>
+</fcpxml>

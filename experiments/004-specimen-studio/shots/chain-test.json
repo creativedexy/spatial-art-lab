@@ -1,0 +1,10 @@
+{
+ "name": "chain-test",
+ "plate": "experiments/003-spider-probe/render/probe-a-v002-clean.mp4",
+ "td_hud": true,
+ "preset": "Specimen card · delaunay",
+ "params": {"lock": false, "frame": false, "nodes": 380, "src": 100, "lalpha": 28},
+ "format": "1280x720",
+ "fps": 24,
+ "seconds": 3
+}

@@ -1,0 +1,1 @@
+{"name": "e1-depth-reel", "plate": "experiments/003-spider-probe/video/out/e1.mp4", "preset": "Depth 4D \u00b7 minimal", "params": {"trackX": 46, "trackY": 40, "formY": 44, "hsize": 66, "matteTh": 30}, "format": "1080x1920", "fps": 24, "seconds": 5}

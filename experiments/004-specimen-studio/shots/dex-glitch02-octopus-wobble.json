@@ -1,0 +1,1 @@
+{"name": "dex-glitch02-octopus-wobble", "plate": "experiments/003-spider-probe/video/out/h8.mp4", "preset": "glitch 02", "params": {"bind": {"smax": "MID", "glitch": "HIGH", "fxAmt": "BASS"}, "depth": 40, "trackX": 45, "trackY": 22}, "audio": "experiments/004-specimen-studio/audio/wobble-halftime-140.wav", "format": "1080x1920", "fps": 24, "seconds": 8}

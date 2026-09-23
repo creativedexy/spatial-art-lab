@@ -1,0 +1,6 @@
+- `01-specimen-cameras.png` — Warm-gold/white jumping-spider point cloud in three-quarter view with a radial photogrammetry rig, loose feature points, trails, and sparse edge labels; strict-count miss: 19 camera rectangles are visibly resolved rather than 20.
+- `02-tracking-live.png` — Macro orb-weaver point cloud on a night web with sixteen labeled joint boxes, connected pose lines, dissolving edges, motion streaks, and correct sparse edge text; no obvious rule failure.
+- `03-specimen-archive.png` — Centred eight-legged plexus specimen with nearby-point hairlines, top-right magnified inset, bottom-left museum-card labels, registration marks, and timecode; no obvious rule failure.
+- `04-web-geometry.png` — Orb web reconstructed as radial/concentric construction geometry with ticks, dimensions, drifting particles, and a dense gold point-cluster spider at centre; no obvious rule failure.
+- `05-time-trail.png` — Five successive spider point-cloud poses cross sparse green-white moss, with four timestamps and a single frame marking the present pose; the copies read more as discrete chronophotographic samples than strongly semi-transparent overlaps.
+- `06-ascii-specimen.png` — Eight-legged spider built from tiny white/gold monospace punctuation, enclosed by tracking corners and crossed by a ticked scan line with sparse edge labels; no obvious rule failure.
