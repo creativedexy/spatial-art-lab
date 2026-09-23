@@ -57,7 +57,8 @@ const SCHEMA = [
   ['FRAMING', [['focusX', 'FOCUS X %', 0, 100, 1, 50], ['focusY', 'FOCUS Y %', 0, 100, 1, 50], ['zoom', 'ZOOM %', 100, 250, 1, 100]]],
   ['FIELD', [
     ['nodes', 'NODE COUNT', 40, 900, 10, 420], ['edge', 'EDGE THRESHOLD', 0, 100, 1, 22], ['bias', 'EDGE BIAS', 0.5, 4, 0.1, 1.8],
-    ['radius', 'POINT RADIUS', 0.4, 4, 0.1, 1.1], ['reextract', 'RE-EXTRACT EVERY N FRAMES (VIDEO)', 1, 30, 1, 2]]],
+    ['radius', 'POINT RADIUS', 0.4, 4, 0.1, 1.1], ['reextract', 'RE-EXTRACT EVERY N FRAMES (VIDEO)', 1, 30, 1, 2],
+    {key: 'onAnimal', label: 'FIELD + EFFECT ON ANIMAL ONLY', toggle: true, def: false}]],
   ['SHAPES', [
     {key: 'shape', label: 'SHAPE', options: ['CIRCLE', 'SQUARE', 'CROSS', 'BRACKET', 'MIXED'], def: 'MIXED'},
     ['smin', 'MIN SIZE', 1, 20, 0.5, 2], ['smax', 'MAX SIZE', 2, 60, 1, 14], ['shapeShare', 'SHARE OF NODES WITH A SHAPE %', 0, 100, 1, 18], ['stroke', 'STROKE', 0.25, 3, 0.05, 0.8]]],
@@ -205,6 +206,7 @@ function extract() {
     const x = 1 + Math.floor(r() * (w - 2)), y = 1 + Math.floor(r() * (h - 2)), e = E[y * w + x] / emax;
     if (e * 100 < P.edge) continue;
     if (r() > Math.pow(e, 1 / P.bias)) continue;
+    if (P.onAnimal && matteA && matteA.length === w * h && matteA[y * w + x] < 0.5) continue;   // the depth layer's matte, previous frame
     nodes.push({x: x * 4 + 2, y: y * 4 + 2, e, lum: L[y * w + x] / 255, id: nodes.length, s: r()});
   }
   buildLinks(r); buildGrid(r, L, w, h); buildChain(r); pickTargets();
@@ -294,6 +296,7 @@ function drawFx(E, x0, y0, w, h, dx, dy = 0) {
   }
   ctx.font = `600 ${Math.round(c * 0.92)}px Menlo, monospace`; ctx.textBaseline = 'top';
   for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+    if (E.onAnimal && matteA) { const mw = mt.width, q = matteA[Math.min(mt.height - 1, Math.floor(y * c / 4)) * mw + Math.min(mw - 1, Math.floor(x * c / 4))]; if (!(q > 0.4)) continue; }
     const i = (y * cw + x) * 4, L = Math.min(1, lum(i) / lmax);
     const col = `rgb(${Math.min(255, px[i] * 1.5)},${Math.min(255, px[i + 1] * 1.5)},${Math.min(255, px[i + 2] * 1.5)})`;
     if (E.fx === 'NUMBER FIELD') { if (L < th) continue; ctx.fillStyle = col; ctx.fillText(String(Math.min(9, Math.floor(L * 10))), x * c, y * c); }
@@ -326,7 +329,7 @@ const matte = document.createElement('canvas'), mat = matte.getContext('2d');
 const lay = document.createElement('canvas'), lctx = lay.getContext('2d');
 const geo = document.createElement('canvas'), gctx = geo.getContext('2d');
 const pb = document.createElement('canvas'), pbx = pb.getContext('2d');
-let trk = null, cen = null, hist = [], formPts = [];
+let trk = null, cen = null, hist = [], formPts = [], matteA = null;
 const resetDepth = () => { trk = null; cen = null; hist = []; };
 const ease = x => x * x * (3 - 2 * x);
 function glitchAt(E, T) {                                                   // deterministic: some 1/12 s steps are glitch frames
@@ -342,6 +345,7 @@ function updateMatte(E, W, H) {
     px[i] = px[i + 1] = px[i + 2] = 255; px[i + 3] = a * 255;
     if (a > 0.5) { sx += (j % w) * a; sy += Math.floor(j / w) * a; sm += a; }
   }
+  matteA = new Float32Array(w * h); for (let j = 0; j < w * h; j++) matteA[j] = px[j * 4 + 3] / 255;
   mctx.putImageData(d, 0, 0);
   if (matte.width !== W || matte.height !== H) { matte.width = W; matte.height = H; } else mat.clearRect(0, 0, W, H);
   mat.filter = 'blur(6px)'; mat.drawImage(mt, 0, 0, W, H); mat.filter = 'none';
@@ -472,9 +476,9 @@ function render(time) {
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   if (P.trails && prev.width === W) { ctx.globalAlpha = P.trails / 100; ctx.drawImage(prev, 0, 0); ctx.globalAlpha = 1; }
   if (src) { ctx.globalAlpha = twin ? 1 : P.src / 100; cover(ctx, RW, RH); }
+  const deep = src && (P.hyper !== 'OFF' || P.track !== 'OFF' || P.pblur > 0 || P.onAnimal);
+  if (deep) { updateMatte(P, RW, RH); plateBlur(P, W, H, ph); }          // blur the plate first, so effect lines stay sharp
   ctx.globalAlpha = 1; drawFx(P, 0, 0, RW, RH, gx, gy);
-  const deep = src && (P.hyper !== 'OFF' || P.track !== 'OFF' || P.pblur > 0);
-  if (deep) { updateMatte(P, RW, RH); plateBlur(P, W, H, ph); }
   if (twin) {                                                              // dashed links from the real animal to its twin
     ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1;
     for (const t of targets) { ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(t.x + gx, t.y + gy); ctx.stroke(); }
@@ -495,7 +499,7 @@ function render(time) {
     if (P.labels) { ctx.fillStyle = hexA(P.ink, 0.7); ctx.font = `${Math.round(9 * U())}px Menlo, monospace`; ctx.fillText(c.id, c.x + 5, c.y + 12); }
   }
   // links
-  ctx.lineWidth = P.lw; const nl = Math.floor(links.length * build);
+  ctx.lineWidth = P.lw * U(); const nl = Math.floor(links.length * build);        // weights scale with the canvas, like type
   for (let i = 0; i < nl; i++) {
     const [a0, b0, kind, flip] = links[i], a = off(a0), b = off(b0);
     const near = sweepX >= 0 && Math.abs((a.x + b.x) / 2 - sweepX) < 60;
@@ -509,10 +513,10 @@ function render(time) {
   for (const n0 of nodes) {
     if (n0.id > nodes.length * build) continue;
     const n = off(n0), p = pulse ? 1 + amt * Math.max(0, Math.sin(T * 3 - n.x / 90)) : 1;
-    ctx.fillStyle = hexA(n.s < 0.12 ? P.acc : P.ink, 0.9); ctx.beginPath(); ctx.arc(n.x, n.y, P.radius * p, 0, 7); ctx.fill();
+    ctx.fillStyle = hexA(n.s < 0.12 ? P.acc : P.ink, 0.9); ctx.beginPath(); ctx.arc(n.x, n.y, P.radius * p * U(), 0, 7); ctx.fill();
     if (n.s * 100 < P.shapeShare) {
       const kinds = ['CIRCLE', 'SQUARE', 'CROSS', 'BRACKET'], kind = P.shape === 'MIXED' ? kinds[Math.floor(n.s * 97) % 4] : P.shape;
-      ctx.strokeStyle = hexA(P.ink, 0.75); ctx.lineWidth = P.stroke; shape(n.x, n.y, (P.smin + (P.smax - P.smin) * n.e) * p, kind);
+      ctx.strokeStyle = hexA(P.ink, 0.75); ctx.lineWidth = P.stroke * U(); shape(n.x, n.y, (P.smin + (P.smax - P.smin) * n.e) * p, kind);
       if (P.labels && n.s < 0.05) { ctx.fillStyle = hexA(P.ink, 0.8); ctx.font = `${Math.round(9 * U())}px Menlo, monospace`; ctx.fillText(`C${Math.floor(n.x / 10)} R${Math.floor(n.y / 10)}`, n.x + 6, n.y - 5); }
     }
   }
