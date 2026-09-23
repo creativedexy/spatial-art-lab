@@ -1,0 +1,1817 @@
+{
+ "meta": {
+  "date": "22 Sep 2026",
+  "headline": "Living things, seen by a machine, in the dark.",
+  "lede": "A working hypothesis for the thing you do not have words for yet. This page gives you the words, the field of work around it, and a two-week plan that finds out by making rather than reading.",
+  "tldr": [
+   "What you keep saving is not \"dark particles\". It is a real subject (a spider, an agave, a deer) shown as measurement data, with the machine that measured it left visible: camera frames, tracked points, labels.",
+   "Your tools are Blender and TouchDesigner, so the plan makes the spider look in both: capture on the phone, solve the cameras free with COLMAP, then render in Blender and again in TouchDesigner, the tool RICH & MIYU used. Six sessions end with one sentence: what the first piece is about."
+  ]
+ },
+ "anchors": [
+  {
+   "id": "Y1",
+   "title": "MUTEK Japan · selected stills (slide 2 of 5)",
+   "creator": "RICH & MIYU (Tokyo), with @k__lc · MUTEK Japan 2024",
+   "url": "https://www.instagram.com/p/DFmw64Pyulk/",
+   "image": "anchor-spider.jpg",
+   "visible": "A spider built from tens of thousands of warm gold and white points on pure black. Thin white rectangles stand upright around it like panes of glass, and a few single white points float free of the body.",
+   "evidence": "Caption says: made in TouchDesigner, tagged #pointcloud. Our hypothesis for the rest:",
+   "technique": "scanned organisms rendered as points, with the capture cameras drawn as thin image planes and a few tracked feature points left visible. The same post has been on your board since 7 Sep; only its first slide had been looked at."
+  },
+  {
+   "id": "Y2",
+   "title": "Space + time reconstructed in 4D",
+   "creator": "Bilawal Sidhu · @bilawal.ai",
+   "url": "https://www.instagram.com/p/Ddl4fGEzDS0/",
+   "image": "anchor-bilawal-4d-deer.jpg",
+   "visible": "Night footage of a deer crossing a field becomes a volume: every frame is left standing where it happened, so the deer becomes a ribbon of itself. One camera frustum marks the present moment.",
+   "evidence": "Creator says:",
+   "technique": "geolocated 2D video, per-frame 3D Gaussians, each left where and when it happened. The caption borrows Vonnegut’s \"great millipedes\"."
+  },
+  {
+   "id": "Y3",
+   "title": "Vortex (Rendah Mag feature)",
+   "creator": "Ployz (Ploypapus Phosri) · @plyzitron, Berlin · via @rendahmag",
+   "url": "https://www.instagram.com/rendahmag/reel/DXUbWnEj9si/",
+   "image": "anchor-plyzitron-vortex.jpg",
+   "visible": "White strands and particles spiral into a bowl, pulled by two vertical threads, over thin concentric rings that mark the ground. Pure monochrome force and motion.",
+   "evidence": "Our hypothesis:",
+   "technique": "a particle or strand simulation. The Rendah Mag caption names no tools; the artist says TouchDesigner has been their main tool since 2019 and teaches point-cloud work with its new POPs."
+  },
+  {
+   "id": "Y4",
+   "title": "Memorias Orgánicas",
+   "creator": "X.F · @x.flores___ (F3 Studio, Mexico City) · via @rendahmag",
+   "url": "https://www.instagram.com/rendahmag/reel/DdJ5kJGAH69/",
+   "image": "anchor-xflores-agave.jpg",
+   "visible": "An agave (espadín) hovers as a grey-white point cloud. Tiny letter-spaced labels give the Latin name, a timecode and \"escaneo3D / fotogrametría\", like a museum specimen card.",
+   "evidence": "Caption says:",
+   "technique": "agave from Oaxaca scanned by photogrammetry and rebuilt as a point cloud; vvvv and VCV Rack. F3 Studio (Gabriela Reyes and Jorge Flores) made it on a 2020 residency; it is on at CENART’s Centro Multimedia, Mexico City, until 20 Oct 2026."
+  }
+ ],
+ "grids": [
+  {
+   "creator": "RICH & MIYU · the spider’s series",
+   "url": "https://www.instagram.com/p/DFmw64Pyulk/",
+   "images": [
+    "rm-1-owl.jpg",
+    "rm-2-spider.jpg",
+    "rm-3-fungi-toad.jpg",
+    "rm-4-wing.jpg",
+    "rm-5-moss.jpg",
+    "grid-richandmiyu-5.jpg"
+   ],
+   "note": "All five slides of the MUTEK Japan post: owl, spider, fungi and a toad, a bird’s wing, moss. Same frames, same loose white dots, every subject alive. The last tile is from their profile: \"Unseen life in sound and space\". This is a specimen series, not a one-off."
+  },
+  {
+   "creator": "RICH & MIYU · @richandmiyu",
+   "url": "https://www.instagram.com/richandmiyu/",
+   "images": [
+    "grid-richandmiyu-1.jpg",
+    "grid-richandmiyu-2.jpg",
+    "grid-richandmiyu-3.jpg",
+    "grid-richandmiyu-4.jpg",
+    "grid-richandmiyu-5.jpg",
+    "grid-richandmiyu-6.jpg"
+   ],
+   "note": "Six latest posts. Scanned nature torn into scanlines, a frog ringed by tracking circles, a CT-scanned skeleton, strands of light. Organisms seen by instruments, again and again."
+  },
+  {
+   "creator": "Ployz · @plyzitron",
+   "url": "https://www.instagram.com/plyzitron/",
+   "images": [
+    "grid-plyzitron-1.jpg",
+    "grid-plyzitron-2.jpg",
+    "grid-plyzitron-3.jpg",
+    "grid-plyzitron-4.jpg",
+    "grid-plyzitron-5.jpg",
+    "grid-plyzitron-6.jpg"
+   ],
+   "note": "Six latest posts. Particle rings; a blue plasma wrapped in HUD panels and waveforms; an AV set in front of a point-cloud sphere; the TouchDesigner Bangkok meetup they co-run (Aug 2026); a scanned stone head inside interface. The interface layer is as much the work as the particles."
+  },
+  {
+   "creator": "X.F · @x.flores___",
+   "url": "https://www.instagram.com/x.flores___/",
+   "images": [
+    "grid-xflores-1.jpg",
+    "grid-xflores-2.jpg",
+    "grid-xflores-3.jpg",
+    "grid-xflores-4.jpg",
+    "grid-xflores-5.jpg",
+    "grid-xflores-6.jpg"
+   ],
+   "note": "Six latest posts. A projected cactus in white strands, a room-sized cage of light lines, and an archive of scanned agave species (\"MO archivo\"), each labelled with common and Latin names. A specimen system, not one-off pieces."
+  }
+ ],
+ "anatomy": [
+  {
+   "x": 54,
+   "y": 50,
+   "lx": 90,
+   "ly": 24,
+   "name": "A living thing, not a model",
+   "what": "The subject is real and was measured, not sculpted. That is why it feels uncanny: it is accurate.",
+   "words": [
+    "specimen",
+    "subject from the real world"
+   ]
+  },
+  {
+   "x": 26,
+   "y": 86,
+   "lx": 6,
+   "ly": 74,
+   "name": "Made of points, not surfaces",
+   "what": "The body is a cloud of samples with no skin. Density does the shading; gaps read as fragility.",
+   "words": [
+    "point cloud",
+    "sparse vs dense",
+    "point splatting"
+   ]
+  },
+  {
+   "x": 66.8,
+   "y": 7.6,
+   "lx": 86,
+   "ly": 6,
+   "name": "The frames it was seen from",
+   "what": "The thin rectangles are most likely the photographs, drawn where each camera stood. Photogrammetry software shows exactly this once it has solved the cameras. On the wing slide they lean like tall pyramids seen side-on.",
+   "words": [
+    "camera frustum",
+    "image plane",
+    "structure from motion",
+    "camera poses"
+   ]
+  },
+  {
+   "x": 37.5,
+   "y": 51.3,
+   "lx": 9,
+   "ly": 42,
+   "name": "Loose points the machine tracked",
+   "what": "The single white dots read as features the software locked on to. They are the \"tracking\" in your brief.",
+   "words": [
+    "feature points",
+    "keypoints",
+    "tracking markers"
+   ]
+  },
+  {
+   "x": 72,
+   "y": 132,
+   "lx": 93,
+   "ly": 122,
+   "name": "Warm light in a void",
+   "what": "Near-monochrome on true black, with one warm accent that shifts gold to rust down the legs. The black is not background; it is where there is no data.",
+   "words": [
+    "negative space",
+    "low-key",
+    "additive glow",
+    "monochrome + one accent"
+   ]
+  }
+ ],
+ "layers": [
+  {
+   "key": "L1",
+   "short": "1 Living",
+   "name": "A living thing as the subject",
+   "question": "Is it an organism or a real place, not an invented object?"
+  },
+  {
+   "key": "L2",
+   "short": "2 Scanned",
+   "name": "Captured, not modelled",
+   "question": "Did the form come from photogrammetry, LiDAR, splats or video?"
+  },
+  {
+   "key": "L3",
+   "short": "3 Void",
+   "name": "Light in a void",
+   "question": "Points, strands or lines glowing on black, near-monochrome?"
+  },
+  {
+   "key": "L4",
+   "short": "4 Apparatus",
+   "name": "The apparatus shows",
+   "question": "Can you see the machine’s marks: frames, tracked points, rings, boxes?"
+  },
+  {
+   "key": "L5",
+   "short": "5 Labelled",
+   "name": "Labelled like a specimen",
+   "question": "Names, coordinates, timecode, HUD?"
+  },
+  {
+   "key": "L6",
+   "short": "6 Time",
+   "name": "Time made visible",
+   "question": "Do trails, 4D or motion carry the idea?"
+  }
+ ],
+ "matrix": [
+  {
+   "name": "Spider (MUTEK Japan series)",
+   "who": "7 Sep board, slide 2 · RICH & MIYU",
+   "marks": [
+    2,
+    1,
+    2,
+    2,
+    0,
+    0
+   ],
+   "hl": 1
+  },
+  {
+   "name": "4D deer",
+   "who": "today · Bilawal Sidhu",
+   "marks": [
+    2,
+    2,
+    1,
+    2,
+    1,
+    2
+   ],
+   "hl": 1
+  },
+  {
+   "name": "Memorias Orgánicas",
+   "who": "today · X.F",
+   "marks": [
+    2,
+    2,
+    2,
+    1,
+    2,
+    0
+   ],
+   "hl": 1
+  },
+  {
+   "name": "Vortex",
+   "who": "today · Ployz",
+   "marks": [
+    0,
+    0,
+    2,
+    1,
+    0,
+    2
+   ],
+   "hl": 1
+  },
+  {
+   "name": "Ployz, recent grid",
+   "who": "today · Ployz",
+   "marks": [
+    0,
+    1,
+    2,
+    2,
+    2,
+    1
+   ],
+   "hl": 1
+  },
+  {
+   "name": "Cave as splats",
+   "who": "7 Sep · David Bewick",
+   "marks": [
+    1,
+    2,
+    1,
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "name": "Cosmic journey",
+   "who": "7 Sep · Dimitri Thouzery",
+   "marks": [
+    0,
+    0,
+    2,
+    0,
+    0,
+    2
+   ]
+  }
+ ],
+ "copy": {
+  "sent": "Four pieces and three whole accounts. Each is a credited study frame; open the source to see it move.",
+  "anatomy": "Take the spider apart and it is five decisions stacked on top of each other. Each decision has a name, and each name is a search term that finds more work like it.",
+  "pattern": "Seven pieces: the RICH & MIYU series, today’s four and the two other September references, scored against six layers. Read down a column to see what is constant; read across a row to see what each piece adds.",
+  "words": "The vocabulary, grouped by layer. These are the terms practitioners actually use, so they work three ways: as search terms, as prompt words, and as tool names.",
+  "field": "Works found and checked this session, in three families. Every card links to its source, and the evidence line says whether a claim is the maker’s own, documented elsewhere, or our guess.",
+  "how": "Blender and TouchDesigner are the two tools to master; everything else here only feeds them. Your Mac rules out Postshot, LichtFeld, gsplat, RealityScan desktop, COLMAP’s dense stage and vvvv (Windows or NVIDIA only), so every route runs on Apple silicon. Times marked * are estimates for a first rough result.",
+  "footer": "Images are credited study captures for private research, not material for finished work. Instagram images are poster frames; open the source for motion. Built by scripts/build_dark_geometric.py from research.json.",
+  "decoded": "RICH & MIYU made the spider in TouchDesigner and have not published how. Dany Bittel scans insects the way it was probably made, and publishes both halves: lay his camera solve over his finished insect, turn the grey to black, and you have the look.",
+  "parked": "Also checked and parked: KIRI Engine (splats may be Pro only), Polycam (point-cloud export is paid), Metashape Standard (US$179, only if COLMAP struggles), OpenSplat (Brush is simpler), vvvv (the agave’s own tool, but Windows only), After Effects (not in your kit), Houdini Apprentice (free, the industry tool for strands, but a steep first week). Web delivery (Spark, MediaPipe) and VCV Rack are parked until the look is settled in Blender and TouchDesigner."
+ },
+ "plain": {
+  "anatomy": [
+   "The spider is not really a picture of a spider. It is a picture of a spider being measured. Its body is the dots a scanner recorded, and the thin rectangles are, most likely, the photographs the scanner used, drawn where the camera stood.",
+   "That is probably the thing you had no word for: the work keeps the evidence of how it was seen. The finished look sits somewhere between a scientific record and a ghost, and that tension is what makes it more than a nice render."
+  ],
+  "pattern": [
+   "Darkness is not what makes these special. Five of seven are light on black, so black is the floor, not the idea.",
+   "The machine’s marks were there from the start. The RICH & MIYU post on your first board carries them on every slide; only the first slide had been looked at. Every reference you have added since has them at least in part. The two that do not (Bewick’s cave, Thouzery’s filaments) are the two least like the spider.",
+   "The open question is whether the living subject matters. RICH & MIYU’s answer is yes: owl, spider, toad, wing, moss, every time. If that is your answer too, this is a kind of digital natural history. Probes A and B are designed to tell you."
+  ],
+  "field": [
+   "This is a real lineage, not a passing Instagram style. It runs from Radiohead’s laser-scanned music video in 2008 and the Kinect-era CLOUDS films, through the big scanned-nature installations (Marshmallow Laser Feast, ScanLAB, Quayola), to Gaussian splats you can now drive live in TouchDesigner.",
+   "That is good news for you. The methods are documented, the tools are mostly free, and the people doing it now (Ployz, F3 Studio, Dany Bittel) publish how. Your two new artists sit at the current end of that line, and they teach.",
+   "The three families overlap on one move: keep the evidence. The scanner’s gaps, the camera positions, the tracking boxes, the labels. Almost nobody here cleans the data up; the mess is the message."
+  ],
+  "plan": [
+   "Two weeks, six sessions of 60 to 90 minutes, the same rhythm as the learning plan. Two sessions sort and search; three make; one decides. Making wins ties, because one rough render tells you more about your taste than another hour of scrolling.",
+   "The output of the whole thing is one sentence: what the first piece is about. The tools, the series and any website follow from that sentence, not the other way round."
+  ]
+ },
+ "plan": {
+  "intro": "Six sessions. Each one asks a single question and ends in something you can look at. It stops as soon as you can finish the sentence \"the first piece is about ...\".",
+  "tracks": [
+   {
+    "when": "Before session 1 · 20 min",
+    "name": "Study the spider’s series",
+    "question": "What stays constant across RICH & MIYU’s five slides, and what changes?",
+    "do": "Open the post and flick through all five slides, then their profile. Note what is fixed (frames, dots, black, warm points) and what varies (subject, density, colour accent).",
+    "output": "A one-line recipe for their look, in the words from section 4.",
+    "images": [
+     "rm-1-owl.jpg",
+     "rm-2-spider.jpg",
+     "rm-3-fungi-toad.jpg",
+     "rm-4-wing.jpg",
+     "rm-5-moss.jpg"
+    ]
+   },
+   {
+    "when": "Session 1",
+    "name": "Sort, don’t collect",
+    "question": "Which of the six layers do you actually respond to?",
+    "do": "Shortlist 12 works from this page and the board. Score each against the six layers, exactly like the matrix above. No new searching.",
+    "output": "Your own 12-row matrix. The columns that fill up are your taste; the empty ones can be dropped."
+   },
+   {
+    "when": "Session 2",
+    "name": "Search with the words",
+    "question": "What else lives in the column you care most about?",
+    "do": "Take the three terms from your strongest layer (for example \"camera frustum\", \"point cloud\", \"specimen\") and search Instagram, Vimeo and Are.na with them. Start from the makers Rendah Mag featured alongside Ployz in April 2026: @kopfgestaltung, @nigina.dsgn, @alex.g.u.e.v.a.r.a, @martmaimaimart. Add ten works, delete five weaker ones.",
+    "output": "A board of about 60 works, each tagged by layer, and a list of five makers to follow."
+   },
+   {
+    "when": "Session 3",
+    "name": "Probe A: the spider, in Blender and TouchDesigner",
+    "question": "Does showing the apparatus make a scan yours?",
+    "do": "See Probe A below.",
+    "output": "The same scan rendered twice: one Blender still and loop, one TouchDesigner loop."
+   },
+   {
+    "when": "Session 4",
+    "name": "Probe B: the machine’s eye",
+    "question": "Does tracking alone carry the feeling, with no scan at all?",
+    "do": "See Probe B below.",
+    "output": "One 10-second loop."
+   },
+   {
+    "when": "Session 5",
+    "name": "Probe C: forces and rings",
+    "question": "Does abstract motion hold you with no living subject?",
+    "do": "See Probe C below.",
+    "output": "One 10-second loop."
+   },
+   {
+    "when": "Session 6",
+    "name": "Compare and name it",
+    "question": "Which probe felt like yours?",
+    "do": "Put the three loops next to the four anchors. Score each against the six layers. Write the sentence and give the direction a working name.",
+    "output": "A one-page brief for the first piece, with its name, subject, layers and tools."
+   }
+  ],
+  "probes_intro": "Each probe switches layers off, so the comparison tells you which layer is doing the work. A has everything; B drops the scan; C drops the subject. All three run in your two tools: Blender and TouchDesigner.",
+  "probes": [
+   {
+    "id": "A",
+    "name": "The spider, in both tools",
+    "image": "rm-2-spider.jpg",
+    "tests": "Everything on: a living subject, scanned, in the void, with its apparatus. Does showing the cameras make a scan yours?",
+    "steps": [
+     "Film two slow iPhone orbits, one high and one low, of something alive and textured (a plant, a root, a pine cone). Exposure locked, 60 to 90 seconds.",
+     "Pull frames: ffmpeg at 2 fps gives 120 to 180 photos.",
+     "Solve the cameras in COLMAP (brew install colmap), sparse only, and export the model as text.",
+     "Import into Blender 5.2 with the Photogrammetry Importer: cameras, image planes, points. If it fails (known issue #102), Codex writes a 30-line script that reads the text files instead.",
+     "Blender: pure black world, points as tiny gold emitters, camera planes as white wireframe, 1% of points scaled up in white, a faint glare. EEVEE, slow orbit, 10 seconds.",
+     "TouchDesigner: load the same points with Point File In POP and the camera positions as instanced thin rectangles; render 1280×720. This is RICH & MIYU’s tool."
+    ],
+    "know": "Which tool the look wants to live in, and whether the camera frames are the magic or a gimmick (render once with them hidden)."
+   },
+   {
+    "id": "B",
+    "name": "The machine’s eye",
+    "image": "b12-echaar-blob-tracking.jpg",
+    "tests": "The apparatus and labels with no scan at all. Is tracking enough on its own?",
+    "steps": [
+     "Film 20 seconds of something alive moving in low light: a dog, trees in wind, people crossing a street.",
+     "TouchDesigner: Movie File In, darken and threshold, into the Blob Track TOP.",
+     "Draw a thin white rectangle and a monospace ID and coordinate label per blob; join the centres with lines (Bileam Tschepe’s tutorial 76 builds exactly this).",
+     "Drop the footage to about 15% under the overlay and render 10 seconds at 1280×720, inside the free licence’s 1280 px cap."
+    ],
+    "know": "Whether you need the scanned body, or whether machine sight carries it on any footage."
+   },
+   {
+    "id": "C",
+    "name": "Forces and rings",
+    "image": "grid-plyzitron-1.jpg",
+    "tests": "Only the void and time: no living subject, no scan, no apparatus beyond a few rings.",
+    "steps": [
+     "TouchDesigner POPs: a Particle POP with a swirl force towards a centre.",
+     "Trail POP turns each particle’s last frames into a thin line.",
+     "Circle POP for three concentric rings as a ground plane.",
+     "Line MAT, white on black, additive. Render 10 seconds at 1280×720.",
+     "Optional: drive the swirl from a track with an Audio File In CHOP."
+    ],
+    "know": "Whether abstract motion holds you, or whether you miss the living thing. Ployz’s free POPs tutorials cover every node here."
+   }
+  ],
+  "ten": {
+   "title": "Specimens: a series of five",
+   "body": "Five living things from within a mile of home, each scanned on the phone, shown with its cameras and a label, as 10-second loops. A series reads as a body of work where a single piece reads as an experiment, and it is the fastest thing on this page to finish."
+  },
+  "hundred": {
+   "title": "A live specimen room",
+   "body": "Point a phone at anything and watch it become a specimen in real time: scanned, tracked, labelled, dark, in the browser. The viewer’s own surroundings become the archive. Phone splat capture plus a browser splat renderer (Spark, already on your board) makes a crude version possible now. Also already in the repo: 1 m LiDAR height data for west Cheltenham from the living map, which would take the same treatment."
+  }
+ },
+ "reading": [
+  {
+   "title": "Ivsic, McCormack & Dziekan (2023), The point cloud aesthetic: defining a new visual language in media art. Virtual Creativity 13(2)",
+   "url": "https://research.monash.edu/en/publications/the-point-cloud-aesthetic-defining-a-new-visual-language-in-media/",
+   "note": "Names four traits: a real scanned subject, transparency (things dissolving into data), ambiguity (scan artefacts kept on purpose) and algorithmic shaping. The closest thing to a textbook definition of your spider."
+  },
+  {
+   "title": "Dany Bittel, Macro Splats",
+   "url": "https://www.danybittel.ch/macro.html",
+   "note": "The method behind A07 step by step: turntable, focus stacks, COLMAP, splat. The clearest public account of how the spider was probably made."
+  },
+  {
+   "title": "Ployz (plyzitron), Lines Point Cloud with POPs tutorial",
+   "url": "https://www.youtube.com/watch?v=c7bZ0zCd3f4",
+   "note": "One of your two new artists teaching the point-cloud look in TouchDesigner, free."
+  },
+  {
+   "title": "F3 Studio, Memorias Orgánicas",
+   "url": "https://f3.studio/work/memorias-organicas",
+   "note": "The project page behind Y4: residency in Oaxaca, photogrammetry, then visual programming."
+  },
+  {
+   "title": "Harun Farocki, Eye/Machine",
+   "url": "https://www.harunfarocki.de/installations/2000s/2000/eye-machine.html",
+   "note": "Where \"operational image\" comes from: images made for machines, not people."
+  },
+  {
+   "title": "Timo Arnall, Robot Readable World",
+   "url": "https://www.elasticspace.com/2012/02/robot-readable-world",
+   "note": "A 2012 film cut entirely from machine-vision debug footage. The seed of the tracking look."
+  }
+ ],
+ "clusters": [
+  {
+   "key": "scan",
+   "title": "The scan as material",
+   "summary": "Works where the measurement itself is the picture: forests, cacti, insects and faces shown as dots, camera positions and time slices rather than surfaces, almost always floating in black. The lineage runs from LiDAR music videos and Kinect depth video (2008 to 2016), through big laser-scanned nature installations (MLF, ScanLAB, Quayola, Kurokawa), to Gaussian splats you can now drive live in TouchDesigner. The recurring move is to keep the scanner's gaps, ghosts and camera frusta visible instead of cleaning them up.",
+   "items": [
+    {
+     "id": "A01",
+     "title": "FRAMERATE: Desert Pulse",
+     "creator": "ScanLAB Projects",
+     "year": "2025",
+     "url": "https://scanlabprojects.co.uk/projects/desert-pulse",
+     "visible": "A saguaro cactus and desert scrub drawn in fine white points on pure black, a bright band of scanned ground at its base. Other frames in the series show flowering cacti in colour, isolated on black.",
+     "vocabulary": [
+      "terrestrial LiDAR",
+      "time-lapse scanning",
+      "pointcloud animation",
+      "photogrammetry"
+     ],
+     "technique": "A year of daily scans of the Sonoran Desert: the studio cites 365 days of LiDAR data plus 93 days of time-lapse photogrammetry, rendered as point-cloud animation; sound from contact mics on cacti. Shown in the Desert Botanical Garden, Phoenix, Oct 2025 to May 2026.",
+     "evidence": "Creator says:",
+     "rhymes_with": "2 Bilawal Sidhu, Space + time reconstructed in 4D; 4 x.flores, Memorias Organicas (scanned agave as point cloud); 1 spider (point cloud + camera frusta + tracked dots)",
+     "image": "a01-scanlab-desert-pulse.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A02",
+     "title": "FRAMERATE: Pulse of the Earth",
+     "creator": "ScanLAB Projects",
+     "year": "2022 (Venice premiere; trailer 2020)",
+     "url": "https://scanlabprojects.co.uk/projects/pulse-of-the-earth",
+     "visible": "A garden border at night: yellow lilies, foliage and a young tree built from dense coloured points that fall away into black. Installed as an array of screens and floor monitors in a dark room.",
+     "vocabulary": [
+      "4D scanning",
+      "time-lapse point cloud",
+      "multichannel installation",
+      "change detection"
+     ],
+     "technique": "Thousands of daily 3D time-lapse scans of British landscapes, played back so seasons pass in seconds. The studio says its measurements were later published in Nature. Scanner type is not named on the page; LiDAR plus photogrammetry is our hypothesis, by analogy with Desert Pulse.",
+     "evidence": "Creator says (scan type: our hypothesis):",
+     "rhymes_with": "2 Bilawal Sidhu, Space + time reconstructed in 4D; 4 x.flores, Memorias Organicas (scanned agave as point cloud)",
+     "image": "a02-scanlab-framerate-pulse-of-the-earth.jpg",
+     "rhymes": [
+      "Y2",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A03",
+     "title": "In the Eyes of the Animal",
+     "creator": "Marshmallow Laser Feast",
+     "year": "2015",
+     "url": "https://marshmallowlaserfeast.com/project/in-the-eyes-of-the-animal/",
+     "visible": "A conifer forest rebuilt as a point cloud: mauve trunks rising out of a swirling orange and pink particle floor, loose points drifting like spores against navy black.",
+     "vocabulary": [
+      "LiDAR scan",
+      "CT scan",
+      "photogrammetry rig",
+      "real-time point cloud",
+      "vvvv"
+     ],
+     "technique": "LiDAR scans of Grizedale Forest, 360 drone footage, CT scans of insects by the Natural History Museum and photogrammetry of owls and frogs, visualised in real time in vvvv as VR seen through the eyes of a mosquito, dragonfly, frog and owl.",
+     "evidence": "Documented (creator site + AND festival making-of):",
+     "rhymes_with": "4 x.flores, Memorias Organicas (scanned agave as point cloud); 1 spider (point cloud + camera frusta + tracked dots); RICH & MIYU owl (already on board)",
+     "image": "a03-mlf-in-the-eyes-of-the-animal.jpg",
+     "rhymes": [
+      "Y1",
+      "Y4"
+     ],
+     "rhymes_board": [
+      "RICH & MIYU"
+     ]
+    },
+    {
+     "id": "A04",
+     "title": "Treehugger: Wawona",
+     "creator": "Marshmallow Laser Feast",
+     "year": "2016",
+     "url": "https://marshmallowlaserfeast.com/project/treehugger-wawona/",
+     "visible": "A giant sequoia and neighbouring conifers drawn as pale cream lines of points on dark teal black, the trunk rising from scanned boulders like an etching made of dots.",
+     "vocabulary": [
+      "LiDAR",
+      "white-light (structured light) scanning",
+      "point cloud",
+      "mixed-reality VR"
+     ],
+     "technique": "A giant sequoia in Sequoia National Park captured with LiDAR and white-light scanning, rendered in custom vvvv software; visitors put their heads into a sculpted knot to see water and carbon flowing through the tree. Follow-on work: We Live in an Ocean of Air (Saatchi Gallery, 2018).",
+     "evidence": "Creator says:",
+     "rhymes_with": "4 x.flores, Memorias Organicas (scanned agave as point cloud); 3 plyzitron (monochrome particle vortex)",
+     "image": "a04-mlf-treehugger-wawona.jpg",
+     "rhymes": [
+      "Y3",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A05",
+     "title": "Remains: Chaumont-sur-Loire",
+     "creator": "Quayola",
+     "year": "2018",
+     "url": "https://quayola.com/remains",
+     "visible": "A monochrome print of a shrub: branches and leaves in silvery white-grey points on black. Up close the scanner's gaps and doubled edges show where it could not resolve the foliage.",
+     "vocabulary": [
+      "high-precision laser scanner",
+      "point cloud render",
+      "scan artefacts",
+      "machinic vision"
+     ],
+     "technique": "Trees and shrubs in the Chaumont-sur-Loire gardens captured with a high-precision laser scanner and rendered as ultra-high-resolution prints. The artist frames the images as documenting the scanner's failures. A later Remains series did the same in the Vallee de Joux.",
+     "evidence": "Creator says:",
+     "rhymes_with": "4 x.flores, Memorias Organicas (scanned agave as point cloud); 3 plyzitron (monochrome particle vortex)",
+     "image": "a05-quayola-remains.jpg",
+     "rhymes": [
+      "Y3",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A06",
+     "title": "subassemblies",
+     "creator": "Ryoichi Kurokawa",
+     "year": "2019",
+     "url": "http://www.ryoichikurokawa.com/project/sa.html",
+     "visible": "A performer silhouetted at a desk beneath a huge screen where a laser-scanned landscape of vegetation and rock breaks apart into white and green point spray on black.",
+     "vocabulary": [
+      "laser-scan data",
+      "point cloud deformation",
+      "audiovisual concert",
+      "glitch / disassembly"
+     ],
+     "technique": "3D data from laser scans of architecture, ruins and nature, distorted and rebuilt in modules; concert version on one screen with 4.1 sound and strobe (premiered MUTEK Montreal 2019); installation version re-assembli uses four screens.",
+     "evidence": "Creator says + documented (designboom):",
+     "rhymes_with": "3 plyzitron (monochrome particle vortex); 4 x.flores, Memorias Organicas (scanned agave as point cloud); Dimitri Thouzery filaments (already on board)",
+     "image": "a06-kurokawa-subassemblies.jpg",
+     "rhymes": [
+      "Y3",
+      "Y4"
+     ],
+     "rhymes_board": [
+      "Dimitri Thouzery"
+     ]
+    },
+    {
+     "id": "A07",
+     "title": "Macro Splats",
+     "creator": "Dany Bittel",
+     "year": "2025",
+     "url": "https://www.danybittel.ch/macro.html",
+     "visible": "Main image: in COLMAP, a hemisphere of white camera pyramids (one per photo) fans out around a tiny cluster of coloured points, the insect. Alt image: the finished splat, a photoreal solitary wasp floating on dark grey.",
+     "vocabulary": [
+      "Gaussian splatting",
+      "focus stacking",
+      "structure from motion (COLMAP)",
+      "camera frusta / camera poses",
+      "sparse point cloud"
+     ],
+     "technique": "Insects on a rotary disk shot from 111 angles, 16-frame focus stacks each (1,776 photos, about four hours), camera poses solved in COLMAP, splats trained in Postshot. The patterned block under the insect gives the matcher texture to lock on to.",
+     "evidence": "Creator says:",
+     "rhymes_with": "1 spider (point cloud + camera frusta + tracked dots); 2 Bilawal Sidhu, Space + time reconstructed in 4D",
+     "image": "a07-dany-bittel-macro-splats.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A08",
+     "title": "Where the City Can't See",
+     "creator": "Liam Young (director), Tim Maughan (writer)",
+     "year": "2016",
+     "url": "https://vimeo.com/188626212",
+     "visible": "Two costumed dancers rendered as translucent, smeared LiDAR ghosts in a dark conifer forest, points thinning to black between the trunks.",
+     "vocabulary": [
+      "LiDAR film",
+      "mobile laser scanning",
+      "motion ghosting",
+      "machine vision"
+     ],
+     "technique": "Billed as the first narrative fiction film shot entirely with laser scanners, the vision system of driverless cars; set in a near-future Detroit, soundtrack by DJ Stingray. Premiered at AND festival, St Helens, November 2016.",
+     "evidence": "Documented (creator's Vimeo text + Metropolis):",
+     "rhymes_with": "2 Bilawal Sidhu, Space + time reconstructed in 4D; 1 spider (point cloud + camera frusta + tracked dots)",
+     "image": "a08-liam-young-where-the-city-cant-see.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A09",
+     "title": "House of Cards",
+     "creator": "Radiohead; dir. James Frost with Aaron Koblin",
+     "year": "2008",
+     "url": "https://www.youtube.com/watch?v=8nTFjVm9sTQ",
+     "visible": "Thom Yorke's face as a cyan grid of dots on black, breaking into scattered points at the edges where the sensor loses him.",
+     "vocabulary": [
+      "Velodyne LiDAR",
+      "structured light",
+      "per-frame point cloud",
+      "open data"
+     ],
+     "technique": "No cameras: close-ups captured with Geometric Informatics structured-light scanning, exteriors with a Velodyne LiDAR; rendered in Processing. The raw CSV data and code were released openly on Google Code.",
+     "evidence": "Documented:",
+     "rhymes_with": "2 Bilawal Sidhu, Space + time reconstructed in 4D; 3 plyzitron (monochrome particle vortex)",
+     "image": "a09-radiohead-house-of-cards.jpg",
+     "rhymes": [
+      "Y2",
+      "Y3"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A10",
+     "title": "CLOUDS",
+     "creator": "James George and Jonathan Minard",
+     "year": "2014",
+     "url": "https://www.jamesgeorge.me/clouds",
+     "visible": "A woman speaking, her face and jumper a striated depth mesh of fine scanlines on black, with stray streaks flying off where the depth sensor loses her edges.",
+     "vocabulary": [
+      "RGBD",
+      "depth video",
+      "volumetric capture",
+      "Kinect",
+      "Depthkit (formerly RGBD Toolkit)"
+     ],
+     "technique": "Interviews shot with a Canon DSLR paired with a Kinect depth sensor, combined in their open-source RGBD Toolkit (which became Depthkit) into point-cloud video; an interactive, generative documentary that premiered at Sundance New Frontier 2014.",
+     "evidence": "Documented (STUDIO for Creative Inquiry):",
+     "rhymes_with": "2 Bilawal Sidhu, Space + time reconstructed in 4D; 1 spider (point cloud + camera frusta + tracked dots)",
+     "image": "a10-clouds-documentary.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "A11",
+     "title": "Leaving the Grid (Ital Tek, official video)",
+     "creator": "RubenFro",
+     "year": "2020",
+     "url": "https://www.rubenfro.com/works/project-one-ephnc-lnfn9-l2pnc-7ycdf-znlnh-sgeht-nyrsf-9rt7a-gawf2-dafsy",
+     "visible": "A Japanese shrine at night built from coloured points: teal stone lanterns, a glowing red figure at the steps, a roof dissolving into falling pink particles under a dark canopy.",
+     "vocabulary": [
+      "360 capture",
+      "point cloud",
+      "real-time rendering (Unity)",
+      "particle dissolve"
+     ],
+     "technique": "Point clouds captured with a set of 360 cameras, rendered in real time in Unity through a custom point-cloud shader. Vimeo Staff Pick; screened at MUTEK SF Nexus 2020. The same artist later moved to Gaussian splats (see Frontiers paper in A12).",
+     "evidence": "Creator says:",
+     "rhymes_with": "3 plyzitron (monochrome particle vortex); 4 x.flores, Memorias Organicas (scanned agave as point cloud)",
+     "image": "a11-rubenfro-ital-tek-leaving-the-grid.jpg",
+     "rhymes": [
+      "Y3",
+      "Y4"
+     ],
+     "rhymes_board": []
+    }
+   ]
+  },
+  {
+   "key": "sight",
+   "title": "The machine's eye made visible",
+   "summary": "What Dex calls 'tracking' is the debug view of machine vision: the boxes, dots, lines, IDs and timestamps an algorithm draws to show what it has detected, promoted from engineering check to the image itself. The lineage runs from Farocki's operational images and Arnall's found research footage, through Paglen, Lozano-Hemmer, Rhizomatiks and Forensic Architecture, to the 2024-26 TouchDesigner blob-tracking reels. In photogrammetry the same apparatus appears as camera frusta and camera-pose markers around a sparse point cloud, which is very likely what the spider's thin white rectangles are (our hypothesis, supported by the COLMAP and RealityScan examples).",
+   "items": [
+    {
+     "id": "B01",
+     "title": "Robot Readable World",
+     "creator": "Timo Arnall",
+     "year": "2012 (made 2011, published February 2012)",
+     "url": "https://www.elasticspace.com/2012/02/robot-readable-world",
+     "visible": "Grey street footage shot from a car, overwritten by hundreds of green arrows showing which way each patch of the image is moving. Arnall's Flickr stills from the same film show face-detection boxes and coloured ellipses locked onto eyes, nose and mouth.",
+     "vocabulary": [
+      "machine vision",
+      "optical flow",
+      "motion vectors",
+      "face detection",
+      "found footage"
+     ],
+     "technique": "A 5-minute edit of found footage from computer-vision research demos, the debug output researchers record to show their algorithms working.",
+     "evidence": "Creator says: Arnall describes it as an experiment in machine-vision footage built from found footage of computer vision research. Reading the poster's arrows as optical flow is our hypothesis (it is the standard look of that technique).:",
+     "rhymes_with": "Anchor 2 (movement turned into lines and trails) and the spider's small tracked dots",
+     "image": "b01-robot-readable-world.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B02",
+     "title": "Eye/Machine I (Auge/Maschine I)",
+     "creator": "Harun Farocki",
+     "year": "2000-2001 (Farocki estate lists 2000; MoMA and MACBA date Eye/Machine I to 2001; trilogy to 2003)",
+     "url": "https://www.harunfarocki.de/installations/2000s/2000/eye-machine.html",
+     "visible": "Two video frames floating on black: a factory worker at a machine above, a red cruise missile streaking over blurred ground below. The work sets missile-nose camera footage from the 1991 Gulf War against assembly-line and inspection imagery.",
+     "vocabulary": [
+      "operational image",
+      "machine vision",
+      "C3I",
+      "split-screen montage"
+     ],
+     "technique": "Multi-screen video installation (also a single-channel version) assembled from military and industrial archive footage.",
+     "evidence": "Documented: Farocki estate page, MoMA, MACBA. The term 'operational image' was coined in this work (Wikipedia, Operational image).:",
+     "rhymes_with": "All four anchors at the level of idea: images made for a machine to act on, not for a person to look at",
+     "image": "b02-eye-machine.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2",
+      "Y3",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B03",
+     "title": "Sight Machine",
+     "creator": "Trevor Paglen with Kronos Quartet (produced with Obscura Digital)",
+     "year": "2017",
+     "url": "https://paglen.studio/2019/07/01/sight-machine/",
+     "visible": "Four string players reduced to what the algorithms see: red face-detection squares, green and cyan edge strokes, circles and triangles, laid over a Voronoi-style cell grid on deep navy. At the concert the same readouts were projected behind the quartet in real time.",
+     "vocabulary": [
+      "face detection",
+      "edge detection",
+      "Voronoi tessellation",
+      "real-time computer vision",
+      "operational image"
+     ],
+     "technique": "Cameras on the players feed a suite of computer-vision algorithms (of the kinds used in self-driving cars, missile guidance, face detection and recognition), modified to render what they detect, projected live.",
+     "evidence": "Documented: Stanford Cantor Arts Center press release and Barbican page; premiered 14 January 2017 at Pier 70, San Francisco.:",
+     "rhymes_with": "Anchor 1 (thin geometric marks laid over a body) and anchor 4 (a scene annotated by the machine)",
+     "image": "b03-sight-machine.jpg",
+     "rhymes": [
+      "Y1",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B04",
+     "title": "discrete figures",
+     "creator": "ELEVENPLAY x Rhizomatiks (Daito Manabe, Motoi Ishibashi) x Kyle McDonald; choreography MIKIKO",
+     "year": "2018 (2022 version)",
+     "url": "https://rhizomatiks.com/en/work/discrete-figures/",
+     "visible": "Five dancers each stand inside a tall, thin, white-edged frame on a black stage, their bodies wrapped in projected white line networks like a skeleton or pose graph. The frames read almost exactly like the spider's vertical rectangles.",
+     "vocabulary": [
+      "pose estimation",
+      "skeleton / keypoints",
+      "motion capture",
+      "projection mapping",
+      "machine learning"
+     ],
+     "technique": "Dance performance combining motion capture (volumetric capture credited to 4D-VIEWS in the 2022 version), machine learning (direction by Kyle McDonald), drones and projection.",
+     "evidence": "Documented for the technologies (Rhizomatiks credits). That this scene shows tracked body keypoints projected back onto the dancers is our hypothesis.:",
+     "rhymes_with": "Anchor 1 (thin white vertical rectangles and line-drawn bodies on black)",
+     "image": "b04-discrete-figures.jpg",
+     "rhymes": [
+      "Y1"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B05",
+     "title": "Zoom Pavilion",
+     "creator": "Rafael Lozano-Hemmer and Krzysztof Wodiczko",
+     "year": "2015",
+     "url": "https://www.lozano-hemmer.com/zoom_pavilion.php",
+     "visible": "A dark room walled with monochrome projection: a grid of detected faces, each stamped with date, time and camera number in monospaced type, while the side walls show detection boxes joined by thin lines between people.",
+     "vocabulary": [
+      "face detection",
+      "surveillance aesthetic",
+      "timestamp overlay",
+      "robotic zoom",
+      "annotation layer"
+     ],
+     "technique": "12 computerised surveillance systems with infrared cameras and robotic zoom (up to 35x); face-recognition algorithms detect visitors and record their spatial relationships; three-wall projection.",
+     "evidence": "Creator says (artist's project page); first shown at MUAC, Mexico City, 2015.:",
+     "rhymes_with": "Anchor 4 (monospaced timecode and labels as part of the picture)",
+     "image": "b05-zoom-pavilion.jpg",
+     "rhymes": [
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B06",
+     "title": "Triple-Chaser",
+     "creator": "Forensic Architecture with Praxis Films (Laura Poitras); narrated by David Byrne",
+     "year": "2019",
+     "url": "https://forensic-architecture.org/investigation/triple-chaser",
+     "visible": "Two halves of a spent tear-gas grenade held up in a street, each flooded with a pink segmentation mask and boxed in yellow by a classifier. Other frames of the film show hundreds of rendered canisters scattered on a dark grid: the synthetic training set.",
+     "vocabulary": [
+      "object detection",
+      "bounding box",
+      "segmentation mask",
+      "classifier",
+      "synthetic data"
+     ],
+     "technique": "A 3D model of the grenade rendered in Unreal Engine into thousands of synthetic images to train a computer-vision classifier, then run over footage shared online.",
+     "evidence": "Documented: designboom and e-flux; shown at the 2019 Whitney Biennial.:",
+     "rhymes_with": "Anchor 4 (an object named and labelled by the machine); the boxes of 'tracking'",
+     "image": "b06-triple-chaser.jpg",
+     "rhymes": [
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B07",
+     "title": "The Dream Life of Driverless Cars",
+     "creator": "ScanLAB Projects (Matt Shaw, Will Trossell) for The New York Times Magazine; text by Geoff Manaugh",
+     "year": "2015",
+     "url": "https://bldgblog.com/2015/11/computational-romanticism-and-the-dream-life-of-driverless-cars/",
+     "visible": "Parliament Square and Big Ben as a cyan and violet laser scan on black, with streaked, doubled vertical lines where the scanner smeared buildings as the vehicle moved.",
+     "vocabulary": [
+      "LiDAR",
+      "point cloud",
+      "scan lines",
+      "sensor artefacts",
+      "machine hallucination"
+     ],
+     "technique": "A vehicle-mounted LiDAR of the kind driverless cars use, with corrective algorithms removed so glitches, duplications and ghosts stay in the scan.",
+     "evidence": "Documented: BLDGBLOG (Geoff Manaugh) describes the modified scanner and the NYT collaboration.:",
+     "rhymes_with": "Anchors 1 and 3 (luminous points and strands on pure black); anchor 2 (a scene recorded over time by a moving sensor)",
+     "image": "b07-dream-life-driverless-cars.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2",
+      "Y3"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B08",
+     "title": "Oblivion GFX (HUD and interface graphics)",
+     "creator": "GMUNK (Bradley G Munkowitz), design director, with Joseph Chanimal, Navarro Parker and Alexander Perry, for Joseph Kosinski's Oblivion",
+     "year": "2013",
+     "url": "https://gmunk.com/OBLIVION-GFX",
+     "visible": "A near-black HUD: a thin map outline inside nested arcs and concentric rings, 'ANALYZING' in small spaced capitals, coordinates in the top corners and tiny boxed readouts down both sides.",
+     "vocabulary": [
+      "FUI",
+      "HUD",
+      "reticle",
+      "letter-spaced micro-type",
+      "greeble"
+     ],
+     "technique": "Motion-graphics screen and HUD design for film; GMUNK notes the team studied flight-simulator and combat-helicopter interfaces.",
+     "evidence": "Creator says: GMUNK's page lists drone vision among the machinery HUDs the team made. That this particular frame is the drone's view is our hypothesis.:",
+     "rhymes_with": "Anchor 3 (thin concentric circles) and anchor 4 (tiny letter-spaced labels and numbers)",
+     "image": "b08-oblivion-drone-hud.jpg",
+     "rhymes": [
+      "Y3",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B09",
+     "title": "COLMAP sparse reconstruction of central Rome (camera frusta)",
+     "creator": "COLMAP (open-source SfM/MVS pipeline, Johannes L. Schonberger and contributors)",
+     "year": "Current documentation (COLMAP 4.1 dev, 2026)",
+     "url": "https://colmap.github.io/",
+     "visible": "A sparse point cloud of central Rome built from tourist photos, with every registered photo drawn as a small red camera frustum; the red swarms trace the streets where people stood, and ring the Colosseum.",
+     "vocabulary": [
+      "structure from motion (SfM)",
+      "sparse point cloud",
+      "camera frustum",
+      "registered image",
+      "camera pose"
+     ],
+     "technique": "Open-source SfM: detect feature points in each photo, match them across photos, then solve camera poses and 3D points together (bundle adjustment).",
+     "evidence": "Documented: COLMAP homepage hero image (alt text 'Sparse reconstruction of central Rome.'); GUI docs state registered images are drawn in red.:",
+     "rhymes_with": "Anchor 1 (the spider's rectangles are very likely camera frusta or image planes like these) and anchor 2 (Bilawal's visible frustum)",
+     "image": "b09-colmap-sparse-frusta.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B10",
+     "title": "RealityScan Help: Components and Sparse Point Cloud",
+     "creator": "Epic Games / Capturing Reality (RealityScan, formerly RealityCapture)",
+     "year": "Current documentation (2025-26)",
+     "url": "https://rshelp.capturingreality.com/en-US/tutorials/quickstart_3.htm",
+     "visible": "A labelled help figure: on a dark grid, the sparse point cloud of a wall stands to one side while a curving row of small white camera-pose markers leads towards it, each marker one photo's position and direction.",
+     "vocabulary": [
+      "camera pose",
+      "sparse point cloud",
+      "component",
+      "alignment",
+      "tie points"
+     ],
+     "technique": "Image alignment (feature detection and tie-point matching) produces camera poses plus a sparse cloud, inspected in the 3D Scene view.",
+     "evidence": "Documented: RealityScan Help ('Each component contains camera poses and a sparse point cloud').:",
+     "rhymes_with": "Anchor 1 (white camera markers on black around a cloud: the likely grammar of the spider)",
+     "image": "b10-realityscan-sparse-cloud.jpg",
+     "rhymes": [
+      "Y1"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B11",
+     "title": "Trace and Blob Tracking Effect with TouchDesigner",
+     "creator": "Dean Cheesman (@dcheesman)",
+     "year": "2024 (13 June)",
+     "url": "https://www.youtube.com/watch?v=ioSVh06MySc",
+     "visible": "TouchDesigner's network view: a ballet dancer traced in green contour lines, a thresholded black-and-white version beside her, and the Blob Track TOP's parameters open with 'Draw Blob Bounds' switched on.",
+     "vocabulary": [
+      "Blob Track TOP",
+      "blob bounds",
+      "threshold / luminance key",
+      "trace (contour)",
+      "TouchDesigner"
+     ],
+     "technique": "Threshold the video, feed it to the Blob Track TOP, draw bounds and trace contours back over the source footage.",
+     "evidence": "Creator says: the Derivative post introduces it as a popular effect (June 2024), evidence the look was already a trend by then.:",
+     "rhymes_with": "'Tracking' in Dex's sense, built in the tool he already owns",
+     "image": "b11-blob-track-top-tutorial.jpg",
+     "rhymes": [
+      "Y1"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "B12",
+     "title": "Blob tracking reel (monochrome traffic)",
+     "creator": "Ech Aar (@echaar_av)",
+     "year": "2024 (13 February)",
+     "url": "https://www.instagram.com/echaar_av/reel/C3Sl07qopND/",
+     "visible": "Black-and-white overhead traffic footage with red rectangles thrown round moving vehicles, each crossed by diagonals and tagged with a large ID number.",
+     "vocabulary": [
+      "blob tracking",
+      "bounding box",
+      "blob ID",
+      "surveillance aesthetic"
+     ],
+     "technique": "TouchDesigner blob tracking over recorded video (caption credits @touchdesigner).",
+     "evidence": "Creator says (Instagram caption and date from the post's metadata); the description comes from the preview frame only.:",
+     "rhymes_with": "'Tracking'; anchor 4 (numbers used as labels)",
+     "image": "b12-echaar-blob-tracking.jpg",
+     "rhymes": [
+      "Y1",
+      "Y4"
+     ],
+     "rhymes_board": []
+    }
+   ]
+  },
+  {
+   "key": "void",
+   "title": "Geometry in the dark",
+   "summary": "Thin luminous marks (lines, circles, orbits, strands, points) drawn on a black field, mostly monochrome with at most one accent colour, and usually made to be performed with sound (MUTEK-style live AV, laser concerts, club visuals). Two layers keep recurring: a captured or computed form turned into points and strands, and a tiny annotation layer of labels, coordinates and section numbers that makes the image read like a scientific specimen or instrument readout. Dex's anchors sit squarely in this lineage: plyzitron and F3 Studio (x.flores___) are the current generation of what Ikeda, Henke, Lemercier and Kurokawa established.",
+   "items": [
+    {
+     "id": "C01",
+     "title": "datamatics [prototype-ver.2.0]",
+     "creator": "Ryoji Ikeda",
+     "year": "2006-2008 (datamatics series since 2006)",
+     "url": "https://www.ryojiikeda.com/project/datamatics/",
+     "visible": "A star catalogue plotted as white points on an infinite dot grid, crossed by thin white and blue axis lines; every star carries a tiny monospace label with its name and coordinates, and in the next shot the labels pile up into a white blizzard of data.",
+     "vocabulary": [
+      "annotation layer",
+      "monochrome plus one accent",
+      "construction lines / wireframe grid",
+      "live AV / audiovisual performance",
+      "data visualisation"
+     ],
+     "technique": "Audiovisual concert using pure data (hard-drive errors, software code, astronomical data) as the source for both sound and image, rendered in pared-down black and white with colour accents (creator's own project text). Photo: Ryuichi Maruo, courtesy YCAM.",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 4 (x.flores___ specimen labels); anchor 1 (white dots and lines on black)",
+     "image": "c01-ikeda-datamatics.jpg",
+     "rhymes": [
+      "Y1",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C02",
+     "title": "Lumière (Lumière I)",
+     "creator": "Robert Henke",
+     "year": "2013 (series since 2013; Lumière II and III later revisions)",
+     "url": "https://roberthenke.com/concerts/lumiere.html",
+     "visible": "Two concentric white laser circles, one broken into dashes, float on total black with a soft glow at the centre and a faint beam cutting diagonally across; nothing else is in frame.",
+     "vocabulary": [
+      "vector drawing (laser, oscilloscope X-Y)",
+      "negative space",
+      "live AV / audiovisual performance",
+      "audiovisual event",
+      "persistence of vision"
+     ],
+     "technique": "Self-written vector graphics software and FM synthesis engine; from Lumière II each shape is bound to a MIDI note so every note is both a sound and a drawn shape ('audiovisual notes'). Vocabulary of circles, squares, lines, dots and glyphs; performed from the back of the room (creator's page). Image is from the page's Lumière I gallery folder (our reading of the file path).",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 3 (plyzitron thin concentric circles)",
+     "image": "c02-henke-lumiere.jpg",
+     "rhymes": [
+      "Y3"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C03",
+     "title": "Constellations",
+     "creator": "Joanie Lemercier and Juliette Bibasse (Studio Lemercier), music by Paul Jebanasam",
+     "year": "2018",
+     "url": "https://joanielemercier.com/constellations/",
+     "visible": "A web of thin white straight lines and bright nodes hangs in the night air over a crowd in silhouette, like a wireframe galaxy projected onto nothing.",
+     "vocabulary": [
+      "vector drawing (laser, oscilloscope X-Y)",
+      "construction lines / wireframe grid",
+      "live AV / audiovisual performance",
+      "water screen / volumetric projection",
+      "monochrome"
+     ],
+     "technique": "Light projected onto a curtain of invisible water particles so shapes appear to float; 16-minute AV piece, 'vectorial, monochromatic aesthetics' paired with Jebanasam's electronic score; additional code Kyle McLean; commissioned by University of Bristol / Watershed (studio page).",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 1 (thin white lines and dots on black)",
+     "image": "c03-lemercier-constellations.jpg",
+     "rhymes": [
+      "Y1"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C04",
+     "title": "DAYDREAM V.2",
+     "creator": "NONOTAK (Noemi Schipfer and Takami Nakamoto)",
+     "year": "2013",
+     "url": "https://www.nonotak.com/_DAYDREAM-V-2",
+     "visible": "A dark figure stands inside a tunnel of hundreds of thin vertical white light lines that recede to a single bright point; the lines are stacked in depth like layers of rain.",
+     "vocabulary": [
+      "negative space",
+      "construction lines / wireframe grid",
+      "scrim projection",
+      "live AV / audiovisual performance"
+     ],
+     "technique": "Audiovisual installation 'that generates space distortions' with light and sound (studio page). Projection onto stacked translucent panels is visible in the gallery photos; the exact rig is our hypothesis. Schipfer draws kinetic geometric visuals, Nakamoto (architect, musician) handles space, light and sound (studio about page).",
+     "evidence": "Documented:",
+     "rhymes_with": "anchor 1 (thin white vertical rectangles); anchor 3 (vertical lines)",
+     "image": "c04-nonotak-daydream.jpg",
+     "rhymes": [
+      "Y1",
+      "Y3"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C06",
+     "title": "Aleph 2 (official video)",
+     "creator": "Max Cooper, video by Martin Krzywinski",
+     "year": "2019",
+     "url": "https://vimeo.com/367747083",
+     "visible": "Two dense panels of monospace numerals on black, headed 'NATURAL POWER SETS' and 'REAL POWER SETS' with a counter top right, a few digits picked out in red so diagonal patterns emerge across the grid.",
+     "vocabulary": [
+      "annotation layer",
+      "monochrome plus one accent",
+      "generative",
+      "mathematical visualisation"
+     ],
+     "technique": "An 'authentic numerical rendering' of Georg Cantor's ideas on sizes of infinity, part of Cooper's 'Yearning for the Infinite' AV show; Aleph numbers and section labels are shown top left (Cooper's own video description).",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 4 (tiny labels and timecode as part of the image)",
+     "image": "c06-maxcooper-aleph2.jpg",
+     "rhymes": [
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C07",
+     "title": "Build the Cities (music video for Karma Fields feat. Kerli)",
+     "creator": "Raven Kwok",
+     "year": "2015",
+     "url": "https://ravenkwok.com/build-the-cities/",
+     "visible": "A singer's head and shoulders built from white dots and small squares, floating inside a faint wireframe of cube cells, with scribbled grey line clusters drifting in the dark around her.",
+     "vocabulary": [
+      "scan-to-points (photogrammetry, laser scanning, depth capture)",
+      "point cloud",
+      "construction lines / wireframe grid",
+      "generative",
+      "subdivision"
+     ],
+     "technique": "Code-based generative video made in Processing; built from dynamic subdivided cubic cells; the singer was shot with a Kinect plus camera using Depthkit and her depth sequence drives the pattern (creator's Vimeo text, vimeo.com/121096680). Screened at Ars Electronica Animation Festival 2015.",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 1 (a figure made of points crossed by thin lines); anchor 2 (captured subject as particles)",
+     "image": "c07-ravenkwok-buildthecities.jpg",
+     "rhymes": [
+      "Y1",
+      "Y2"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C08",
+     "title": "Quanta Perception feat. Geoastra x Joanna John",
+     "creator": "plyzitron (Ploypapus Phosri)",
+     "year": "2022",
+     "url": "https://www.youtube.com/watch?v=UQytgc26vyc",
+     "visible": "Two seated figures made of fine particles, one warm pink and one blue, face each other inside thin concentric orbit rings on black, with small icons and a tiny letter-spaced title between them.",
+     "vocabulary": [
+      "point cloud",
+      "audio-reactive",
+      "annotation layer",
+      "construction lines / wireframe grid",
+      "live AV / audiovisual performance"
+     ],
+     "technique": "Audiovisual work shown in May 2022 at End of Nations Festival, Berlin, music by Geoastra and Joanna John (creator's description). Made in TouchDesigner is our hypothesis from her stated main tool since 2019; the point-cloud figures match her taught workflow (NODE Institute 'Audio-Reactive Point Cloud Visuals').",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 3 (plyzitron herself: concentric circles); anchor 2 (captured figure as particles)",
+     "image": "c08-plyzitron-quanta-perception.jpg",
+     "rhymes": [
+      "Y2",
+      "Y3"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C09",
+     "title": "Memorias Orgánicas (Oaxaca)",
+     "creator": "F3 Studio (Gabriela Reyes and Jorge Flores)",
+     "year": "2020 (captured 2020; CENART / Centro Multimedia show 20 Aug to 20 Oct 2026)",
+     "url": "https://f3.studio/work/memorias-organicas",
+     "visible": "Four agave-like rosettes rebuilt as grey-white mesh and points on a floating slab of ground, with hundreds of thin white vertical strands dripping down from the slab into the black.",
+     "vocabulary": [
+      "scan-to-points (photogrammetry, laser scanning, depth capture)",
+      "point cloud",
+      "strands / trails (curves)",
+      "generative",
+      "monochrome"
+     ],
+     "technique": "Artistic residency in Oaxaca; plants recorded by photogrammetry, then 'visual programming', output as high-fidelity prints, AV work and NFT (F3 project page). F3's documented toolset includes vvvv (STIRworld 2021). CENART bulletin 124 adds 3D scanning and field audio recording. This is the source project of anchor 4.",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 4 (this is its source project); anchor 1 (thin white verticals over particles)",
+     "image": "c09-f3-memorias-organicas.jpg",
+     "rhymes": [
+      "Y1",
+      "Y4"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C10",
+     "title": "BLCK SUN",
+     "creator": "AMIANGELIKA (visuals) and 1100 (music)",
+     "year": "2025 (Rendah Mag interview, 14 Feb 2025)",
+     "url": "https://rendahmag.com/article/blck-sun-amiangelika-1100",
+     "visible": "Two performers in black silhouette at a cable-strewn desk in front of a wall-sized monochrome projection of white filaments radiating from a dark centre, like an iris or a burst of roots.",
+     "vocabulary": [
+      "audio-reactive",
+      "live AV / audiovisual performance",
+      "strands / trails (curves)",
+      "generative",
+      "spatial audio"
+     ],
+     "technique": "Real-time generative visuals built in TouchDesigner that respond to frequency, amplitude and texture of the music, not pre-rendered; paired with spatial audio (artist interview, Rendah Mag, by Daniel Aagentah).",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 3 (strands pulled to a centre, featured by Rendah Mag)",
+     "image": "c10-blcksun-amiangelika.jpg",
+     "rhymes": [
+      "Y3"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C11",
+     "title": "VEX in Houdini: Strange Attractors (tutorial)",
+     "creator": "Entagma (Moritz Schwind)",
+     "year": "2016",
+     "url": "https://entagma.com/vex-in-houdini-strange-attractors/",
+     "visible": "Hundreds of thin pale strands loop around two spiral eyes in a butterfly-like orbit, lit warm at the core and fading to single threads at the edges, on a dark blue-grey ground.",
+     "vocabulary": [
+      "strange attractor",
+      "strands / trails (curves)",
+      "solver",
+      "VEX",
+      "procedural"
+     ],
+     "technique": "A Houdini solver repeatedly moves points by an attractor formula written in VEX, then connects successive positions into curves for rendering (tutorial text). Image cropped from the video thumbnail (title card removed). This is the 'how' behind strand-orbit imagery.",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 3 (plyzitron strand vortex); anchor 2 (a trail through time)",
+     "image": "c11-entagma-strange-attractors.jpg",
+     "rhymes": [
+      "Y2",
+      "Y3"
+     ],
+     "rhymes_board": []
+    },
+    {
+     "id": "C12",
+     "title": "Oscilloscope Music: Attractor (from N-SPHERES)",
+     "creator": "Jerobeam Fenderson (with Hansi3D, oscilloscopemusic.com)",
+     "year": "2024",
+     "url": "https://www.youtube.com/watch?v=3uL_CZ1wWnI",
+     "visible": "A cyan-green glowing ring tilted in space wraps around a hazy sphere of tangled beam traces, all on pure black, like a planet drawn with one continuous wire.",
+     "vocabulary": [
+      "vector drawing (laser, oscilloscope X-Y)",
+      "strange attractor",
+      "strands / trails (curves)",
+      "audiovisual event",
+      "Lissajous"
+     ],
+     "technique": "The audio signal is fed straight into an analogue oscilloscope in X-Y mode: left channel is the horizontal axis, right channel the vertical, so the music draws the picture; Attractor explores semi-stable systems and chaotic oscillators (creator's video description and site). The channel currently displays as 'Jellybean Fenderson'.",
+     "evidence": "Creator says:",
+     "rhymes_with": "anchor 3 (orbits and strands); anchor 2 (a trace through time)",
+     "image": "c12-fenderson-attractor.jpg",
+     "rhymes": [
+      "Y2",
+      "Y3"
+     ],
+     "rhymes_board": []
+    }
+   ]
+  }
+ ],
+ "lexicon": [
+  {
+   "layer": "L1",
+   "term": "specimen",
+   "meaning": "A real organism shown as an object of study: isolated, lit evenly, labelled. The frame that turns a scan into natural history.",
+   "examples": [
+    "Y4",
+    "A01",
+    "A03",
+    "A07"
+   ]
+  },
+  {
+   "layer": "L1",
+   "term": "point cloud aesthetic",
+   "meaning": "The name researchers now use for this whole language: a real scanned subject, dissolving into data, with the scanner’s gaps kept.",
+   "examples": [
+    "A01",
+    "A05",
+    "A06"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "point cloud",
+   "meaning": "A 3D shape made only of dots, each with a position and often a colour. No skin, so it glows and dissolves on black.",
+   "examples": [
+    "Y1",
+    "Y4",
+    "A01",
+    "A04",
+    "C08"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "photogrammetry",
+   "meaning": "Rebuilding a 3D object from many overlapping photos. What Polycam, Scaniverse and RealityScan do under the hood.",
+   "examples": [
+    "Y4",
+    "A07",
+    "C09"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "LiDAR",
+   "meaning": "Laser scanning: pulses fired and timed to measure millions of exact distances. The source of most forest and landscape clouds.",
+   "examples": [
+    "A01",
+    "A03",
+    "A04",
+    "A05"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "Gaussian splatting (3DGS)",
+   "meaning": "A scene stored as millions of soft, see-through coloured blobs trained to match the photos. Photoreal from any angle, and fast enough to run live.",
+   "examples": [
+    "Y2",
+    "A07",
+    "A11"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "sparse vs dense cloud",
+   "meaning": "The first pass gives a thin cloud of matched feature points; a second pass fills in millions more. The spider looks like the sparse layer left visible.",
+   "examples": [
+    "Y1",
+    "A07",
+    "B09"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "volumetric capture / RGBD",
+   "meaning": "Recording a moving subject as 3D every frame, usually a colour camera plus a depth sensor such as a Kinect. Depthkit grew from this.",
+   "examples": [
+    "A09",
+    "A10",
+    "C07"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "depth map",
+   "meaning": "A greyscale image where brightness means distance. Push each pixel out and you have a point cloud.",
+   "examples": [
+    "A09",
+    "A10"
+   ]
+  },
+  {
+   "layer": "L2",
+   "term": "scan artefacts",
+   "meaning": "The scanner’s mistakes: holes it could not see into, smears where things moved, stray floaters. Much of this work keeps them as the look.",
+   "examples": [
+    "A05",
+    "A08",
+    "A10"
+   ]
+  },
+  {
+   "layer": "L3",
+   "term": "negative space",
+   "meaning": "Treating the black as the main material and the lit marks as the exception. Henke calls the dark between laser shapes \"negative objects\".",
+   "examples": [
+    "C02",
+    "C04",
+    "Y1"
+   ]
+  },
+  {
+   "layer": "L3",
+   "term": "monochrome plus one accent",
+   "meaning": "Black and white as the rule, one colour used only to flag something: the spider’s gold, the red running through Aleph 2.",
+   "examples": [
+    "Y1",
+    "C01",
+    "C06"
+   ]
+  },
+  {
+   "layer": "L3",
+   "term": "generative",
+   "meaning": "You design the rules and let them run; the system makes the picture, not your hand frame by frame.",
+   "examples": [
+    "C07",
+    "C09",
+    "C10",
+    "C11"
+   ]
+  },
+  {
+   "layer": "L3",
+   "term": "vector drawing",
+   "meaning": "Light drawn as moving lines, not pixels: lasers and oscilloscopes. The same signal can literally be the sound.",
+   "examples": [
+    "C02",
+    "C03",
+    "C12"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "camera frustum / camera pose",
+   "meaning": "The rectangle or pyramid drawn at each photo’s position once the software has solved where it was taken. Most likely the spider’s thin white frames.",
+   "examples": [
+    "Y1",
+    "Y2",
+    "A07",
+    "B09",
+    "B10"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "structure from motion (SfM)",
+   "meaning": "Working out where every photo was taken by matching the same points across images. COLMAP is the standard free tool.",
+   "examples": [
+    "A07",
+    "B09",
+    "B10"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "feature points",
+   "meaning": "Distinctive specks and corners software can find again in another frame. The dots that get matched and tracked; also called keypoints or tie points.",
+   "examples": [
+    "Y1",
+    "B01",
+    "B09"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "operational image",
+   "meaning": "Harun Farocki’s term: an image made for a machine to act on (aim, sort, steer), not for a person to look at.",
+   "examples": [
+    "B02",
+    "B03",
+    "B06"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "debug view",
+   "meaning": "The overlay a programmer draws to check an algorithm: boxes, dots, IDs, numbers. The aesthetic is this layer promoted to the artwork.",
+   "examples": [
+    "B01",
+    "B05",
+    "B11"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "bounding box",
+   "meaning": "The rectangle drawn round a detected thing, usually with a label and a confidence score such as \"person 95%\".",
+   "examples": [
+    "B03",
+    "B06",
+    "B12"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "blob tracking",
+   "meaning": "Finding bright or moving regions frame by frame and following each with a box and an ID. In TouchDesigner, the Blob Track TOP.",
+   "examples": [
+    "B11",
+    "B12"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "pose estimation",
+   "meaning": "Inferring a body’s joints from video and drawing them as a line skeleton.",
+   "examples": [
+    "B04"
+   ]
+  },
+  {
+   "layer": "L4",
+   "term": "construction lines",
+   "meaning": "Grids, axes, orbit rings and wireframe cells left in the picture instead of hidden, so the geometry shows how it was built.",
+   "examples": [
+    "Y3",
+    "C01",
+    "C07",
+    "C08"
+   ]
+  },
+  {
+   "layer": "L5",
+   "term": "annotation layer",
+   "meaning": "Tiny monospace labels, coordinates, counters and timecode laid over the image so it reads as a specimen sheet or instrument readout.",
+   "examples": [
+    "Y4",
+    "C01",
+    "C08",
+    "B05"
+   ]
+  },
+  {
+   "layer": "L5",
+   "term": "FUI / HUD",
+   "meaning": "Fictional user interfaces made for film, and the heads-up displays inside them: reticles, arcs, coordinates, micro-type.",
+   "examples": [
+    "B08",
+    "C08"
+   ]
+  },
+  {
+   "layer": "L5",
+   "term": "letter-spaced micro-type",
+   "meaning": "The typographic signature of the look: very small lowercase or capitals with wide tracking, placed at the edges like marginalia.",
+   "examples": [
+    "Y4",
+    "C08"
+   ]
+  },
+  {
+   "layer": "L6",
+   "term": "4D capture",
+   "meaning": "Time as the fourth dimension: rescanning the same place day after day, or rebuilding every video frame, so change itself becomes the image.",
+   "examples": [
+    "Y2",
+    "A01",
+    "A02"
+   ]
+  },
+  {
+   "layer": "L6",
+   "term": "strands / trails",
+   "meaning": "Particles that leave their recent path behind as thin lines. What makes particles read as hair, filament or orbit.",
+   "examples": [
+    "Y3",
+    "C09",
+    "C10",
+    "C11"
+   ]
+  },
+  {
+   "layer": "L6",
+   "term": "strange attractor",
+   "meaning": "A chaos formula that moves a point for ever without repeating. Plot its path and you get looping, orbiting strands.",
+   "examples": [
+    "C11",
+    "C12"
+   ]
+  },
+  {
+   "layer": "L6",
+   "term": "optical flow",
+   "meaning": "An estimate of how every patch of the picture moved between two frames, drawn as arrows or streaks.",
+   "examples": [
+    "B01"
+   ]
+  },
+  {
+   "layer": "L6",
+   "term": "audio-reactive / live AV",
+   "meaning": "Visuals driven by the sound’s measurements and performed with it, usually at MUTEK, CTM, Unsound or Sónar+D.",
+   "examples": [
+    "C02",
+    "C08",
+    "C10",
+    "A06"
+   ]
+  }
+ ],
+ "techniques": [
+  {
+   "id": "D01",
+   "title": "Scaniverse: free on-device splat capture, PLY out",
+   "serves": "Y1 spider (dense cloud) · Y4 agave",
+   "pipeline": [
+    "Scan the object in Scaniverse (iPhone, no LiDAR needed for splats)",
+    "Process on the phone (unlimited on-device splat processing is free)",
+    "Export PLY (or SPZ, about 90% smaller)",
+    "AirDrop to the Mac",
+    "Load the PLY in TouchDesigner (Point File In POP, Gaussian Splat Format = PLY/SPZ) or Blender (Import PLY node) and render the splat centres as points"
+   ],
+   "tools": "Scaniverse (iOS/Android, Niantic Spatial), iPhone",
+   "cost": "Free",
+   "time_to_first": "20 to 30 min*",
+   "url": "https://apps.apple.com/us/app/scaniverse-lidar-3d-scanner/id1541433223",
+   "image": "d01-scaniverse.jpg"
+  },
+  {
+   "id": "D04",
+   "title": "COLMAP on the Mac: sparse cloud plus camera poses",
+   "serves": "Y1 spider (the white rectangles and dots) · Y4 agave",
+   "pipeline": [
+    "Film 2 slow orbits of the subject on the iPhone, then pull ~150 frames with ffmpeg (fps=2)",
+    "Install: brew install colmap, or the colmap-arm64-macos.zip from the 4.2.0 release",
+    "GUI: Reconstruction > Automatic Reconstruction, workspace = project folder, untick dense (dense needs CUDA)",
+    "Result: sparse/0 with cameras, images and points3D",
+    "File > Export model (text): images.txt holds one quaternion + translation per photo, i.e. every frustum pose"
+   ],
+   "tools": "COLMAP 4.2.0, ffmpeg, iPhone",
+   "cost": "Free",
+   "time_to_first": "1 to 2 h first time, most of it compute*",
+   "url": "https://colmap.github.io/tutorial.html",
+   "image": "d04-colmap-mac.jpg"
+  },
+  {
+   "id": "D05",
+   "title": "Photogrammetry Importer: COLMAP cameras and image planes into Blender",
+   "serves": "Y1 spider",
+   "pipeline": [
+    "Install the add-on release v2026.02.16 in Blender 5.2",
+    "File > Import > Colmap (model/workspace), point it at sparse/0 (or the text export)",
+    "Tick cameras, image planes and point cloud as Geometry Nodes",
+    "Hide image textures, add a Wireframe modifier to the planes, emissive white = the thin rectangles",
+    "Point cloud via the add-on's Geometry Nodes renders in EEVEE or Cycles"
+   ],
+   "tools": "Blender 5.2 LTS, Photogrammetry Importer (SBCV)",
+   "cost": "Free",
+   "time_to_first": "30 to 60 min*",
+   "url": "https://github.com/SBCV/Blender-Addon-Photogrammetry-Importer",
+   "image": "d05-photogrammetry-importer.jpg"
+  },
+  {
+   "id": "D07",
+   "title": "Brush: train Gaussian splats natively on Apple silicon",
+   "serves": "Y1 spider (dense cloud from splat centres) · Y2 deer (plays PLY sequences)",
+   "pipeline": [
+    "Download the brush-app-aarch64-apple-darwin binary",
+    "Load the COLMAP folder from D04 (images + sparse)",
+    "Train (live preview), then Export PLY",
+    "Or load a folder/zip of PLY frames to play them as an animation"
+   ],
+   "tools": "Brush v0.3.0",
+   "cost": "Free",
+   "time_to_first": "1 to 2 h; M5 Pro training speed unconfirmed",
+   "url": "https://github.com/ArthurBrussee/brush",
+   "image": "d07-brush.jpg"
+  },
+  {
+   "id": "D12",
+   "title": "Blender: tiny emissive points in the dark",
+   "serves": "Y1 spider · Y4 agave",
+   "pipeline": [
+    "Import PLY node (or the D05 add-on) brings the cloud in as a mesh",
+    "Mesh to Points, radius 0.002 to 0.005",
+    "Emission material in warm gold, World pure black",
+    "Render EEVEE for speed or Cycles for quality; glow via compositor Glare"
+   ],
+   "tools": "Blender 5.2 LTS Geometry Nodes",
+   "cost": "Free",
+   "time_to_first": "1 to 2 h*",
+   "url": "https://www.youtube.com/watch?v=BXBGtBGIZsk",
+   "image": "d12-blender-dark-points.jpg"
+  },
+  {
+   "id": "D13",
+   "title": "Blender 5.3 (alpha): native Gaussian splats",
+   "serves": "Y1 spider · Y2 deer",
+   "pipeline": [
+    "Wait for 5.3 (release expected 10 Nov 2026) or test the alpha",
+    "Import a Scaniverse PLY/SPZ directly as a splat point cloud",
+    "Swap the default emissive shader, or keep it for the glow",
+    "Use Set Point Cloud Type / Import SPZ nodes procedurally"
+   ],
+   "tools": "Blender 5.3 alpha",
+   "cost": "Free",
+   "time_to_first": "30 min once released*",
+   "url": "https://developer.blender.org/docs/release_notes/5.3/rendering/",
+   "image": "d13-blender-53-splats.jpg"
+  },
+  {
+   "id": "D10",
+   "title": "TouchDesigner POPs: point clouds and splats on black",
+   "serves": "Y1 spider · Y3 plyzitron · Y4 agave",
+   "pipeline": [
+    "Point File In POP: load the PLY (Gaussian Splat Format Auto/PLY/SPZ for splats)",
+    "Thin points if needed, colour ramp to warm gold",
+    "Render as points on a black background",
+    "Optional: Particle POP emission from the cloud and proximity lines, as in plyzitron's tutorial"
+   ],
+   "tools": "TouchDesigner 2025 (POPs)",
+   "cost": "Free (Non-Commercial)",
+   "time_to_first": "1 to 2 h*",
+   "url": "https://www.youtube.com/watch?v=c7bZ0zCd3f4",
+   "image": "d10-td-pointcloud-pops.jpg"
+  },
+  {
+   "id": "D11",
+   "title": "TouchDesigner Blob Track TOP: boxes, IDs and lines",
+   "serves": "Y1 spider (tracked dots) · Y2 deer (track + labels) · Y4 agave (annotations)",
+   "pipeline": [
+    "Movie File In TOP (or camera) into Blob Track TOP",
+    "Read blob IDs, positions and sizes from its Info DAT",
+    "Instance rectangles and monospace coordinate labels per blob",
+    "Connect blob centres with lines (POPs) for the web look"
+   ],
+   "tools": "TouchDesigner 2025",
+   "cost": "Free (Non-Commercial)",
+   "time_to_first": "1 h*",
+   "url": "https://www.youtube.com/watch?v=D5N1R5CVMkc",
+   "image": "d11-td-blob-track.jpg"
+  },
+  {
+   "id": "D09",
+   "title": "Video to 4D: one SHARP splat per frame",
+   "serves": "Y2 Bilawal deer",
+   "pipeline": [
+    "Film a locked-off iPhone clip (a still camera keeps frames aligned)",
+    "ffmpeg the clip to frames",
+    "sharp predict -i frames -o gaussians (runs on MPS; the --render flag needs CUDA)",
+    "Play the PLY sequence in Brush, or load it as a file sequence in TouchDesigner (Point File In POP) and add Trail POP for the path",
+    "Overlay monospace labels (distance, speed) with a Text TOP"
+   ],
+   "tools": "Apple ml-sharp, ffmpeg, Brush or TouchDesigner",
+   "cost": "Free (research-only licence)",
+   "time_to_first": "2 to 4 h*",
+   "url": "https://github.com/apple/ml-sharp",
+   "image": "d09-sharp-video-to-4d.jpg"
+  },
+  {
+   "id": "D18",
+   "title": "TouchDesigner POPs strands and orbits",
+   "serves": "Y3 plyzitron",
+   "pipeline": [
+    "Particle POP with a swirl/orbit force",
+    "Trail POP keeps the last N frames and joins them into line strips by particle Id",
+    "Circle POP for the thin concentric rings",
+    "Line MAT, monochrome, black background"
+   ],
+   "tools": "TouchDesigner 2025 (POPs)",
+   "cost": "Free (Non-Commercial)",
+   "time_to_first": "1 to 2 h*",
+   "url": "https://www.youtube.com/watch?v=A5upp-S8Qaw",
+   "image": "d18-td-pops-line-trails.jpg"
+  },
+  {
+   "id": "D20",
+   "title": "Blender Geometry Nodes: simulation-zone trails",
+   "serves": "Y3 plyzitron",
+   "pipeline": [
+    "Simulation Zone moving points with a curl or orbit field",
+    "Store positions per frame, Points to Curves for strands",
+    "Curve radius tiny, emission white on black",
+    "Add thin circles as separate curve objects"
+   ],
+   "tools": "Blender 5.2 LTS",
+   "cost": "Free",
+   "time_to_first": "2 to 3 h*",
+   "url": "https://www.youtube.com/watch?v=7RSgGQjgLPY",
+   "image": "d20-blender-sim-trails.jpg"
+  }
+ ],
+ "decoded": [
+  {
+   "image": "decoded-bittel-frusta.jpg",
+   "cap": "The apparatus. Dany Bittel’s COLMAP solve for an insect scan: one white pyramid per photo, 111 angles, around a tiny cloud of points (A07)."
+  },
+  {
+   "image": "decoded-bittel-wasp.jpg",
+   "cap": "The subject. The finished Gaussian splat of the same kind of capture: a wasp, trained in Postshot from those photos (A07)."
+  },
+  {
+   "image": "b04-discrete-figures.jpg",
+   "cap": "The same move on stage. Rhizomatiks and ELEVENPLAY put dancers inside thin frames and draw the tracked skeleton over them (B04)."
+  }
+ ]
+}
