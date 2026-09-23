@@ -1,0 +1,10 @@
+{
+ "name": "k2-twin-test",
+ "plate": "experiments/003-spider-probe/alignment/out3/k2-plate.png",
+ "preset": "Data twin (Azat)",
+ "params": {"bind": {"bloom": "BASS", "radius": "BASS", "fxAmt": "HIGH"}, "depth": 70},
+ "format": "1280x720",
+ "fps": 24,
+ "seconds": 4,
+ "audio": "experiments/004-specimen-studio/audio/test-pulse-120bpm.wav"
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.10">
+<resources>
+<format id="r0" name="FFVideoFormat720p24" frameDuration="1/24s" width="1280" height="720"/>
+<asset id="r1" name="k2-twin-test" start="0s" duration="4s" hasVideo="1" format="r0" hasAudio="1" audioSources="1" audioChannels="2" audioRate="44100"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/k2-twin-test.mp4"/></asset>
+<asset id="r2" name="chain-test" start="0s" duration="3s" hasVideo="1" format="r0"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/render/chain-test.mp4"/></asset>
+<asset id="r3" name="test-pulse-120bpm" start="0s" duration="8s" hasAudio="1" audioSources="1" audioChannels="2" audioRate="44100"><media-rep kind="original-media" src="file:///Users/user/Projects/3D%20Design/.claude/worktrees/mood-board-dark-geometric-339848/experiments/004-specimen-studio/audio/test-pulse-120bpm.wav"/></asset>
+</resources>
+<library><event name="Spider piece test"><project name="Spider piece test">
+<sequence format="r0" duration="7s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k"><spine>
+<asset-clip ref="r1" name="k2-twin-test" offset="0s" start="0s" duration="4s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="k2-twin-test"/><asset-clip ref="r3" lane="-1" name="test-pulse-120bpm" offset="0s" start="0s" duration="7s" audioRole="music"/></asset-clip>
+<asset-clip ref="r2" name="chain-test" offset="4s" start="0s" duration="3s" format="r0" tcFormat="NDF"><marker start="0s" duration="1/24s" value="chain-test"/></asset-clip>
+</spine></sequence></project></event></library>
+</fcpxml>
