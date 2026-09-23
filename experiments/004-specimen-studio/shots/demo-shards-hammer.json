@@ -1,0 +1,1 @@
+{"name": "demo-shards-hammer", "plate": "experiments/003-spider-probe/video/out/h4.mp4", "preset": "Shards \u00b7 audio-reactive", "params": {"formY": 50, "matteTh": 18, "trackX": 80, "trackY": 50}, "audio": "experiments/004-specimen-studio/audio/hammer-industrial-150.wav", "format": "1080x1920", "fps": 24, "seconds": 8}

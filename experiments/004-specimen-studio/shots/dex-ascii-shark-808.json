@@ -1,0 +1,1 @@
+{"name": "dex-ascii-shark-808", "plate": "experiments/003-spider-probe/video/out/h4.mp4", "preset": "ASC II", "params": {"bind": {"fxAmt": "BASS", "src": "MID", "glitch": "HIGH"}, "depth": 40}, "audio": "experiments/004-specimen-studio/audio/808-night-140.wav", "format": "1080x1920", "fps": 24, "seconds": 8}

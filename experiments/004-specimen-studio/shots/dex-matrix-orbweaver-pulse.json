@@ -1,0 +1,1 @@
+{"name": "dex-matrix-orbweaver-pulse", "plate": "experiments/003-spider-probe/video/out/e1.mp4", "preset": "matrix asc II", "params": {"bind": {"fxAmt": "BASS", "bloom": "BASS", "glitch": "HIGH"}, "depth": 45}, "audio": "experiments/004-specimen-studio/audio/pulse-techno-128.wav", "format": "1080x1920", "fps": 24, "seconds": 8}

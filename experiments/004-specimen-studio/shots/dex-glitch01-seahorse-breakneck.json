@@ -1,0 +1,1 @@
+{"name": "dex-glitch01-seahorse-breakneck", "plate": "experiments/003-spider-probe/video/out/e5.mp4", "preset": "glitch 01", "params": {"bind": {"glitch": "HIGH", "dof": "MID", "bloom": "BASS"}, "depth": 40, "trackX": 62, "trackY": 36}, "audio": "experiments/004-specimen-studio/audio/breakneck-dnb-172.wav", "format": "1080x1920", "fps": 24, "seconds": 8}
