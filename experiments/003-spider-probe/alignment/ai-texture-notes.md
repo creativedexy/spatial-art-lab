@@ -1,4 +1,6 @@
-# Why the panther reads as AI, and the fix (23 Sep 2026)
+# Why the panther plates read as AI, and the fix (23 Sep 2026)
+
+**Correction:** Dex meant the ground, not the fur, and preferred H1-H3's original lighting. Round 12 (fur re-render, section below) was the wrong target; round 13 (ground only) is the fix. See "The ground" at the end.
 
 ## What the crops of H1-H3 show
 | Tell | In the plate | Real photograph |
@@ -20,3 +22,12 @@ Sources: getimg.ai "Why AI skin looks fake"; Upsampler "Make AI images look real
 
 ## Result (round 12)
 The prompt fix alone did it: P1-P3 read as photographs. A post pass (grain plus softening off the eye) was tested on H2 and dropped; it cannot undo combed-strand fur, and the re-render needs no help.
+
+## The ground (round 13, the actual fix)
+| Plate | Generated tell | What the edit asked for |
+|---|---|---|
+| H1 sandstone | Same crumbly sponge lumps everywhere, all equally sharp, flat saturated orange | Bedding lines, a fracture edge, wind-worn faces, loose grit, varied rust to ochre, foreground out of focus |
+| H2 mangrove | Smeared glaze like melted chocolate | Rough bark, oysters and barnacles at the waterline, algae, foreground soft |
+| H3 snow | Oversized sugar-like crystals, even sparkle | Soft matte powder in drifts, sparkle only where the torch hits, blue-grey shadow, granite grain |
+
+Method: pass the approved plate as the edit target, say what to keep (animal, light, grade, composition) and change only the ground. The rule that carried over: a real long-lens shot has **one plane of focus**; generated surfaces are equally sharp and equally textured from front to back.

@@ -1,0 +1,9 @@
+# Round 13: fix the ground only
+The attached images are H1, H2, H3 (in that order). **They are the edit targets. Keep the panther, its pose, the lighting, the colour grade, the background and the composition exactly as they are. Change only the ground surface under and in front of the paws** (roughly the bottom third of the frame). Dex loves these images; the only problem is that the ground has a generated look.
+
+What makes each ground look generated, and what a real photograph shows instead:
+- H1 sandstone: the same crumbly, sponge-like lumps repeated everywhere, all equally sharp, flat saturated orange, evenly lit. Real: a sandstone ledge with fine horizontal bedding lines and cross-bedding, a clean fracture edge, smooth wind-worn faces, loose grit and a few small pebbles, dark desert-varnish streaks, colour varying from rust to pale ochre. With a 400mm lens focused on the eye, the ground nearest the camera (bottom of frame) is soft and out of focus; only the strip under the paws is sharp. The torch rakes across it, so the far edge glows and the near foreground falls into shadow.
+- H2 mangrove root: a smeared glaze like melted chocolate. Real: a grey-brown mangrove prop root with rough bark, lenticels, a band of small oysters and barnacles at the waterline, a film of green algae, wet only on the lower part. Foreground soft, as above.
+- H3 snow: oversized crystals like sugar or salt, evenly sparkling. Real: soft powder snow sitting in drifts on dark granite, fine and mostly matte, sparkle only in a few spots where the torch hits; blue-grey in the shadows; the granite showing feldspar grain and lichen at the edges. Foreground soft, as above.
+
+Save PNGs as 1080 x 1920 in experiments/003-spider-probe/alignment/out13/: `g1-sandstone.png`, `g2-mangrove.png`, `g3-snow.png` (if the output is 1024 x 1536, scale to 1920 tall and centre-crop the width with sips). Write `out13/notes.md` and `out13/prompts.json`.
