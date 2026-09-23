@@ -86,7 +86,8 @@ const SCHEMA = [
     ['bloom', 'BLOOM %', 0, 100, 1, 22], ['streaks', 'STREAKS %', 0, 100, 1, 0], ['trails', 'TRAILS %', 0, 95, 1, 0],
     ['contrast', 'GRADE CONTRAST %', 60, 160, 1, 106], ['sat', 'GRADE SATURATION %', 0, 200, 1, 105], ['paper', 'PAPER TINT %', 0, 60, 1, 0]]],
   ['DEPTH + 4D', [
-    {key: 'hyper', label: '4D FORM', options: ['OFF', 'TESSERACT', 'NESTED FRAMES', 'BOTH'], def: 'OFF'},
+    {key: 'hyper', label: '4D FORM', options: ['OFF', 'TESSERACT', 'NESTED FRAMES', 'BOTH', '16-CELL', '24-CELL', 'HOPF RINGS', 'LATTICE', 'GOLDEN SPIRAL', 'SHARDS', 'SLICES', 'ARMILLARY'], def: 'OFF'},
+    {key: 'rays', label: 'RAYS FROM TRACKED POINT', toggle: true, def: false},
     ['hsize', 'FORM SIZE %', 10, 140, 1, 62], ['hdepth', 'FORM DEPTH %', 10, 200, 1, 80], ['wdist', '4D PERSPECTIVE', 1.6, 6, 0.1, 2.6],
     ['hspin', '4D SPIN', 0, 2, 0.01, 0.35], ['hw', 'FORM LINE WEIGHT', 0.3, 3, 0.05, 1], ['formY', 'FORM CENTRE Y %', 20, 80, 1, 50],
     ['dof', 'DEPTH BLUR (PX)', 0, 40, 0.5, 14], {key: 'rack', label: 'RACK FOCUS', toggle: true, def: true},
@@ -401,6 +402,61 @@ function formEdges(E, T, W, H, ph) {
     F.forEach((f, i) => { for (let k = 0; k < 4; k++) add(f[k], f[(k + 1) % 4]); if (i) { add(F[i - 1][0], f[0]); add(F[i - 1][2], f[2]); } });
     if (E.hyper === 'NESTED FRAMES') formPts = F.flat();
   }
+  const poly = (Q, closed) => { const V = Q.map(proj); for (let i = 0; i + 1 < V.length; i++) add(V[i], V[i + 1]); if (closed) add(V[V.length - 1], V[0]); return V; };
+  const sc = ([x, y, z, w]) => [x * 0.62, y, z * 0.62, w * 0.62];               // portrait: tall in y
+  if (E.hyper === '16-CELL') {                                              // cross-polytope: 8 vertices, every non-opposite pair joined
+    const Q = []; for (let b = 0; b < 4; b++) for (const s of [1, -1]) { const v = [0, 0, 0, 0]; v[b] = s; Q.push(sc(v)); }
+    const V = Q.map(proj); for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) if (i >> 1 !== j >> 1) add(V[i], V[j]); formPts = V;
+  }
+  if (E.hyper === '24-CELL') {                                              // all permutations of (±1,±1,0,0); edges at distance sqrt 2
+    const Q = []; for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) for (const s of [1, -1]) for (const u of [1, -1]) { const v = [0, 0, 0, 0]; v[a] = s; v[b] = u; Q.push(v); }
+    const V = Q.map(v => proj(sc(v.map(c => c * 0.72))));
+    for (let i = 0; i < 24; i++) for (let j = i + 1; j < 24; j++) if (Q[i].reduce((m, c, k) => m + (c - Q[j][k]) ** 2, 0) === 2) add(V[i], V[j]); formPts = V;
+  }
+  if (E.hyper === 'HOPF RINGS') {                                           // Hopf fibres: interlinked great circles on the 3-sphere
+    formPts = [];
+    for (let k = 0; k < 9; k++) { const ph0 = k / 9 * Math.PI * 2, eta = 0.35 + 0.4 * (k % 3) / 2, Q = [];
+      for (let s = 0; s < 40; s++) { const u = s / 40 * Math.PI * 2; Q.push(sc([Math.cos(eta) * Math.cos(u), Math.cos(eta) * Math.sin(u), Math.sin(eta) * Math.cos(u + ph0), Math.sin(eta) * Math.sin(u + ph0)].map(c => c * 1.25))); }
+      formPts.push(...poly(Q, true).filter((_, i) => i % 10 === 0)); }
+  }
+  if (E.hyper === 'LATTICE') {                                              // a portrait grid of rectangles in depth
+    const X = [-1, 0, 1], Y = [-1, -1 / 3, 1 / 3, 1], Z = [-1, 0, 1], id = (i, j, k) => (i * 4 + j) * 3 + k, V = [];
+    for (const x of X) for (const y of Y) for (const z of Z) V.push(proj(sc([x, y, z, 0.35 * Math.sin(a + x + z)])));
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 3; k++) { if (i < 2) add(V[id(i, j, k)], V[id(i + 1, j, k)]); if (j < 3) add(V[id(i, j, k)], V[id(i, j + 1, k)]); if (k < 2) add(V[id(i, j, k)], V[id(i, j, k + 1)]); }
+    formPts = V;
+  }
+  if (E.hyper === 'GOLDEN SPIRAL') {                                        // golden rectangles, each cut to a square, spiralling back in depth
+    const g = 1.618; let x0 = -0.62, y0 = -1, w = 1.24, h = 1.24 * g; formPts = [];
+    for (let i = 0; i < 9; i++) {
+      const z = -0.9 + i * 0.28, rect = [[x0, y0], [x0 + w, y0], [x0 + w, y0 + h], [x0, y0 + h]];
+      formPts.push(...poly(rect.map(([x, y]) => [x, y, z, 0.3 * Math.sin(a + i * 0.7)]), true));
+      const d = i % 4; let sq, cx, cy, a0;                                     // square cut off: top, right, bottom, left in turn
+      if (d === 0) { sq = w; cx = x0 + w; cy = y0 + w; a0 = Math.PI; y0 += w; h -= w; }
+      else if (d === 1) { sq = h; cx = x0 + w - h; cy = y0 + h; a0 = -Math.PI / 2; w -= h; }
+      else if (d === 2) { sq = w; cx = x0; cy = y0 + h - w; a0 = 0; h -= w; }
+      else { sq = h; cx = x0 + h; cy = y0; a0 = Math.PI / 2; x0 += h; w -= h; }
+      const arc = []; for (let s = 0; s <= 10; s++) { const u = a0 + s / 10 * Math.PI / 2; arc.push([cx + sq * Math.cos(u), cy + sq * Math.sin(u), z, 0.3 * Math.sin(a + i * 0.7)]); }
+      poly(arc, false);
+    }
+  }
+  if (E.hyper === 'SHARDS') {                                               // small rectangles scattered through depth: bokeh under the depth blur
+    const r = rng(E.seed + 101); formPts = [];
+    for (let i = 0; i < 34; i++) {
+      const cx = (r() - 0.5) * 2.2, cy = (r() - 0.5) * 3.2, cz = (r() - 0.5) * 3, s = 0.05 + r() ** 2 * 0.28, asp = 0.5 + r(), t0 = r() * 6, spin = a * (0.5 + r());
+      const Q = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => [cx + u * s * Math.cos(t0 + spin), cy + v * s * asp, cz + u * s * Math.sin(t0 + spin), 0.2 * Math.sin(a + i)]);
+      formPts.push(poly(Q, true)[0]);
+    }
+  }
+  if (E.hyper === 'SLICES') {                                               // horizontal planes stacked through the animal, like scan slices
+    formPts = []; let prevQ = null;
+    for (let i = 0; i < 10; i++) { const y = -1.1 + i * 0.244, w = 0.25 * Math.sin(a + i * 0.5), Q = [[-0.95, y, -0.95, w], [0.95, y, -0.95, w], [0.95, y, 0.95, w], [-0.95, y, 0.95, w]];
+      const V = poly(Q, true); formPts.push(...V); if (prevQ) { add(prevQ[0], V[0]); add(prevQ[2], V[2]); } prevQ = V; }
+  }
+  if (E.hyper === 'ARMILLARY') {                                            // gyroscope rings, tilted, turning through w
+    formPts = []; const ring = f => { const Q = []; for (let s = 0; s < 56; s++) { const u = s / 56 * Math.PI * 2; Q.push(f(Math.cos(u), Math.sin(u))); } formPts.push(...poly(Q, true).filter((_, i) => i % 14 === 0)); };
+    ring((c, s) => [c * 0.9, s * 1.3, 0, 0]); ring((c, s) => [0, s * 1.3, c * 0.9, 0]); ring((c, s) => [c * 0.9, 0, s * 0.9, 0.3]);
+    ring((c, s) => [c * 0.9, 0.55, s * 0.9, 0]); ring((c, s) => [c * 0.9, -0.55, s * 0.9, 0]); ring((c, s) => [c * 0.66, s * 0.95, s * 0.66, c * 0.4]);
+  }
   const fz = E.rack ? -0.9 + 1.8 * ease(Math.min(1, Math.max(0, (ph - 0.1) / 0.8))) : 0;   // the focal plane racks through the form
   for (const e of out) {
     const blur = E.dof * Math.min(1, Math.abs(e.z - fz) / 1.1);
@@ -447,6 +503,7 @@ function drawTrack(E, T, W, H, ph) {
   ctx.fillStyle = E.acc; ctx.fillRect(x + r + 5 * u, y - r, 4 * u, 4 * u);
   ctx.fillStyle = hexA(E.ink, 0.95); ctx.font = `${Math.round(12 * u)}px Menlo, monospace`;
   ctx.fillText(`T01  ${(x / W).toFixed(3)}  ${(y / H).toFixed(3)}`, x + r + 12 * u, y - r + 5 * u);
+  if (E.rays && formPts.length && E.hyper !== 'OFF') { ctx.strokeStyle = hexA(E.ink, 0.22); ctx.lineWidth = 0.8 * u; ctx.beginPath(); for (const v of formPts) { ctx.moveTo(x, y); ctx.lineTo(v.x, v.y); } ctx.stroke(); }
   if (formPts.length && E.hyper !== 'OFF') {                                // tie the animal to the nearest vertex of the form
     const v = formPts.reduce((m, p) => Math.hypot(p.x - x, p.y - y) < Math.hypot(m.x - x, m.y - y) ? p : m);
     ctx.setLineDash([3 * u, 5 * u]); ctx.strokeStyle = hexA(E.ink, 0.5); ctx.beginPath(); ctx.moveTo(x + r * 0.7, y - r * 0.7); ctx.lineTo(v.x, v.y); ctx.stroke(); ctx.setLineDash([]);
@@ -565,7 +622,7 @@ function render(time) {
   if (!HEADLESS) requestAnimationFrame(render);
 }
 // ---------------------------------------------------------------------------------------------------
-function changed(k) { if (k === 'layout') { extract(); return; } if (['fx', 'cell', 'fxth', 'fxAmt', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'depth', 'lfo', 'ink', 'acc', 'blend', 'src', 'over', 'speed', 'amount', 'motion', 'scan', 'grain', 'frame', 'sidebar', 'lw', 'lalpha', 'radius', 'stroke', 'fill', 'title', 'labels', 'hyper', 'hsize', 'hdepth', 'wdist', 'hspin', 'hw', 'formY', 'dof', 'rack', 'pblur', 'pfocus', 'occlude', 'matteTh', 'track', 'trackX', 'trackY', 'glitch'].includes(k)) return; extract(); }
+function changed(k) { if (k === 'layout') { extract(); return; } if (['fx', 'cell', 'fxth', 'fxAmt', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'depth', 'lfo', 'ink', 'acc', 'blend', 'src', 'over', 'speed', 'amount', 'motion', 'scan', 'grain', 'frame', 'sidebar', 'lw', 'lalpha', 'radius', 'stroke', 'fill', 'title', 'labels', 'hyper', 'hsize', 'hdepth', 'wdist', 'hspin', 'hw', 'formY', 'dof', 'rack', 'pblur', 'pfocus', 'occlude', 'matteTh', 'track', 'trackX', 'trackY', 'glitch', 'rays'].includes(k)) return; extract(); }
 function setSource(el, video) { src = el; isVideo = video; frameNo = 0; if (video) { el.muted = true; el.loop = true; el.playsInline = true; el.play(); } setTimeout(extract, 50); }
 function loadFile(f) {
   const url = URL.createObjectURL(f);
