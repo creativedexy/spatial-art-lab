@@ -2,12 +2,24 @@
 
     python3 experiments/004-specimen-studio/serve.py        # then open the printed URL
 Python's own http.server has no Range support, so browsers cannot seek or loop video from it.
+API (loopback only): GET /api/library lists plates, shots and audio; POST /api/presets merges into presets.json;
+POST /api/shot writes shots/<name>.json. Drop new clips in plates/ and tracks in audio/; they appear on reload.
 """
-import http.server, os, re, sys
+import http.server, json, os, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8790
+HERE = ROOT / 'experiments/004-specimen-studio'
+PLATE_DIRS = [ROOT / 'experiments/003-spider-probe/video/out', HERE / 'plates']
+MEDIA = ('.mp4', '.mov', '.webm', '.m4v', '.png', '.jpg', '.jpeg')
+
+
+def library():
+    rel = lambda f: f.relative_to(ROOT).as_posix()
+    plates = [{'label': f.stem, 'path': rel(f)} for d in PLATE_DIRS if d.exists() for f in sorted(d.iterdir()) if f.suffix.lower() in MEDIA]
+    audio = [rel(f) for f in sorted((HERE / 'audio').glob('*')) if f.suffix.lower() in ('.wav', '.mp3', '.m4a', '.aif', '.aiff', '.flac', '.ogg')]
+    return {'plates': plates, 'shots': sorted(f.stem for f in (HERE / 'shots').glob('*.json')), 'audio': audio}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -17,6 +29,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Accept-Ranges', 'bytes'); self.send_header('Cache-Control', 'no-store')
         super().end_headers()
+
+    def _json(self, code, obj):
+        b = json.dumps(obj).encode(); self.send_response(code)
+        self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
+
+    def do_GET(self):
+        if self.path.split('?')[0] == '/api/library':
+            return self._json(200, library())
+        super().do_GET()
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers.get('Content-Length', 0))) or b'{}')
+        if self.path == '/api/presets':                          # merge by name; never deletes
+            f = HERE / 'presets.json'; cur = json.loads(f.read_text()) if f.exists() else {}
+            cur.update(body); f.write_text(json.dumps(cur, indent=1)); return self._json(200, {'presets': len(cur)})
+        if self.path == '/api/shot':
+            name = re.sub(r'[^\w.-]+', '-', str(body.get('name', 'shot')))[:80] or 'shot'
+            (HERE / 'shots' / f'{name}.json').write_text(json.dumps({**body, 'name': name}))
+            return self._json(200, {'saved': f'shots/{name}.json'})
+        self._json(404, {'error': 'unknown'})
 
     def send_head(self):
         m = re.match(r'bytes=(\d*)-(\d*)', self.headers.get('Range', ''))
