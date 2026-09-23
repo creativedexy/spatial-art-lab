@@ -84,6 +84,15 @@ const SCHEMA = [
   ['FINISH', [
     ['bloom', 'BLOOM %', 0, 100, 1, 22], ['streaks', 'STREAKS %', 0, 100, 1, 0], ['trails', 'TRAILS %', 0, 95, 1, 0],
     ['contrast', 'GRADE CONTRAST %', 60, 160, 1, 106], ['sat', 'GRADE SATURATION %', 0, 200, 1, 105], ['paper', 'PAPER TINT %', 0, 60, 1, 0]]],
+  ['DEPTH + 4D', [
+    {key: 'hyper', label: '4D FORM', options: ['OFF', 'TESSERACT', 'NESTED FRAMES', 'BOTH'], def: 'OFF'},
+    ['hsize', 'FORM SIZE %', 10, 140, 1, 62], ['hdepth', 'FORM DEPTH %', 10, 200, 1, 80], ['wdist', '4D PERSPECTIVE', 1.6, 6, 0.1, 2.6],
+    ['hspin', '4D SPIN', 0, 2, 0.01, 0.35], ['hw', 'FORM LINE WEIGHT', 0.3, 3, 0.05, 1], ['formY', 'FORM CENTRE Y %', 20, 80, 1, 50],
+    ['dof', 'DEPTH BLUR (PX)', 0, 40, 0.5, 14], {key: 'rack', label: 'RACK FOCUS', toggle: true, def: true},
+    ['pblur', 'PLATE BLUR (PX)', 0, 40, 0.5, 0], ['pfocus', 'PLATE FOCUS RADIUS %', 5, 90, 1, 32],
+    {key: 'occlude', label: 'PASS BEHIND ANIMAL', toggle: true, def: true}, ['matteTh', 'ANIMAL MATTE %', 2, 60, 1, 14],
+    {key: 'track', label: 'TRACKING', options: ['OFF', 'GLIMPSE', 'ON'], def: 'OFF'}, ['trackX', 'TRACK START X %', 0, 100, 1, 50], ['trackY', 'TRACK START Y %', 0, 100, 1, 40],
+    ['glitch', 'GLITCH %', 0, 100, 1, 0]]],
   ['SOUND + BINDINGS', [['depth', 'BINDING DEPTH %', 0, 100, 1, 60], ['lfo', 'LFO RATE (HZ)', 0.05, 4, 0.05, 0.5]]],
   ['MOTION', [
     {key: 'motion', label: 'MOTION PROGRAM', options: ['ASSEMBLE + SWEEP', 'SCAN SWEEP', 'SIGNAL PULSE', 'ORBIT', 'GLITCH SLICE', 'OFF'], def: 'ASSEMBLE + SWEEP'},
@@ -96,11 +105,15 @@ const PRESETS = {
   'Data twin (Azat)': {layout: 'TWIN', fx: 'NUMBER FIELD', link: 'PROXIMITY', grid: 'OFF', chain: false, locks: 4, shapeShare: 30, shape: 'CIRCLE', nodes: 260, cell: 13, fxth: 22, ink: '#f1efe6', acc: '#8dff6a', bloom: 35, motion: 'SIGNAL PULSE', title: 'ARANEAE / DATA TWIN'},
   'ASCII specimen': {fx: 'ASCII', link: 'OFF', grid: 'OFF', chain: false, cell: 9, fxth: 14, src: 10, motion: 'SIGNAL PULSE', fxAmt: 95, ink: '#e9dcc0', shapeShare: 0, locks: 3, bloom: 30},
   'Glitch track': {link: 'HYBRID', ink: '#9ff0ff', acc: '#ff3b3b', grid: 'FRAGMENT', motion: 'GLITCH SLICE', amount: 70, locks: 6, sidebar: true},
+  'Depth 4D · minimal': {hyper: 'TESSERACT', track: 'GLIMPSE', glitch: 22, pblur: 4, pfocus: 42, hw: 1.8, dof: 9, over: 0, link: 'OFF', grid: 'OFF', chain: false, labels: false, lock: false, frame: false,
+    shapeShare: 0, nodes: 40, src: 100, motion: 'OFF', scan: 0, grain: 6, bloom: 16, contrast: 100, sat: 100, ink: '#f4f1ea', acc: '#ff6a3d', title: ''},
+  'Depth 4D · corridor': {hyper: 'NESTED FRAMES', hsize: 78, hdepth: 120, track: 'GLIMPSE', glitch: 18, pblur: 5, pfocus: 42, hw: 1.8, dof: 9, over: 0, link: 'OFF', grid: 'OFF', chain: false, labels: false, lock: false, frame: false,
+    shapeShare: 0, nodes: 40, src: 100, motion: 'OFF', scan: 0, grain: 6, bloom: 16, contrast: 100, sat: 100, ink: '#f4f1ea', acc: '#ff6a3d', title: ''},
 };
 // ---------------------------------------------------------------------------------------------------
 const $ = id => document.getElementById(id), cv = $('c'), ctx = cv.getContext('2d');
 const P = {}; const defaults = {}; const RANGE = {};
-const BINDABLE = ['radius', 'smax', 'lw', 'lalpha', 'over', 'src', 'amount', 'fill', 'scan', 'grain', 'fxAmt', 'fxth', 'cell', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'speed'];
+const BINDABLE = ['dof', 'pblur', 'hspin', 'hsize', 'glitch', 'radius', 'smax', 'lw', 'lalpha', 'over', 'src', 'amount', 'fill', 'scan', 'grain', 'fxAmt', 'fxth', 'cell', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'speed'];
 const SIGNALS = ['—', 'BASS', 'MID', 'HIGH', 'LFO'];
 for (const [, items] of SCHEMA) for (const it of items) { const k = Array.isArray(it) ? it[0] : it.key; defaults[k] = Array.isArray(it) ? it[5] : it.def; if (Array.isArray(it)) RANGE[k] = [it[2], it[3]]; }
 defaults.bind = {};
@@ -304,6 +317,138 @@ function finish(E, W, H) {
   ctx.restore();
   if (E.paper) { ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(236,224,196,${E.paper / 100})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
 }
+// ---------------------------------------------------------------------------------------------------
+// Depth + 4D: a hyper-rectangle (or nested frames) turning through the 4th dimension around the animal. Each edge is
+// Gaussian-blurred by its distance from a focal plane that racks through the form; edges behind the animal plane pass
+// behind it (a luminance matte of the plate). A tracker follows the brightest feature; rare glitch frames split it.
+const mt = document.createElement('canvas'), mctx = mt.getContext('2d', {willReadFrequently: true});
+const matte = document.createElement('canvas'), mat = matte.getContext('2d');
+const lay = document.createElement('canvas'), lctx = lay.getContext('2d');
+const geo = document.createElement('canvas'), gctx = geo.getContext('2d');
+const pb = document.createElement('canvas'), pbx = pb.getContext('2d');
+let trk = null, cen = null, hist = [], formPts = [];
+const resetDepth = () => { trk = null; cen = null; hist = []; };
+const ease = x => x * x * (3 - 2 * x);
+function glitchAt(E, T) {                                                   // deterministic: some 1/12 s steps are glitch frames
+  if (!E.glitch) return 0; const k = Math.floor(T * 12);
+  return rng(k * 7919 + E.seed)() < E.glitch / 100 * 0.12 ? 0.5 + rng(k)() : 0;
+}
+function updateMatte(E, W, H) {
+  const w = W >> 2, h = H >> 2; mt.width = w; mt.height = h; cover(mctx, w, h);
+  const d = mctx.getImageData(0, 0, w, h), px = d.data, th = E.matteTh / 100, L = new Float32Array(w * h);
+  let sx = 0, sy = 0, sm = 0;
+  for (let i = 0, j = 0; i < px.length; i += 4, j++) {
+    L[j] = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) / 255; const a = Math.min(1, Math.max(0, (L[j] - th) / 0.12));
+    px[i] = px[i + 1] = px[i + 2] = 255; px[i + 3] = a * 255;
+    if (a > 0.5) { sx += (j % w) * a; sy += Math.floor(j / w) * a; sm += a; }
+  }
+  mctx.putImageData(d, 0, 0);
+  if (matte.width !== W || matte.height !== H) { matte.width = W; matte.height = H; } else mat.clearRect(0, 0, W, H);
+  mat.filter = 'blur(6px)'; mat.drawImage(mt, 0, 0, W, H); mat.filter = 'none';
+  const c = sm ? {x: sx / sm * 4, y: sy / sm * 4} : {x: W / 2, y: H / 2};
+  cen = cen ? {x: cen.x * 0.92 + c.x * 0.08, y: cen.y * 0.92 + c.y * 0.08} : c;
+  // tracker: mean shift towards bright detail in a window around the last point (quarter-res units)
+  let p = trk ? {x: trk.x / 4, y: trk.y / 4} : {x: E.trackX / 100 * w, y: E.trackY / 100 * h};
+  const R = Math.round(w / 20);
+  for (let it = 0; it < 5; it++) {
+    let ax = 0, ay = 0, am = 0;
+    for (let y = Math.max(0, Math.round(p.y) - R); y < Math.min(h, Math.round(p.y) + R); y++)
+      for (let x = Math.max(0, Math.round(p.x) - R); x < Math.min(w, Math.round(p.x) + R); x++) { const v = L[y * w + x] ** 3; ax += x * v; ay += y * v; am += v; }
+    if (am > 1e-6) p = {x: ax / am, y: ay / am};
+  }
+  const q = {x: p.x * 4, y: p.y * 4};
+  trk = trk ? {x: trk.x * 0.65 + q.x * 0.35, y: trk.y * 0.65 + q.y * 0.35} : q;
+  hist.push({...trk}); if (hist.length > 14) hist.shift();
+}
+function plateBlur(E, W, H, ph) {
+  const pull = E.rack ? ease(Math.min(1, ph / 0.2)) : 1;                  // rack: the plate starts soft and resolves
+  const amt = Math.max(E.pblur, E.rack ? 12 * (1 - pull) : 0) * U(); if (amt < 0.3) return;
+  if (pb.width !== W || pb.height !== H) { pb.width = W; pb.height = H; } else pbx.clearRect(0, 0, W, H);
+  pbx.filter = `blur(${amt}px)`; pbx.drawImage(cv, 0, 0); pbx.filter = 'none';
+  const f = trk || cen || {x: W / 2, y: H / 2}, r = E.pfocus / 100 * W * pull;
+  if (r > 1) {                                                            // a soft sharp window around the tracked point
+    pbx.globalCompositeOperation = 'destination-out';
+    const g = pbx.createRadialGradient(f.x, f.y, r * 0.3, f.x, f.y, r); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    pbx.fillStyle = g; pbx.fillRect(0, 0, W, H); pbx.globalCompositeOperation = 'source-over';
+  }
+  ctx.drawImage(pb, 0, 0);
+}
+function formEdges(E, T, W, H, ph) {
+  const out = [], c = {x: (cen || {x: W / 2}).x * 0.5 + W * 0.25, y: E.formY / 100 * H}, S = E.hsize / 100 * W * 0.5, D = E.hdepth / 100;
+  const a = T * E.hspin + glitchAt(E, T) * 0.35, rot = (u, v, t) => [u * Math.cos(t) - v * Math.sin(t), u * Math.sin(t) + v * Math.cos(t)];
+  const proj = ([x, y, z, w]) => {
+    [x, w] = rot(x, w, a); [z, w] = rot(z, w, a * 0.62); [y, w] = rot(y, w, a * 0.21); [x, z] = rot(x, z, 0.55 + a * 0.4);
+    const k = E.wdist / (E.wdist - w); x *= k; y *= k; z *= k * D;
+    const p = 2.6 / (2.6 + z); return {x: c.x + x * S * p, y: c.y + y * S * p, z};
+  };
+  const add = (A, B) => out.push({a: A, b: B, z: (A.z + B.z) / 2});
+  if (E.hyper === 'TESSERACT' || E.hyper === 'BOTH') {                      // hyper-rectangle: tall in y, 16 vertices, 32 edges
+    const ext = [0.58, 1, 0.58, 0.58], V = [];
+    for (let i = 0; i < 16; i++) V.push(proj(ext.map((e, b) => (i >> b & 1 ? 1 : -1) * e)));
+    for (let i = 0; i < 16; i++) for (let b = 0; b < 4; b++) { const j = i ^ (1 << b); if (j > i) add(V[i], V[j]); }
+    formPts = V;
+  }
+  if (E.hyper === 'NESTED FRAMES' || E.hyper === 'BOTH') {                  // portrait frames receding in z, breathing through w
+    const n = 7, F = [];
+    for (let i = 0; i < n; i++) {
+      const z = -1 + i * 0.45, w = 0.5 * Math.sin(a * 1.3 + i * 0.9), s = 1 - i * 0.05;
+      F.push([[-0.62, -1], [0.62, -1], [0.62, 1], [-0.62, 1]].map(([x, y]) => proj([x * s, y * s, z, w])));
+    }
+    F.forEach((f, i) => { for (let k = 0; k < 4; k++) add(f[k], f[(k + 1) % 4]); if (i) { add(F[i - 1][0], f[0]); add(F[i - 1][2], f[2]); } });
+    if (E.hyper === 'NESTED FRAMES') formPts = F.flat();
+  }
+  const fz = E.rack ? -0.9 + 1.8 * ease(Math.min(1, Math.max(0, (ph - 0.1) / 0.8))) : 0;   // the focal plane racks through the form
+  for (const e of out) {
+    const blur = E.dof * Math.min(1, Math.abs(e.z - fz) / 1.1);
+    e.bk = E.dof ? Math.round(blur / E.dof * 5) : 0; e.behind = e.z > 0.04; e.al = 0.95 - 0.25 * e.bk / 5;
+  }
+  return out;
+}
+function drawForm(E, T, W, H, ph) {
+  if (E.hyper === 'OFF') return;
+  const edges = formEdges(E, T, W, H, ph), step = E.dof / 5 * U();
+  if (geo.width !== W || geo.height !== H) { geo.width = W; geo.height = H; lay.width = W; lay.height = H; } else gctx.clearRect(0, 0, W, H);
+  const build = Math.min(1, ph / 0.12);                                     // the form draws itself in over the first 12%
+  for (const behind of [true, false]) for (let b = 5; b >= 0; b--) {
+    const set = edges.filter(e => e.behind === behind && e.bk === b); if (!set.length) continue;
+    lctx.clearRect(0, 0, W, H); lctx.lineWidth = E.hw * U(); lctx.strokeStyle = E.ink; lctx.fillStyle = E.ink; lctx.lineCap = 'round';
+    for (const e of set) {
+      const bx = e.a.x + (e.b.x - e.a.x) * build, by = e.a.y + (e.b.y - e.a.y) * build;
+      lctx.globalAlpha = e.al; lctx.beginPath(); lctx.moveTo(e.a.x, e.a.y); lctx.lineTo(bx, by); lctx.stroke();
+      const s = 2.8 * U(); lctx.fillRect(e.a.x - s, e.a.y - s, 2 * s, 2 * s);
+    }
+    lctx.globalAlpha = 1;
+    if (behind && E.occlude) { lctx.globalAlpha = 0.78; lctx.globalCompositeOperation = 'destination-out'; lctx.drawImage(matte, 0, 0); lctx.globalCompositeOperation = 'source-over'; lctx.globalAlpha = 1; }   // dimmed, not cut: reads as behind even on a full-frame animal
+    gctx.filter = b ? `blur(${b * step}px)` : 'none'; gctx.drawImage(lay, 0, 0); gctx.filter = 'none';
+  }
+  const g = glitchAt(E, T);
+  ctx.save(); ctx.globalCompositeOperation = 'screen';
+  if (g) {                                                                  // glitch frame: chromatic split of the form
+    ctx.globalAlpha = 0.85; const o = g * 9 * U();
+    ctx.filter = 'sepia(1) saturate(7) hue-rotate(-45deg)'; ctx.drawImage(geo, -o, 0);
+    ctx.filter = 'sepia(1) saturate(7) hue-rotate(150deg)'; ctx.drawImage(geo, o, o * 0.3); ctx.filter = 'none';
+  }
+  ctx.globalAlpha = 1; ctx.drawImage(geo, 0, 0); ctx.restore();
+}
+function drawTrack(E, T, W, H, ph) {
+  if (E.track === 'OFF' || !trk) return;
+  if (E.track === 'GLIMPSE') {                                              // two windows, flickering on as they open
+    const win = [[0.16, 0.44], [0.64, 0.84]].find(([a, b]) => ph >= a && ph <= b); if (!win) return;
+    if (ph - win[0] < 0.035 && Math.floor(T * 24) % 2) return;
+  }
+  const u = U(), r = 34 * u, g = 11 * u, {x, y} = trk;
+  ctx.save(); ctx.lineWidth = 1.4 * u; ctx.strokeStyle = hexA(E.ink, 0.95);
+  ctx.beginPath(); for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.moveTo(x + sx * r, y + sy * (r - g)); ctx.lineTo(x + sx * r, y + sy * r); ctx.lineTo(x + sx * (r - g), y + sy * r); } ctx.stroke();
+  hist.forEach((p, i) => { ctx.fillStyle = hexA(E.ink, 0.12 + 0.5 * i / hist.length); ctx.fillRect(p.x - 1.2 * u, p.y - 1.2 * u, 2.4 * u, 2.4 * u); });
+  ctx.fillStyle = E.acc; ctx.fillRect(x + r + 5 * u, y - r, 4 * u, 4 * u);
+  ctx.fillStyle = hexA(E.ink, 0.95); ctx.font = `${Math.round(12 * u)}px Menlo, monospace`;
+  ctx.fillText(`T01  ${(x / W).toFixed(3)}  ${(y / H).toFixed(3)}`, x + r + 12 * u, y - r + 5 * u);
+  if (formPts.length && E.hyper !== 'OFF') {                                // tie the animal to the nearest vertex of the form
+    const v = formPts.reduce((m, p) => Math.hypot(p.x - x, p.y - y) < Math.hypot(m.x - x, m.y - y) ? p : m);
+    ctx.setLineDash([3 * u, 5 * u]); ctx.strokeStyle = hexA(E.ink, 0.5); ctx.beginPath(); ctx.moveTo(x + r * 0.7, y - r * 0.7); ctx.lineTo(v.x, v.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
 const prev = document.createElement('canvas'), pctx = prev.getContext('2d');
 // ---------------------------------------------------------------------------------------------------
 function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; }
@@ -328,6 +473,8 @@ function render(time) {
   if (P.trails && prev.width === W) { ctx.globalAlpha = P.trails / 100; ctx.drawImage(prev, 0, 0); ctx.globalAlpha = 1; }
   if (src) { ctx.globalAlpha = twin ? 1 : P.src / 100; cover(ctx, RW, RH); }
   ctx.globalAlpha = 1; drawFx(P, 0, 0, RW, RH, gx, gy);
+  const deep = src && (P.hyper !== 'OFF' || P.track !== 'OFF' || P.pblur > 0);
+  if (deep) { updateMatte(P, RW, RH); plateBlur(P, W, H, ph); }
   if (twin) {                                                              // dashed links from the real animal to its twin
     ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1;
     for (const t of targets) { ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(t.x + gx, t.y + gy); ctx.stroke(); }
@@ -377,6 +524,7 @@ function render(time) {
   if (sweepX >= 0) { const sx = sweepX + gx; ctx.strokeStyle = hexA(P.acc, 0.7); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(sx, 20); ctx.lineTo(sx, H - 20); ctx.stroke();
     ctx.fillStyle = hexA(P.acc, 0.9); ctx.font = `${Math.round(10 * U())}px Menlo, monospace`; ctx.fillText('SURFACE RESPONSE', sx + 6, 34); }
   ctx.globalCompositeOperation = 'source-over';
+  if (deep) { drawForm(P, T, W, H, ph); drawTrack(P, T, W, H, ph); }
   // HUD: lock-on brackets that tighten with time, elbowed callouts
   if (P.lock) targets.forEach((t, i) => {
     const conf = Math.min(1, ((ph * len) - i * 0.4) / 2); if (conf <= 0) return;
@@ -405,13 +553,15 @@ function render(time) {
   if (P.grain) { const r = rng(frameNo), a = P.grain / 100; for (let i = 0; i < 2600; i++) { ctx.fillStyle = `rgba(255,255,255,${a * r() * 0.5})`; ctx.fillRect(r() * W, r() * H, 1, 1); } }
   finish(P, W, H);
   if (prev.width !== W || prev.height !== H) { prev.width = W; prev.height = H; } pctx.drawImage(cv, 0, 0);
+  const gl = glitchAt(P, T);
+  if (gl) { const r = rng(Math.floor(T * 12) + 5); for (let i = 0; i < 2 + gl * 3; i++) { const y = r() * H, h = (3 + r() * 18) * U(), dx = (r() - 0.5) * 60 * gl * U(); ctx.drawImage(cv, 0, y, W, h, dx, y, W, h); } }
   if (mo === 'GLITCH SLICE' && Math.floor(T * 8) % 3 === 0) {             // horizontal slice offsets
     const r = rng(Math.floor(T * 8)); for (let i = 0; i < 3 + amt * 8; i++) { const y = r() * H, h = 4 + r() * 30, dx = (r() - 0.5) * 80 * amt; ctx.drawImage(cv, 0, y, W, h, dx, y, W, h); }
   }
   if (!HEADLESS) requestAnimationFrame(render);
 }
 // ---------------------------------------------------------------------------------------------------
-function changed(k) { if (k === 'layout') { extract(); return; } if (['fx', 'cell', 'fxth', 'fxAmt', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'depth', 'lfo', 'ink', 'acc', 'blend', 'src', 'over', 'speed', 'amount', 'motion', 'scan', 'grain', 'frame', 'sidebar', 'lw', 'lalpha', 'radius', 'stroke', 'fill', 'title', 'labels'].includes(k)) return; extract(); }
+function changed(k) { if (k === 'layout') { extract(); return; } if (['fx', 'cell', 'fxth', 'fxAmt', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'depth', 'lfo', 'ink', 'acc', 'blend', 'src', 'over', 'speed', 'amount', 'motion', 'scan', 'grain', 'frame', 'sidebar', 'lw', 'lalpha', 'radius', 'stroke', 'fill', 'title', 'labels', 'hyper', 'hsize', 'hdepth', 'wdist', 'hspin', 'hw', 'formY', 'dof', 'rack', 'pblur', 'pfocus', 'occlude', 'matteTh', 'track', 'trackX', 'trackY', 'glitch'].includes(k)) return; extract(); }
 function setSource(el, video) { src = el; isVideo = video; frameNo = 0; if (video) { el.muted = true; el.loop = true; el.playsInline = true; el.play(); } setTimeout(extract, 50); }
 function loadFile(f) {
   const url = URL.createObjectURL(f);
@@ -454,14 +604,14 @@ window.studio = {
       if (/\.(mp4|mov|webm|m4v)$/i.test(shot.source)) { const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = shot.source; v.onloadeddata = () => { src = v; isVideo = true; res(); }; v.onerror = () => rej('video load failed: ' + shot.source); }
       else { const i = new Image(); i.onload = () => { src = i; isVideo = false; res(); }; i.onerror = () => rej('image load failed: ' + shot.source); i.src = shot.source; }
     });
-    buildControls(); frameNo = 0; extract();
+    buildControls(); frameNo = 0; resetDepth(); extract();
     return {nodes: nodes.length, links: links.length, w: cv.width, h: cv.height, video: isVideo};
   },
   async frame(i, url) {                                                     // url: this frame of a video plate, unpacked by make.py
     const t = i / FPS;
     if (url) { await new Promise((res, rej) => { const im = new Image(); im.onload = () => { src = im; isVideo = false; SEQ = true; res(); }; im.onerror = () => rej('frame load failed: ' + url); im.src = url; }); }
     if (isVideo) { const d = src.duration || 0, want = d ? t % d : t; if (Math.abs(src.currentTime - want) > 1e-3) await new Promise(r => { src.onseeked = r; src.currentTime = want; }); }
-    forcedT = t; sigIndex = i; frameNo = i; render(0);
+    if (i === 0) resetDepth(); forcedT = t; sigIndex = i; frameNo = i; render(0);
     return cv.toDataURL('image/png');
   },
 };

@@ -1,0 +1,1 @@
+{"name": "h4-depth-reel", "plate": "experiments/003-spider-probe/video/out/h4.mp4", "preset": "Depth 4D \u00b7 corridor", "params": {"trackX": 80, "trackY": 50, "formY": 50, "hsize": 84, "matteTh": 18}, "format": "1080x1920", "fps": 24, "seconds": 5}
