@@ -22,6 +22,12 @@ JOBS = {
     'k2': ('out3/k2-plate.png', 'The wolf spider walks forward over dewy moss, each leg lifting and placing deliberately, body steady; dew drops tremble as it passes. Locked-off macro camera, shallow depth of field. Deep black background, one low warm light from the left.'),
     'k3': ('out3/k3-plate.png', 'The wolf spider walks steadily from left to right along the mossy log, eight legs moving in a natural gait, body level, never leaving the log. Locked-off side-on camera. Deep black background, one low warm light.'),
     's3': ('out5/s3-iridescent.png', 'The peacock spider steps forward across the dark moss, legs lifting deliberately, its iridescent blue and red body catching the light as it turns slightly. The moss stays still. Locked-off macro camera. One cool soft light, deep black background.'),
+    'p1': ('out6/p1-peacock-face.png', 'The peacock spider faces the camera and slowly raises and waves its iridescent fan, front legs lifting in its courtship display, palps twitching. Locked-off macro camera. True black background, one cool soft light from above.'),
+    'p2': ('out6/p2-peacock-profile.png', 'The peacock spider climbs slowly up the dark stem, legs placing one by one, its blue and red scales shimmering as the rim light moves across them. Locked-off camera. True black background.'),
+    'p3': ('out6/p3-moonlight-wolf.png', 'The wolf spider stands still, then lifts and resets its front legs, body lowering slightly; fine hairs catch cold silver moonlight. Locked-off overhead camera. True black background, one cold light.'),
+    'p4': ('out6/p4-moon-bell.png', 'The moon jellyfish pulses slowly, its bell contracting and relaxing, the four rings glowing; tentacles sway and drift downwards. Locked-off camera looking up from below. True black water, one soft light.'),
+    'p5': ('out6/p5-compass-column.png', 'The compass jellyfish pulses gently and drifts upward, its long fine tentacles trailing and swaying through the whole frame; a few plankton sparks drift past. Locked-off camera. True black water.'),
+    'p6': ('out6/p6-comb-pair.png', 'The two comb jellies drift slowly, their iridescent comb rows rippling with travelling rainbow light; the seaweed strand sways. Locked-off camera. True black water, one soft light.'),
     'j1': ('out4/j1-plate.png', 'The moon jellyfish drifts slowly upward, its bell pulsing in a steady rhythm, tentacles trailing and swaying; kelp sways gently and fine particles drift through the torchlight. Locked-off camera. Dark rock pool at night, one low side light.'),
     'j2': ('out4/j2-plate.png', 'The jellyfish pulses and drifts slowly, long fine tentacles flowing behind it; bioluminescent plankton sparks flicker around it and the seagrass sways. Locked-off camera, close and low. Dark open water.'),
     'j3': ('out4/j3-plate.png', 'Three comb jellies drift independently, their iridescent comb rows rippling with travelling light; the seaweed frond sways softly beside them. Locked-off camera. Black water, one soft light.'),
@@ -33,7 +39,8 @@ def key():
 
 
 def data_uri(p):
-    im = Image.open(p).convert('RGB'); im = im.resize((1920, 1080), Image.LANCZOS) if im.size != (1920, 1080) else im
+    im = Image.open(p).convert('RGB'); size = (1080, 1920) if im.height > im.width else (1920, 1080)   # keep portrait plates 9:16
+    im = im.resize(size, Image.LANCZOS) if im.size != size else im
     b = io.BytesIO(); im.save(b, 'JPEG', quality=90)
     return 'data:image/jpeg;base64,' + base64.b64encode(b.getvalue()).decode()
 
