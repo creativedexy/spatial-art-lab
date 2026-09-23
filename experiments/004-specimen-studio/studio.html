@@ -84,9 +84,10 @@ const SCHEMA = [
     ['cell', 'CELL SIZE', 5, 32, 1, 12], ['fxth', 'EFFECT THRESHOLD %', 0, 90, 1, 28], ['fxAmt', 'EFFECT OPACITY %', 0, 100, 1, 85]]],
   ['FINISH', [
     ['bloom', 'BLOOM %', 0, 100, 1, 22], ['streaks', 'STREAKS %', 0, 100, 1, 0], ['trails', 'TRAILS %', 0, 95, 1, 0],
-    ['contrast', 'GRADE CONTRAST %', 60, 160, 1, 106], ['sat', 'GRADE SATURATION %', 0, 200, 1, 105], ['paper', 'PAPER TINT %', 0, 60, 1, 0]]],
+    ['contrast', 'GRADE CONTRAST %', 60, 160, 1, 106], ['sat', 'GRADE SATURATION %', 0, 200, 1, 105], ['paper', 'PAPER TINT %', 0, 60, 1, 0],
+    {key: 'gradePlate', label: 'GRADE THE PLATE ONLY (KEEP GEOMETRY COLOUR)', toggle: true, def: false}]],
   ['DEPTH + 4D', [
-    {key: 'hyper', label: '4D FORM', options: ['OFF', 'TESSERACT', 'NESTED FRAMES', 'BOTH', '16-CELL', '24-CELL', 'HOPF RINGS', 'LATTICE', 'GOLDEN SPIRAL', 'SHARDS', 'SLICES', 'ARMILLARY'], def: 'OFF'},
+    {key: 'hyper', label: '4D FORM', options: ['OFF', 'TESSERACT', 'NESTED FRAMES', 'BOTH', '16-CELL', '24-CELL', 'HOPF RINGS', 'LATTICE', 'GOLDEN SPIRAL', 'SHARDS', 'SLICES', 'ARMILLARY', 'CELL + SHARDS'], def: 'OFF'},
     {key: 'rays', label: 'RAYS FROM TRACKED POINT', toggle: true, def: false},
     ['hsize', 'FORM SIZE %', 10, 140, 1, 62], ['hdepth', 'FORM DEPTH %', 10, 200, 1, 80], ['wdist', '4D PERSPECTIVE', 1.6, 6, 0.1, 2.6],
     ['hspin', '4D SPIN', 0, 2, 0.01, 0.35], ['hw', 'FORM LINE WEIGHT', 0.3, 3, 0.05, 1], ['formY', 'FORM CENTRE Y %', 20, 80, 1, 50],
@@ -317,7 +318,7 @@ function finish(E, W, H) {
   if (E.bloom) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = E.bloom / 100 * 0.6; ctx.filter = 'blur(12px)'; ctx.drawImage(cv, 0, 0); }
   if (E.streaks) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = E.streaks / 100 * 0.5; ctx.filter = 'blur(3px)'; ctx.drawImage(cv, 0, 0, W, H, -W * 0.3, 0, W * 1.6, H); }
   ctx.restore(); ctx.save();
-  if (E.contrast !== 100 || E.sat !== 100) { ctx.filter = `contrast(${E.contrast}%) saturate(${E.sat}%)`; ctx.drawImage(cv, 0, 0); }
+  if (!E.gradePlate && (E.contrast !== 100 || E.sat !== 100)) { ctx.filter = `contrast(${E.contrast}%) saturate(${E.sat}%)`; ctx.drawImage(cv, 0, 0); }
   ctx.restore();
   if (E.paper) { ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(236,224,196,${E.paper / 100})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
 }
@@ -408,10 +409,11 @@ function formEdges(E, T, W, H, ph) {
     const Q = []; for (let b = 0; b < 4; b++) for (const s of [1, -1]) { const v = [0, 0, 0, 0]; v[b] = s; Q.push(sc(v)); }
     const V = Q.map(proj); for (let i = 0; i < 8; i++) for (let j = i + 1; j < 8; j++) if (i >> 1 !== j >> 1) add(V[i], V[j]); formPts = V;
   }
-  if (E.hyper === '24-CELL') {                                              // all permutations of (±1,±1,0,0); edges at distance sqrt 2
+  const cellPts = [];
+  if (E.hyper === '24-CELL' || E.hyper === 'CELL + SHARDS') {                                              // all permutations of (±1,±1,0,0); edges at distance sqrt 2
     const Q = []; for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) for (const s of [1, -1]) for (const u of [1, -1]) { const v = [0, 0, 0, 0]; v[a] = s; v[b] = u; Q.push(v); }
     const V = Q.map(v => proj(sc(v.map(c => c * 0.72))));
-    for (let i = 0; i < 24; i++) for (let j = i + 1; j < 24; j++) if (Q[i].reduce((m, c, k) => m + (c - Q[j][k]) ** 2, 0) === 2) add(V[i], V[j]); formPts = V;
+    for (let i = 0; i < 24; i++) for (let j = i + 1; j < 24; j++) if (Q[i].reduce((m, c, k) => m + (c - Q[j][k]) ** 2, 0) === 2) add(V[i], V[j]); formPts = V; cellPts.push(...V);
   }
   if (E.hyper === 'HOPF RINGS') {                                           // Hopf fibres: interlinked great circles on the 3-sphere
     formPts = [];
@@ -439,13 +441,14 @@ function formEdges(E, T, W, H, ph) {
       poly(arc, false);
     }
   }
-  if (E.hyper === 'SHARDS') {                                               // small rectangles scattered through depth: bokeh under the depth blur
+  if (E.hyper === 'SHARDS' || E.hyper === 'CELL + SHARDS') {                                               // small rectangles scattered through depth: bokeh under the depth blur
     const r = rng(E.seed + 101); formPts = [];
     for (let i = 0; i < 34; i++) {
       const cx = (r() - 0.5) * 2.2, cy = (r() - 0.5) * 3.2, cz = (r() - 0.5) * 3, s = 0.05 + r() ** 2 * 0.28, asp = 0.5 + r(), t0 = r() * 6, spin = a * (0.5 + r());
       const Q = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => [cx + u * s * Math.cos(t0 + spin), cy + v * s * asp, cz + u * s * Math.sin(t0 + spin), 0.2 * Math.sin(a + i)]);
       formPts.push(poly(Q, true)[0]);
     }
+    if (cellPts.length) formPts = cellPts;
   }
   if (E.hyper === 'SLICES') {                                               // horizontal planes stacked through the animal, like scan slices
     formPts = []; let prevQ = null;
@@ -535,6 +538,7 @@ function render(time) {
   if (src) { ctx.globalAlpha = twin ? 1 : P.src / 100; cover(ctx, RW, RH); }
   const deep = src && (P.hyper !== 'OFF' || P.track !== 'OFF' || P.pblur > 0 || P.onAnimal);
   if (deep) { updateMatte(P, RW, RH); plateBlur(P, W, H, ph); }          // blur the plate first, so effect lines stay sharp
+  if (P.gradePlate && (P.contrast !== 100 || P.sat !== 100)) { ctx.save(); ctx.filter = `contrast(${P.contrast}%) saturate(${P.sat}%)`; ctx.drawImage(cv, 0, 0); ctx.restore(); }
   ctx.globalAlpha = 1; drawFx(P, 0, 0, RW, RH, gx, gy);
   if (twin) {                                                              // dashed links from the real animal to its twin
     ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1;
