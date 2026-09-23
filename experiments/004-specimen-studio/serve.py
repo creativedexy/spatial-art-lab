@@ -35,6 +35,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
 
     def do_GET(self):
+        if self.path.split('?')[0] == '/api/health':                     # the launcher checks this before trusting a running server
+            return self._json(200, {'app': 'specimen-studio', 'root': str(ROOT), 'pid': os.getpid()})
         if self.path.split('?')[0] == '/api/library':
             return self._json(200, library())
         if self.path.startswith('/api/beatmap?path='):                   # exact sidecar, or detected once and cached
