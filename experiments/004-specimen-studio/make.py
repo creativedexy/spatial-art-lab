@@ -9,6 +9,7 @@ shot.json (paths relative to the repo root):
   preset    a Specimen Studio preset name; params override any field (Save shot in the studio writes these)
   format    "1280x720" | "720x1280" | "1080x1350" | "1080x1080";  fps, seconds
   audio     optional track: analysed offline into per-frame bass/mid/high for the bindings, then muxed in
+  cues      optional [{bar, name, params}]: the look changes at each bar (the studio's timeline); hits come from beats.py
 Output: render/<name>.mp4 and render/<name>-sheet.jpg in this folder. Adjust by opening studio.html,
 tuning by hand and pressing Save shot; the saved file runs here unchanged.
 """
@@ -105,7 +106,9 @@ def main(shot_path):
     page = rel(HERE / 'studio.html')
     log('stage 3: studio', page)
     browse('goto', page); time.sleep(2)
-    cfg = {k: shot[k] for k in ('preset', 'params', 'format') if k in shot}
+    cfg = {k: shot[k] for k in ('preset', 'params', 'format', 'cues') if k in shot}
+    if shot.get('audio'):                                              # hits for the beat engine: exact sidecar or detected
+        sys.path.insert(0, str(HERE)); import beats; cfg['beats'] = beats.beatmap(ROOT / shot['audio'])
     seq = []
     if plate.suffix.lower() in ('.mp4', '.mov', '.webm', '.m4v'):          # unpack video: exact frames, no seeking
         (work / 'src').mkdir()
@@ -118,7 +121,7 @@ def main(shot_path):
     log('loaded', res.strip().splitlines()[-1][:200])
     t0 = time.time()
     for i in range(frames):
-        arg = f', {json.dumps(rel(seq[min(i, len(seq) - 1)]))}' if seq else ''
+        arg = f', {json.dumps(rel(seq[i % len(seq)]))}' if seq else ''          # the plate loops under a longer timeline
         browse('js', f'studio.frame({i}{arg})', '--out', str(work / f'f{i:04d}.png'))
         if i % 48 == 0:
             log(f'frame {i}/{frames}  {time.time() - t0:.0f}s')

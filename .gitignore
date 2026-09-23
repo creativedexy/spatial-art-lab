@@ -73,3 +73,4 @@ experiments/**/td/CrashAutoSave.*
 experiments/004-specimen-studio/audio/*.wav
 experiments/004-specimen-studio/audio/*.mp3
 experiments/004-specimen-studio/audio/*.m4a
+experiments/004-specimen-studio/audio/*.beats.json

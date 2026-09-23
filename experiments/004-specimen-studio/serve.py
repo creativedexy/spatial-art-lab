@@ -37,6 +37,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.split('?')[0] == '/api/library':
             return self._json(200, library())
+        if self.path.startswith('/api/beatmap?path='):                   # exact sidecar, or detected once and cached
+            from urllib.parse import unquote
+            f = (ROOT / unquote(self.path.split('=', 1)[1])).resolve()
+            if ROOT not in f.parents or not f.exists():
+                return self._json(404, {'error': 'no such audio'})
+            sys.path.insert(0, str(HERE)); import beats
+            return self._json(200, beats.beatmap(f))
         super().do_GET()
 
     def do_POST(self):

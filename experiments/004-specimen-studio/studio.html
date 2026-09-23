@@ -19,7 +19,10 @@ select{width:100%;margin-top:4px}select.bind{margin:0;padding:3px 2px;font-size:
 .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.row button{flex:1}
 .tog{display:flex;justify-content:space-between;align-items:center;margin-top:7px;color:var(--mut)}
 main{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
-canvas{max-width:calc(100% - 40px);max-height:calc(100vh - 90px);box-shadow:0 0 0 1px var(--line)}
+canvas{max-width:calc(100% - 40px);max-height:calc(100vh - 150px);box-shadow:0 0 0 1px var(--line)}
+.tl{position:absolute;left:14px;right:14px;bottom:12px;display:flex;gap:8px;align-items:center}.tl button{min-width:44px}
+#tlc{flex:1;width:100%;height:48px;max-width:none;max-height:none;box-shadow:none;cursor:pointer;border:1px solid var(--line);border-radius:4px}
+#tc{min-width:128px;color:var(--ink);text-align:right}
 .bar{position:absolute;top:10px;left:14px;right:14px;display:flex;gap:8px;justify-content:space-between;color:var(--mut)}
 .drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#000c;color:var(--acc);font-size:16px;letter-spacing:.2em}
 .drop.on{display:flex}
@@ -47,6 +50,7 @@ canvas{max-width:calc(100% - 40px);max-height:calc(100vh - 90px);box-shadow:0 0 
 <main>
   <div class="bar"><span id="info"></span><span id="status"></span></div>
   <canvas id="c" width="1280" height="720"></canvas>
+  <div class="tl"><button id="play" title="Play / pause (space)">❚❚</button><span id="tc">0:00.0</span><canvas id="tlc" height="48" title="Click or drag to scrub. ⌥-click a cue to delete it. ← → jump a bar."></canvas><button id="addcue" title="Save the current look as a cue at this bar (C)">+ Cue</button></div>
   <div class="drop" id="drop">DROP IMAGE OR VIDEO</div>
   <input type="file" id="file" accept="image/*,video/*" hidden><input type="file" id="afile" accept="audio/*" hidden>
 </main>
@@ -97,6 +101,10 @@ const SCHEMA = [
     {key: 'occlude', label: 'PASS BEHIND ANIMAL', toggle: true, def: true}, ['matteTh', 'ANIMAL MATTE %', 2, 60, 1, 14],
     {key: 'track', label: 'TRACKING', options: ['OFF', 'GLIMPSE', 'ON'], def: 'OFF'}, ['trackX', 'TRACK START X %', 0, 100, 1, 50], ['trackY', 'TRACK START Y %', 0, 100, 1, 40],
     ['glitch', 'GLITCH %', 0, 100, 1, 0]]],
+  ['BEAT', [
+    ['kickTurn', 'KICK: FORM SNAPS ROUND (DEG)', 0, 180, 1, 0], ['kickPunch', 'KICK: FORM PUNCH %', 0, 60, 1, 0], ['kickFlash', 'KICK: FLASH %', 0, 100, 1, 0],
+    ['snareGlitch', 'SNARE: GLITCH %', 0, 100, 1, 0], {key: 'hatFlicker', label: 'HATS: FLICKER THE TRACKING', toggle: true, def: false},
+    {key: 'barRack', label: 'BAR: FOCUS PULL EVERY BAR', toggle: true, def: false}]],
   ['SOUND + BINDINGS', [['depth', 'BINDING DEPTH %', 0, 100, 1, 60], ['lfo', 'LFO RATE (HZ)', 0.05, 4, 0.05, 0.5]]],
   ['MOTION', [
     {key: 'motion', label: 'MOTION PROGRAM', options: ['ASSEMBLE + SWEEP', 'SCAN SWEEP', 'SIGNAL PULSE', 'ORBIT', 'GLITCH SLICE', 'OFF'], def: 'ASSEMBLE + SWEEP'},
@@ -124,7 +132,7 @@ const PRESETS = {
 const $ = id => document.getElementById(id), cv = $('c'), ctx = cv.getContext('2d');
 const P = {}; const defaults = {}; const RANGE = {};
 const BINDABLE = ['dof', 'pblur', 'hspin', 'hsize', 'glitch', 'radius', 'smax', 'lw', 'lalpha', 'over', 'src', 'amount', 'fill', 'scan', 'grain', 'fxAmt', 'fxth', 'cell', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'speed'];
-const SIGNALS = ['—', 'BASS', 'MID', 'HIGH', 'LFO'];
+const SIGNALS = ['—', 'BASS', 'MID', 'HIGH', 'LFO', 'KICK', 'SNARE', 'HAT'];
 for (const [, items] of SCHEMA) for (const it of items) { const k = Array.isArray(it) ? it[0] : it.key; defaults[k] = Array.isArray(it) ? it[5] : it.def; if (Array.isArray(it)) RANGE[k] = [it[2], it[3]]; }
 defaults.bind = {};
 Object.assign(P, defaults);
@@ -163,7 +171,7 @@ function buildControls() {
 }
 // ---------------------------------------------------------------------------------------------------
 // Sound: a dropped track feeds an analyser; bass, mid and high (0..1, smoothed) plus an LFO can drive any bindable slider.
-let actxA = null, analyser = null, audioEl = null, audioDest = null, fbins = null; const sig = {BASS: 0, MID: 0, HIGH: 0, LFO: 0};
+let actxA = null, analyser = null, audioEl = null, audioDest = null, fbins = null; const sig = {BASS: 0, MID: 0, HIGH: 0, LFO: 0, KICK: 0, SNARE: 0, HAT: 0};
 let audioPath = null;                                                      // set when the track comes from the library, so Save shot keeps it
 function loadAudio(f, url) {
   actxA = actxA || new AudioContext(); if (audioEl) audioEl.pause(); if (!url) audioPath = null;
@@ -174,7 +182,7 @@ function loadAudio(f, url) {
 }
 function stopAudio() {                                                   // remove the track: silence, zero the signals, and Save shot drops it
   if (audioEl) audioEl.pause(); audioEl = null; analyser = null; audioDest = null; audioPath = null;
-  for (const k of ['BASS', 'MID', 'HIGH']) sig[k] = 0; $('aname').textContent = ''; if ($('track')) $('track').value = '';
+  for (const k of ['BASS', 'MID', 'HIGH']) sig[k] = 0; BM = null; $('aname').textContent = ''; if ($('track')) $('track').value = '';
 }
 // Headless render mode (make.py): time comes from the frame index, sound from an offline analysis track.
 let HEADLESS = false, SEQ = false, forcedT = null, sigTrack = null, sigIndex = 0, LEN = 0, FPS = 24;
@@ -347,6 +355,7 @@ let trk = null, cen = null, hist = [], formPts = [], matteA = null;
 const resetDepth = () => { trk = null; cen = null; hist = []; };
 const ease = x => x * x * (3 - 2 * x);
 function glitchAt(E, T) {                                                   // deterministic: some 1/12 s steps are glitch frames
+  if (E.snareGlitch && BEAT.SNARE > 0.35) return E.snareGlitch / 100 * (0.5 + BEAT.SNARE);   // on the snare
   if (!E.glitch) return 0; const k = Math.floor(T * 12);
   return rng(k * 7919 + E.seed)() < E.glitch / 100 * 0.12 ? 0.5 + rng(k)() : 0;
 }
@@ -392,8 +401,9 @@ function plateBlur(E, W, H, ph) {
   ctx.drawImage(pb, 0, 0);
 }
 function formEdges(E, T, W, H, ph) {
-  const out = [], c = {x: (cen || {x: W / 2}).x * 0.5 + W * 0.25, y: E.formY / 100 * H}, S = E.hsize / 100 * W * 0.5, D = E.hdepth / 100;
-  const a = T * E.hspin + glitchAt(E, T) * 0.35, rot = (u, v, t) => [u * Math.cos(t) - v * Math.sin(t), u * Math.sin(t) + v * Math.cos(t)];
+  const out = [], c = {x: (cen || {x: W / 2}).x * 0.5 + W * 0.25, y: E.formY / 100 * H}, S = E.hsize / 100 * W * 0.5 * (1 + E.kickPunch / 100 * BEAT.KICK), D = E.hdepth / 100;
+  const snap = E.kickTurn && BEAT.kicks ? E.kickTurn * Math.PI / 180 * (BEAT.kicks - 1 + 1 - (1 - Math.min(1, BEAT.kickAge / 0.16)) ** 3) : 0;   // kick: snap round, settle
+  const a = T * E.hspin + snap + glitchAt(E, T) * 0.35, rot = (u, v, t) => [u * Math.cos(t) - v * Math.sin(t), u * Math.sin(t) + v * Math.cos(t)];
   const proj = ([x, y, z, w]) => {
     [x, w] = rot(x, w, a); [z, w] = rot(z, w, a * 0.62); [y, w] = rot(y, w, a * 0.21); [x, z] = rot(x, z, 0.55 + a * 0.4);
     const k = E.wdist / (E.wdist - w); x *= k; y *= k; z *= k * D;
@@ -472,7 +482,7 @@ function formEdges(E, T, W, H, ph) {
     ring((c, s) => [c * 0.9, s * 1.3, 0, 0]); ring((c, s) => [0, s * 1.3, c * 0.9, 0]); ring((c, s) => [c * 0.9, 0, s * 0.9, 0.3]);
     ring((c, s) => [c * 0.9, 0.55, s * 0.9, 0]); ring((c, s) => [c * 0.9, -0.55, s * 0.9, 0]); ring((c, s) => [c * 0.66, s * 0.95, s * 0.66, c * 0.4]);
   }
-  const fz = E.rack ? -0.9 + 1.8 * ease(Math.min(1, Math.max(0, (ph - 0.1) / 0.8))) : 0;   // the focal plane racks through the form
+  const fz = E.barRack ? -0.9 + 1.8 * ease(BEAT.barPh) : E.rack ? -0.9 + 1.8 * ease(Math.min(1, Math.max(0, (ph - 0.1) / 0.8))) : 0;   // the focal plane racks through the form
   for (const e of out) {
     const blur = E.dof * Math.min(1, Math.abs(e.z - fz) / 1.1);
     e.bk = E.dof ? Math.round(blur / E.dof * 5) : 0; e.behind = e.z > 0.04; e.al = 0.95 - 0.25 * e.bk / 5;
@@ -503,11 +513,14 @@ function drawForm(E, T, W, H, ph) {
     ctx.filter = 'sepia(1) saturate(7) hue-rotate(-45deg)'; ctx.drawImage(geo, -o, 0);
     ctx.filter = 'sepia(1) saturate(7) hue-rotate(150deg)'; ctx.drawImage(geo, o, o * 0.3); ctx.filter = 'none';
   }
-  ctx.globalAlpha = 1; ctx.drawImage(geo, 0, 0); ctx.restore();
+  ctx.globalAlpha = 1; ctx.drawImage(geo, 0, 0);
+  if (E.kickFlash && BEAT.KICK > 0.02) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = E.kickFlash / 100 * BEAT.KICK; ctx.filter = `blur(${6 * U()}px)`; ctx.drawImage(geo, 0, 0); ctx.filter = 'none'; ctx.drawImage(geo, 0, 0); }
+  ctx.restore();
 }
 function drawTrack(E, T, W, H, ph) {
   if (E.track === 'OFF' || !trk) return;
-  if (E.track === 'GLIMPSE') {                                              // two windows, flickering on as they open
+  if (E.hatFlicker && BM) { if (BEAT.HAT < 0.3) return; }                  // hats: the tracking blinks on each hat
+  else if (E.track === 'GLIMPSE') {                                         // two windows, flickering on as they open
     const win = [[0.16, 0.44], [0.64, 0.84]].find(([a, b]) => ph >= a && ph <= b); if (!win) return;
     if (ph - win[0] < 0.035 && Math.floor(T * 24) % 2) return;
   }
@@ -536,10 +549,82 @@ function shape(x, y, s, kind) {
   else if (kind === 'BRACKET') { const g = s * 0.45; for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.moveTo(x + sx * s, y + sy * (s - g)); ctx.lineTo(x + sx * s, y + sy * s); ctx.lineTo(x + sx * (s - g), y + sy * s); } }
   ctx.stroke();
 }
+// ---------------------------------------------------------------------------------------------------
+// Transport + beat engine. One clock drives sound, plate and geometry; with a track loaded, the track is the clock.
+// A beat map (every kick, snare and hat) turns hits into triggers: KICK / SNARE / HAT decay from 1 after each hit.
+const TP = {playing: true, pos: 0, last: performance.now()};
+let BM = null, BEAT = {KICK: 0, SNARE: 0, HAT: 0, kicks: 0, kickAge: 99, bar: 0, barPh: 0}, cues = [], cueOn = -2;
+const bpmNow = () => BM ? BM.bpm : 120, barLen = () => 240 / bpmNow();
+function tlLength() { return audioEl && audioEl.duration ? audioEl.duration : BM ? BM.duration : (LEN || +$('length').value); }
+function now(time) {
+  if (forcedT !== null) return forcedT;
+  if (audioEl && audioEl.duration) { TP.last = time; return audioEl.currentTime; }
+  if (TP.playing) TP.pos = (TP.pos + Math.max(0, time - TP.last) / 1000) % tlLength(); TP.last = time; return TP.pos;
+}
+function syncPlate(t, force) { if (!isVideo || !src || !src.duration || SEQ) return; const want = t % src.duration; if (force || Math.abs(src.currentTime - want) > 0.15) src.currentTime = want; }
+function setPlaying(on) {
+  TP.playing = on; TP.last = performance.now(); if (audioEl) on ? audioEl.play() : audioEl.pause(); if (isVideo && src) on ? src.play() : src.pause();
+  $('play').textContent = on ? '❚❚' : '▶';
+}
+function seek(t) { t = Math.max(0, Math.min(tlLength() - 1e-3, t)); TP.pos = t; if (audioEl) audioEl.currentTime = t; syncPlate(t, true); cueOn = -2; resetDepth(); }
+function lastHit(arr, t) { let lo = 0, hi = arr.length - 1, k = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (arr[m] <= t) { k = m; lo = m + 1; } else hi = m - 1; } return k; }
+function beatSignals(t) {
+  const x = (t - (BM ? BM.offset : 0)) / barLen(), B = {KICK: 0, SNARE: 0, HAT: 0, kicks: 0, kickAge: 99, bar: Math.max(0, Math.floor(x)), barPh: ((x % 1) + 1) % 1};
+  if (!BM) return B;
+  for (const [k, K, d] of [['kick', 'KICK', 0.16], ['snare', 'SNARE', 0.2], ['hat', 'HAT', 0.07]]) {
+    const arr = BM[k] || [], i = lastHit(arr, t), age = i >= 0 ? t - arr[i] : 99; B[K] = Math.exp(-age / d * 2.3);
+    if (k === 'kick') { B.kicks = i + 1; B.kickAge = age; }
+  }
+  return B;
+}
+function applyCues(bar) {                                                  // the look of the latest cue at or before this bar
+  let k = -1; cues.forEach((c, i) => { if (c.bar <= bar && (k < 0 || c.bar >= cues[k].bar)) k = i; });
+  if (k === cueOn) return; cueOn = k; if (k < 0) return;
+  Object.assign(P, defaults, {bind: {}}, JSON.parse(JSON.stringify(cues[k].params))); if (!HEADLESS) buildControls(); extract();
+}
+const tlc = $('tlc'), tlx = tlc.getContext('2d');
+function drawTimeline(t) {
+  const d = devicePixelRatio || 1, w = Math.round(tlc.clientWidth * d), h = Math.round(48 * d); if (!w) return;
+  if (tlc.width !== w || tlc.height !== h) { tlc.width = w; tlc.height = h; }
+  const L = tlLength(), X = s => s / L * w, c = tlx; c.fillStyle = '#0e100e'; c.fillRect(0, 0, w, h);
+  c.font = `${10 * d}px Menlo, monospace`; c.textBaseline = 'top';
+  for (let b = 0, s = BM ? BM.offset : 0; s < L; b++, s += barLen()) {
+    c.fillStyle = b % 4 ? '#2a2e2a' : '#4a514a'; c.fillRect(X(s), 0, 1, h); if (b % 4 === 0) { c.fillStyle = '#8d928a'; c.fillText(String(b + 1), X(s) + 3 * d, 2 * d); }
+  }
+  if (BM) for (const [k, y0, y1, col] of [['hat', 0.3, 0.42, '#5b6f73'], ['snare', 0.5, 0.7, '#e9eae4'], ['kick', 0.74, 1, P.acc || '#d7ff5a']]) {
+    c.fillStyle = col; for (const s of BM[k] || []) c.fillRect(X(s), y0 * h, Math.max(1, d), (y1 - y0) * h);
+  }
+  cues.forEach(q => { const x = X((BM ? BM.offset : 0) + q.bar * barLen()); c.fillStyle = '#ff6a3d'; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 9 * d, 0); c.lineTo(x, 11 * d); c.fill(); c.fillRect(x, 0, 1.5 * d, h); });
+  c.fillStyle = '#fff'; c.fillRect(X(t) - d, 0, 2 * d, h);
+  const m = Math.floor(t / 60), s = (t % 60).toFixed(1).padStart(4, '0'); $('tc').textContent = `${m}:${s}  BAR ${BEAT.bar + 1}`;
+}
+function scrubAt(e) { const r = tlc.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * tlLength(); }
+tlc.onpointerdown = e => {
+  const t = scrubAt(e), r = tlc.getBoundingClientRect(), px = e.clientX - r.left;
+  const hit = cues.findIndex(q => Math.abs(((BM ? BM.offset : 0) + q.bar * barLen()) / tlLength() * r.width - px) < 7);
+  if (hit >= 0 && e.altKey) { cues.splice(hit, 1); cueOn = -2; return; }
+  seek(t); tlc.setPointerCapture(e.pointerId); tlc.onpointermove = ev => seek(scrubAt(ev)); tlc.onpointerup = () => { tlc.onpointermove = null; };
+};
+$('play').onclick = () => setPlaying(!(audioEl ? !audioEl.paused : TP.playing));
+$('addcue').onclick = () => {
+  const bar = BEAT.bar; cues = cues.filter(q => q.bar !== bar).concat({bar, name: $('preset').value, params: JSON.parse(JSON.stringify(P))}).sort((a, b) => a.bar - b.bar);
+  cueOn = cues.findIndex(q => q.bar === bar); $('status').textContent = `CUE AT BAR ${bar + 1}`; setTimeout(() => $('status').textContent = '', 1500);
+};
+addEventListener('keydown', e => {
+  if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) && e.key !== ' ') return;
+  if (e.key === ' ') { e.preventDefault(); document.activeElement.blur(); $('play').onclick(); }
+  else if (e.key === 'ArrowRight') seek((BM ? BM.offset : 0) + (BEAT.bar + 1) * barLen() + 0.01);        // a hair past the line: media seeks round
+  else if (e.key === 'ArrowLeft') seek((BM ? BM.offset : 0) + Math.max(0, BEAT.bar - (BEAT.barPh < 0.1 ? 1 : 0)) * barLen() + 0.01);
+  else if (e.key === 'Home') seek(0);
+  else if (e.key === 'c' || e.key === 'C') $('addcue').onclick();
+});
 function render(time) {
   if (HEADLESS && time !== 0) return;                                      // headless frames are driven by studio.frame(), not the clock
-  const tsec = forcedT !== null ? forcedT : (time - t0) / 1000;
+  const tsec = now(time);
   updateSignals(tsec);
+  BEAT = beatSignals(tsec); sig.KICK = BEAT.KICK; sig.SNARE = BEAT.SNARE; sig.HAT = BEAT.HAT;
+  applyCues(BEAT.bar);
+  if (!HEADLESS && (audioEl ? !audioEl.paused : TP.playing)) syncPlate(tsec);
   const P = effective();                                                    // bound sliders move with the sound or the LFO
   const W = cv.width, H = cv.height, T = tsec * P.speed, len = LEN || +$('length').value, ph = (T % len) / len;
   const twin = P.layout === 'TWIN', RW = regionW(), RH = regionH(), gx = twin && !portrait() ? W / 2 : 0, gy = twin && portrait() ? H / 2 : 0;
@@ -629,13 +714,14 @@ function render(time) {
   if (P.scan) { ctx.fillStyle = `rgba(0,0,0,${P.scan / 100})`; for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1); }
   if (P.grain) { const r = rng(frameNo), a = P.grain / 100; for (let i = 0; i < 2600; i++) { ctx.fillStyle = `rgba(255,255,255,${a * r() * 0.5})`; ctx.fillRect(r() * W, r() * H, 1, 1); } }
   finish(P, W, H);
+  if (P.kickFlash && BEAT.KICK > 0.02) { ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = `rgba(255,255,255,${P.kickFlash / 100 * BEAT.KICK * 0.18})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
   if (prev.width !== W || prev.height !== H) { prev.width = W; prev.height = H; } pctx.drawImage(cv, 0, 0);
   const gl = glitchAt(P, T);
   if (gl) { const r = rng(Math.floor(T * 12) + 5); for (let i = 0; i < 2 + gl * 3; i++) { const y = r() * H, h = (3 + r() * 18) * U(), dx = (r() - 0.5) * 60 * gl * U(); ctx.drawImage(cv, 0, y, W, h, dx, y, W, h); } }
   if (mo === 'GLITCH SLICE' && Math.floor(T * 8) % 3 === 0) {             // horizontal slice offsets
     const r = rng(Math.floor(T * 8)); for (let i = 0; i < 3 + amt * 8; i++) { const y = r() * H, h = 4 + r() * 30, dx = (r() - 0.5) * 80 * amt; ctx.drawImage(cv, 0, y, W, h, dx, y, W, h); }
   }
-  if (!HEADLESS) requestAnimationFrame(render);
+  if (!HEADLESS) { drawTimeline(tsec); requestAnimationFrame(render); }
 }
 // ---------------------------------------------------------------------------------------------------
 function changed(k) { if (k === 'layout') { extract(); return; } if (['fx', 'cell', 'fxth', 'fxAmt', 'bloom', 'streaks', 'trails', 'contrast', 'sat', 'paper', 'depth', 'lfo', 'ink', 'acc', 'blend', 'src', 'over', 'speed', 'amount', 'motion', 'scan', 'grain', 'frame', 'sidebar', 'lw', 'lalpha', 'radius', 'stroke', 'fill', 'title', 'labels', 'hyper', 'hsize', 'hdepth', 'wdist', 'hspin', 'hw', 'formY', 'dof', 'rack', 'pblur', 'pfocus', 'occlude', 'matteTh', 'track', 'trackX', 'trackY', 'glitch', 'rays'].includes(k)) return; extract(); }
@@ -663,11 +749,11 @@ $('save').onclick = () => { const n = prompt('Preset name'); if (!n) return; con
 $('copy').onclick = () => { navigator.clipboard?.writeText(JSON.stringify(P, null, 1)); $('status').textContent = 'SETTINGS COPIED'; setTimeout(() => $('status').textContent = '', 1500); };
 $('png').onclick = () => { const a = document.createElement('a'); a.download = `specimen-${P.seed}.png`; a.href = cv.toDataURL('image/png'); a.click(); };
 $('webm').onclick = () => {
-  const stream = cv.captureStream(30); if (audioDest) { audioDest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); audioEl.currentTime = 0; audioEl.play(); }
+  const stream = cv.captureStream(30); if (audioDest) { audioDest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); }
   const len = +$('length').value, rec = new MediaRecorder(stream, {mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm', videoBitsPerSecond: 12e6});
   const chunks = []; rec.ondataavailable = e => chunks.push(e.data);
   rec.onstop = () => { const a = document.createElement('a'); a.download = `specimen-${P.seed}.webm`; a.href = URL.createObjectURL(new Blob(chunks, {type: 'video/webm'})); a.click(); $('status').textContent = ''; };
-  t0 = performance.now(); if (isVideo) src.currentTime = 0; rec.start(); $('status').textContent = `● RECORDING ${len}s`; setTimeout(() => rec.stop(), len * 1000);
+  const L = audioEl ? tlLength() : len; seek(0); setPlaying(true); rec.start(); $('status').textContent = `● RECORDING ${L.toFixed(1)}s`; setTimeout(() => rec.stop(), L * 1000);
 };
 // Library (served by serve.py): pick a plate or load a saved shot; Save shot then carries the plate path.
 let platePath = null;
@@ -680,22 +766,23 @@ if (location.protocol.startsWith('http')) fetch('/api/library', {cache: 'no-stor
   $('libRow').hidden = false; if (Object.keys(local()).length) pushPresets(local());   // copy browser-only presets into presets.json
   $('plate').innerHTML = '<option value="">PLATE…</option>' + lib.plates.map(p => `<option value="${p.path}">${p.label}</option>`).join('');
   $('track').innerHTML = '<option value="">NO AUDIO</option>' + lib.audio.map(a => `<option value="${a}">${a.split('/').pop()}</option>`).join('');
-  $('track').onchange = () => { const a = $('track').value; if (!a) return stopAudio(); loadAudio(null, '../../' + a); audioPath = a; $('aname').textContent = a.split('/').pop().slice(0, 24); };
+  $('track').onchange = () => { const a = $('track').value; if (!a) return stopAudio(); loadAudio(null, '../../' + a); audioPath = a; BM = null;
+    fetch('/api/beatmap?path=' + encodeURIComponent(a)).then(r => r.ok ? r.json() : null).then(m => { if (audioPath === a) BM = m; }); $('aname').textContent = a.split('/').pop().slice(0, 24); };
   $('shot').innerHTML = '<option value="">SHOT…</option>' + lib.shots.map(s => `<option>${s}</option>`).join('');
   $('plate').onchange = () => $('plate').value && loadPlate($('plate').value);
   $('shot').onchange = async () => {
     if (!$('shot').value) return; const s = await (await fetch(`shots/${$('shot').value}.json`)).json(), all = {...PRESETS, ...stored()};
     Object.assign(P, defaults, {bind: {}}, s.preset ? (all[s.preset] || {}) : {}, s.params || {});
     if (s.format) { const [w, h] = s.format.split('x').map(Number); cv.width = w; cv.height = h; $('format').value = s.format; }
-    buildControls(); if (s.plate) { $('plate').value = s.plate; loadPlate(s.plate); } else extract();
+    cues = s.cues || []; cueOn = -2; buildControls(); if (s.plate) { $('plate').value = s.plate; loadPlate(s.plate); } else extract();
     if (s.audio) { $('track').value = s.audio; $('track').onchange(); }
   };
 }).catch(() => {});
 // Save shot: the current settings as a shot file make.py can run (hand-tuned in the browser, rendered headless).
 $('saveshot').onclick = async () => {
   const name = (prompt('Shot name', `shot-${P.seed}`) || '').trim().replace(/[^\w.-]+/g, '-'); if (!name) return;
-  const shot = {name, plate: platePath || '(set the plate path)', format: `${cv.width}x${cv.height}`, fps: 24, seconds: +$('length').value, params: {...P}};
-  if (audioPath) shot.audio = audioPath;
+  const shot = {name, plate: platePath || '(set the plate path)', format: `${cv.width}x${cv.height}`, fps: 24, seconds: audioPath ? +tlLength().toFixed(3) : +$('length').value, params: {...(cues.length ? cues[0].params : P)}};
+  if (audioPath) shot.audio = audioPath; if (cues.length) shot.cues = cues;
   const ok = await fetch('/api/shot', {method: 'POST', body: JSON.stringify(shot)}).then(r => r.ok).catch(() => false);   // served: straight into shots/
   if (ok) { $('status').textContent = `SAVED shots/${name}.json`; setTimeout(() => $('status').textContent = '', 2500); return; }
   const a = document.createElement('a'); a.download = `${shot.name}.json`; a.href = URL.createObjectURL(new Blob([JSON.stringify(shot, null, 1)], {type: 'application/json'})); a.click();
@@ -706,7 +793,7 @@ window.studio = {
     const all = {...PRESETS, ...stored()};
     Object.assign(P, defaults, {bind: {}}, shot.preset ? (all[shot.preset] || {}) : {}, shot.params || {});
     if (shot.format) { const [w, h] = shot.format.split('x').map(Number); cv.width = w; cv.height = h; }
-    LEN = shot.seconds || 8; FPS = shot.fps || 24; sigTrack = shot.signals || null;
+    LEN = shot.seconds || 8; FPS = shot.fps || 24; sigTrack = shot.signals || null; BM = shot.beats || null; cues = shot.cues || []; cueOn = -2;
     if (shot.source) await new Promise((res, rej) => {
       if (/\.(mp4|mov|webm|m4v)$/i.test(shot.source)) { const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.src = shot.source; v.onloadeddata = () => { src = v; isVideo = true; res(); }; v.onerror = () => rej('video load failed: ' + shot.source); }
       else { const i = new Image(); i.onload = () => { src = i; isVideo = false; res(); }; i.onerror = () => rej('image load failed: ' + shot.source); i.src = shot.source; }
